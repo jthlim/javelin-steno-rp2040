@@ -17,7 +17,7 @@ public:
   static HidReportBuffer reportBuffer;
 
 private:
-  static const size_t MAX_BUFFER_SIZE = 63;
+  static const size_t MAX_BUFFER_SIZE = 64;
 
   int bufferSize = 0;
   uint8_t buffer[MAX_BUFFER_SIZE];

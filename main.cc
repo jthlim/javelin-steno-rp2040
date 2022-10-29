@@ -130,15 +130,12 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
                            hid_report_type_t report_type, const uint8_t *buffer,
                            uint16_t bufsize) {
-  (void)report_id;
-
-  // keyboard interface
   switch (instance) {
   case ITF_NUM_KEYBOARD:
     if (report_type != HID_REPORT_TYPE_OUTPUT || bufsize < 1) {
       return;
     }
-    SetIsNumLockOn(buffer[0] & KEYBOARD_LED_NUMLOCK);
+    SetIsNumLockOn((buffer[0] & KEYBOARD_LED_NUMLOCK) != 0);
     break;
 
   case ITF_NUM_CONSOLE:

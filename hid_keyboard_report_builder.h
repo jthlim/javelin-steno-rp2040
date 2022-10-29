@@ -16,8 +16,8 @@ public:
 
 private:
   struct Buffer {
-    uint8_t data[20];
-    uint8_t presenceFlags[20];
+    uint8_t data[32];
+    uint8_t presenceFlags[32];
   };
 
   uint8_t modifiers = 0;
@@ -28,4 +28,3 @@ private:
 };
 
 //---------------------------------------------------------------------------
-

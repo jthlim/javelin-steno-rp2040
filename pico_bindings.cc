@@ -113,6 +113,10 @@ void StenoEngine_PrintDictionary_Binding(void *context,
   engine->PrintDictionary();
 }
 
+void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
+  ORTHOGRAPHY_ADDRESS->Print();
+}
+
 struct WordListData {
   uint32_t length;
   uint8_t data[1];
@@ -181,6 +185,9 @@ void InitJavelinSteno() {
   console.RegisterCommand("print_dictionary",
                           "Prints all dictionaries in JSON format",
                           StenoEngine_PrintDictionary_Binding, engine);
+  console.RegisterCommand("print_orthography",
+                          "Prints all orthography rules in JSON format",
+                          StenoOrthography_Print_Binding, nullptr);
 
   StenoProcessorElement *processorElement = new StenoSwitch(*engine, gemini);
 

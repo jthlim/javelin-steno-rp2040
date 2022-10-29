@@ -24,8 +24,7 @@ void ConsoleBuffer::SendData(const uint8_t *data, size_t length) {
       length -= bytesToAdd;
 
       if (bufferSize == MAX_BUFFER_SIZE) {
-        reportBuffer.SendReport(ITF_NUM_CONSOLE, REPORT_ID_CONSOLE, buffer,
-                                bufferSize);
+        reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, buffer, MAX_BUFFER_SIZE);
         bufferSize = 0;
       }
 
@@ -37,8 +36,7 @@ void ConsoleBuffer::SendData(const uint8_t *data, size_t length) {
 
   // Send full length requests
   while (length >= MAX_BUFFER_SIZE) {
-    reportBuffer.SendReport(ITF_NUM_CONSOLE, REPORT_ID_CONSOLE, data,
-                            MAX_BUFFER_SIZE);
+    reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, data, MAX_BUFFER_SIZE);
     data += MAX_BUFFER_SIZE;
     length -= MAX_BUFFER_SIZE;
   }
@@ -53,8 +51,9 @@ void ConsoleBuffer::SendData(const uint8_t *data, size_t length) {
 
 void ConsoleBuffer::Flush() {
   if (bufferSize > 0) {
-    reportBuffer.SendReport(ITF_NUM_CONSOLE, REPORT_ID_CONSOLE, buffer,
-                            bufferSize);
+    int remaining = MAX_BUFFER_SIZE - bufferSize;
+    memset(buffer + bufferSize, 0, remaining);
+    reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, buffer, MAX_BUFFER_SIZE);
     bufferSize = 0;
   }
 }

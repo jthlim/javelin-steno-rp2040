@@ -48,6 +48,7 @@ target_sources(${PROJECT} PUBLIC
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
+  javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
   javelin/processor/all_up.cc

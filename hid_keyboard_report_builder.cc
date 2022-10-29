@@ -9,6 +9,8 @@
 
 //---------------------------------------------------------------------------
 
+const size_t MODIFIER_OFFSET = 0;
+
 void HidKeyboardReportBuilder::Press(uint8_t key) {
   if (key == 0) {
     return;
@@ -16,20 +18,20 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
   if (0xe0 <= key && key < 0xe8) {
     modifiers |= (1 << (key - 0xe0));
     if (maxPressIndex == 0) {
-      buffers[0].data[0] = modifiers;
-      buffers[0].presenceFlags[0] = 1;
+      buffers[0].data[MODIFIER_OFFSET] = modifiers;
+      buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
     }
     return;
   }
-  if (key >= 128) {
-    return;
-  }
 
-  int byte = 1 + (key >> 3);
+  int byte = (key >> 3);
+  if (key < 0xe0) {
+    ++byte;
+  }
   int mask = (1 << (key & 7));
 
   if (key <= maxPressIndex ||
-      (maxPressIndex != 0 && buffers[0].data[0] != modifiers) ||
+      (maxPressIndex != 0 && buffers[0].data[MODIFIER_OFFSET] != modifiers) ||
       (buffers[0].presenceFlags[byte] & mask)) {
     DoFlush();
   }
@@ -38,8 +40,8 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
     DoFlush();
   }
 
-  buffers[0].data[0] = modifiers;
-  buffers[0].presenceFlags[0] = 1;
+  buffers[0].data[MODIFIER_OFFSET] = modifiers;
+  buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
   buffers[0].data[byte] |= mask;
   buffers[0].presenceFlags[byte] |= mask;
   if (key > maxPressIndex) {
@@ -54,17 +56,16 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
   if (0xe0 <= key && key < 0xe8) {
     modifiers &= ~(1 << (key - 0xe0));
     if (maxPressIndex == 0) {
-      buffers[0].data[0] = modifiers;
-      buffers[0].presenceFlags[0] = 1;
+      buffers[0].data[MODIFIER_OFFSET] = modifiers;
+      buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
     }
     return;
   }
 
-  if (key >= 128) {
-    return;
+  int byte = (key >> 3);
+  if (key < 0xe0) {
+    ++byte;
   }
-
-  int byte = 1 + (key >> 3);
   int mask = (1 << (key & 7));
 
   if (buffers[0].data[byte] & mask) {
@@ -75,7 +76,7 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
 }
 
 bool HidKeyboardReportBuilder::HasData() const {
-  for (size_t i = 0; i < 20; ++i) {
+  for (size_t i = 0; i < 32; ++i) {
     if (buffers[0].presenceFlags[i] != 0)
       return true;
   }
@@ -92,15 +93,15 @@ void HidKeyboardReportBuilder::Flush() {
 }
 
 void HidKeyboardReportBuilder::DoFlush() {
-  HidReportBuffer::instance.SendReport(ITF_NUM_KEYBOARD, REPORT_ID_KEYBOARD,
-                                       buffers[0].data, 17);
+  HidReportBuffer::instance.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data,
+                                       32);
 
   buffers[0] = buffers[1];
   memset(&buffers[1], 0, sizeof(buffers[1]));
   maxPressIndex = 0;
   if (modifiers != 0) {
-    buffers[0].data[0] = modifiers;
-    buffers[0].presenceFlags[0] = 1;
+    buffers[0].data[MODIFIER_OFFSET] = modifiers;
+    buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
   }
 }
 

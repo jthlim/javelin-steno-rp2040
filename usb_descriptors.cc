@@ -72,15 +72,12 @@ const uint8_t *tud_descriptor_device_cb(void) {
 // HID Report Descriptor
 //--------------------------------------------------------------------+
 
-#define KEYBOARD_BITMAP_BYTES 16
-
 // clang-format off
 const uint8_t desc_hid_keyboard_report[] = {
     // Keyboard
     HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
     HID_USAGE(HID_USAGE_DESKTOP_KEYBOARD),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
-    HID_REPORT_ID(REPORT_ID_KEYBOARD)
     // Bitmap of modifiers.
     HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
       HID_USAGE_MIN(224),
@@ -103,12 +100,21 @@ const uint8_t desc_hid_keyboard_report[] = {
       HID_OUTPUT(HID_CONSTANT),
     // Bitmap of keys.
       HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
-      HID_REPORT_COUNT(KEYBOARD_BITMAP_BYTES * 8),
-      HID_REPORT_SIZE(1),
+      HID_USAGE_MIN(0),
+      HID_USAGE_MAX(223),
       HID_LOGICAL_MIN(0),
       HID_LOGICAL_MAX(1),
-      HID_USAGE_MIN(0),
-      HID_USAGE_MAX(KEYBOARD_BITMAP_BYTES * 8 - 1),
+      HID_REPORT_COUNT(224),
+      HID_REPORT_SIZE(1),
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
+      HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
+      HID_USAGE_MIN(232),
+      HID_USAGE_MAX(255),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(1),
+      HID_REPORT_COUNT(24),
+      HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     HID_COLLECTION_END,
 };
@@ -118,7 +124,6 @@ const uint8_t desc_hid_console_report[] = {
     0x06, 0x31, 0xFF, // HID_USAGE_PAGE(0xff31)
     HID_USAGE(0x0074),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
-    HID_REPORT_ID(REPORT_ID_CONSOLE)
     // Send
       HID_USAGE(0x75),
       HID_LOGICAL_MIN(0),
