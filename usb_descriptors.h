@@ -4,20 +4,20 @@
 
 //---------------------------------------------------------------------------
 
-enum
-{
+enum {
   ITF_NUM_KEYBOARD,
+  ITF_NUM_CONSOLE,
   ITF_NUM_CDC,
   ITF_NUM_CDC_DATA,
-  ITF_NUM_TOTAL
+  ITF_NUM_TOTAL,
 };
 
 //---------------------------------------------------------------------------
 
-enum
-{
+enum {
   REPORT_ID_KEYBOARD = 1,
-  REPORT_ID_COUNT
+  REPORT_ID_CONSOLE = 2,
+  REPORT_ID_COUNT,
 };
 
 //---------------------------------------------------------------------------

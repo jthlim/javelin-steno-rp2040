@@ -22,6 +22,8 @@ target_sources(${PROJECT} PUBLIC
 
   flash.cc
   key_state.cc
+  console_buffer.cc
+  hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   pico_bindings.cc
 
@@ -42,7 +44,6 @@ target_sources(${PROJECT} PUBLIC
   javelin/engine_add_translation_mode.cc
   javelin/engine_normal_mode.cc
   javelin/engine.cc
-  javelin/english_orthography.cc
   javelin/flash.cc
   javelin/key_press_parser.cc
   javelin/list.cc

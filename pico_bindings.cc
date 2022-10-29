@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
-#include "hid_report_buffer.h"
+#include "console_buffer.h"
+#include "hid_keyboard_report_builder.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -37,7 +38,8 @@
 //---------------------------------------------------------------------------
 
 Console console;
-HidReportBuilder reportBuilder;
+ConsoleBuffer consoleSendBuffer;
+HidKeyboardReportBuilder reportBuilder;
 
 //---------------------------------------------------------------------------
 
@@ -164,7 +166,7 @@ void InitJavelinSteno() {
 
   // Set up processors.
   StenoEngine *engine = new StenoEngine(dictionaryListContainer.dictionaries,
-                                        StenoOrthography::englishOrthography,
+                                        *ORTHOGRAPHY_ADDRESS,
 #if USE_USER_DICTIONARY
                                         userDictionary
 #else
@@ -202,21 +204,21 @@ void InitJavelinSteno() {
 void ProcessStenoKeyState(StenoKeyState keyState) {
   processor->Process(keyState);
   reportBuilder.Flush();
-  tud_cdc_read_flush();
 }
 
 void ProcessStenoTick() { processor->Tick(); }
 
 //---------------------------------------------------------------------------
 
-void OnConsoleReceiveData(const char *data, uint8_t length) {
-  console.HandleInput(data, length);
+void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
+  console.HandleInput((char *)data, length);
+  consoleSendBuffer.Flush();
 }
 
 //---------------------------------------------------------------------------
 
 void Console::Write(const char *data, size_t length) {
-  //
+  consoleSendBuffer.SendData((const uint8_t *)data, length);
 }
 
 void Key::Press(uint8_t key) { reportBuilder.Press(key); }
@@ -235,3 +237,5 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
 }
 
 uint32_t Clock::GetCurrentTime() { return time_us_64() / 1000; }
+
+//---------------------------------------------------------------------------

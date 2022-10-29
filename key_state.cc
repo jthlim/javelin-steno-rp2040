@@ -20,17 +20,16 @@ void KeyState::Init() {
 StenoKeyState KeyState::Read() {
   uint64_t state = 0;
 
-  for(int r = 0; r < sizeof(ROW_PINS); ++r) {
+  for (int r = 0; r < sizeof(ROW_PINS); ++r) {
     gpio_put(ROW_PINS[r], false);
-    busy_wait_us_32(5);
+    busy_wait_us_32(10);
 
-
-    for(int c = 0; c < sizeof(COLUMN_PINS); ++c) {
+    for (int c = 0; c < sizeof(COLUMN_PINS); ++c) {
       if (gpio_get(COLUMN_PINS[c]) == 0) {
         StenoKey key = KEY_MAP[r][c];
-        if (key == StenoKey::NONE) continue;
-
-        state |= (1 << (int) key);
+        if (key != StenoKey::NONE) {
+          state |= (1 << (int)key);
+        }
       }
     }
 

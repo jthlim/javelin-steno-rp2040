@@ -7,18 +7,18 @@
 //---------------------------------------------------------------------------
 
 struct HidReportBufferEntry {
+  uint8_t instance;
   uint8_t reportId;
   uint8_t dataLength;
-  uint8_t data[20];
-
-  void Send() const;
+  uint8_t data[64];
 };
 
 struct HidReportBuffer {
 public:
   HidReportBuffer() {}
 
-  void SendReport(uint8_t reportId, const uint8_t *data, size_t length);
+  void SendReport(uint8_t instance, uint8_t reportId, const uint8_t *data,
+                  size_t length);
   void SendNextReport();
 
   void Print(const char *p);
@@ -34,27 +34,3 @@ private:
 };
 
 //---------------------------------------------------------------------------
-
-struct HidReportBuilder {
-public:
-  void Press(uint8_t key);
-  void Release(uint8_t key);
-
-  bool HasData() const;
-  void Flush();
-
-private:
-  struct Buffer {
-    uint8_t data[20];
-    uint8_t presenceFlags[20];
-  };
-
-  uint8_t modifiers = 0;
-  uint8_t maxPressIndex = 0;
-  Buffer buffers[2] = {};
-
-  void DoFlush();
-};
-
-//---------------------------------------------------------------------------
-
