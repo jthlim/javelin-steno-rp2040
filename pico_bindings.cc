@@ -26,6 +26,7 @@
 #include "javelin/serial_port.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
+#include "javelin/word_list.h"
 
 #include "uniV4/config.h"
 #include "usb_descriptors.h"
@@ -110,11 +111,20 @@ void StenoEngine_PrintDictionary_Binding(void *context,
   engine->PrintDictionary();
 }
 
+struct WordListData {
+  uint32_t length;
+  uint8_t data[1];
+};
+
 void InitJavelinSteno() {
   const StenoConfigBlock *config =
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
 
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
+
+  const WordListData *const wordListData =
+      (const WordListData *)STENO_WORD_LIST_ADDRESS;
+  WordList::SetData(wordListData->data, wordListData->length);
 
   memcpy(StenoKeyState::CHORD_BIT_INDEX_LOOKUP, config->keyMap,
          sizeof(config->keyMap));
@@ -206,16 +216,12 @@ void OnConsoleReceiveData(const char *data, uint8_t length) {
 //---------------------------------------------------------------------------
 
 void Console::Write(const char *data, size_t length) {
-  // 
+  //
 }
 
-void Key::Press(uint8_t key) {
-  reportBuilder.Press(key);
-}
+void Key::Press(uint8_t key) { reportBuilder.Press(key); }
 
-void Key::Release(uint8_t key) {
-  reportBuilder.Release(key);
-}
+void Key::Release(uint8_t key) { reportBuilder.Release(key); }
 
 bool isNumLockOn = false;
 
@@ -228,4 +234,4 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
   tud_cdc_write_flush();
 }
 
-uint32_t Clock::GetCurrentTime() { return time_us_64 () / 1000; }
+uint32_t Clock::GetCurrentTime() { return time_us_64() / 1000; }
