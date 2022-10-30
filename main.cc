@@ -40,7 +40,7 @@ int main(void) {
     cdc_task();
 
     ProcessStenoTick();
-    // sleep_ms(1);
+    sleep_ms(1);
   }
 
   return 0;
