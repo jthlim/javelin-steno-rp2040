@@ -23,8 +23,6 @@ public:
 
   void Print(const char *p);
 
-  static HidReportBuffer instance;
-
 private:
   static const size_t NUMBER_OF_ENTRIES = 16;
 

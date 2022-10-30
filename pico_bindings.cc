@@ -22,6 +22,8 @@
 #include "javelin/processor/first_up.h"
 #include "javelin/processor/gemini.h"
 #include "javelin/processor/jeff_modifiers.h"
+#include "javelin/processor/plover_hid.h"
+#include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
 #include "javelin/processor/switch.h"
 #include "javelin/serial_port.h"
@@ -82,6 +84,14 @@ struct StenoDictionaryListContainer {
 
 static StenoDictionaryListContainer dictionaryListContainer;
 static StenoGemini gemini;
+static StenoPloverHid ploverHid;
+
+static constexpr StenoProcessorElement *alternateProcessors[] = {
+    &gemini,
+    &ploverHid,
+};
+static StenoProcessorList alternateProcessor(alternateProcessors, 2);
+
 static StenoProcessor *processor;
 
 void StenoEngine_PrintInfo_Binding(void *context, const char *commandLine) {
@@ -189,7 +199,8 @@ void InitJavelinSteno() {
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
 
-  StenoProcessorElement *processorElement = new StenoSwitch(*engine, gemini);
+  StenoProcessorElement *processorElement =
+      new StenoSwitch(*engine, alternateProcessor);
 
   if (config->useJeffModifiers) {
     processorElement = new JeffModifiers(*processorElement);
@@ -244,5 +255,10 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
 }
 
 uint32_t Clock::GetCurrentTime() { return time_us_64() / 1000; }
+
+void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
+  HidKeyboardReportBuilder::reportBuffer.SendReport(
+      ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
+}
 
 //---------------------------------------------------------------------------

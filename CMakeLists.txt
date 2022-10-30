@@ -55,7 +55,9 @@ target_sources(${PROJECT} PUBLIC
   javelin/processor/first_up.cc
   javelin/processor/gemini.cc
   javelin/processor/jeff_modifiers.cc
+  javelin/processor/plover_hid.cc
   javelin/processor/processor.cc
+  javelin/processor/processor_list.cc
   javelin/processor/repeat.cc
   javelin/processor/switch.cc
   javelin/segment.cc

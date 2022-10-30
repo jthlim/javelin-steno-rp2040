@@ -140,6 +140,21 @@ const uint8_t desc_hid_console_report[] = {
       HID_OUTPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     HID_COLLECTION_END,
 };
+
+const uint8_t desc_hid_plover_hid_report[] = {
+     0x06, 0x50, 0xff,              // UsagePage (65360)
+     0x0a, 0x56, 0x4c,              // Usage (19542)
+     0xa1, 0x02,                    // Collection (Logical)
+     0x85, 0x50,                    //     ReportID (80)
+     0x25, 0x01,                    //     LogicalMaximum (1)
+     0x75, 0x01,                    //     ReportSize (1)
+     0x95, 0x40,                    //     ReportCount (64)
+     0x05, 0x0a,                    //     UsagePage (ordinal)
+     0x19, 0x00,                    //     UsageMinimum (Ordinal(0))
+     0x29, 0x3f,                    //     UsageMaximum (Ordinal(63))
+     0x81, 0x02,                    //     Input (Variable)
+     0xc0,                          // EndCollection
+};
 // clang-format on
 
 // Invoked when received GET HID REPORT DESCRIPTOR
@@ -153,6 +168,9 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
   case ITF_NUM_CONSOLE:
     return desc_hid_console_report;
 
+  case ITF_NUM_PLOVER_HID:
+    return desc_hid_plover_hid_report;
+
   default:
     __builtin_unreachable();
   }
@@ -163,7 +181,7 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
 //--------------------------------------------------------------------+
 
 #define CONFIG_TOTAL_LEN                                                       \
-  (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN +           \
+  (TUD_CONFIG_DESC_LEN + 2 * TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN +       \
    TUD_CDC_DESC_LEN)
 
 #if CFG_TUSB_MCU == OPT_MCU_LPC175X_6X ||                                      \
@@ -181,12 +199,14 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
 #else
 #define EPNUM_KEYBOARD 0x81
 
-#define EPNUM_CONSOLE_OUT 0x02
-#define EPNUM_CONSOLE_IN 0x82
+#define EPNUM_PLOVER_HID 0x82
 
-#define EPNUM_CDC_NOTIF 0x83
-#define EPNUM_CDC_OUT 0x04
-#define EPNUM_CDC_IN 0x84
+#define EPNUM_CONSOLE_OUT 0x03
+#define EPNUM_CONSOLE_IN 0x83
+
+#define EPNUM_CDC_NOTIF 0x84
+#define EPNUM_CDC_OUT 0x05
+#define EPNUM_CDC_IN 0x85
 #endif
 
 const uint8_t desc_configuration[] = {
@@ -207,6 +227,12 @@ const uint8_t desc_configuration[] = {
     TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_CONSOLE, 0, HID_ITF_PROTOCOL_NONE,
                              sizeof(desc_hid_console_report), EPNUM_CONSOLE_OUT,
                              EPNUM_CONSOLE_IN, CFG_TUD_CONSOLE_BUFSIZE, 1),
+
+    // Interface number, string index, protocol, report descriptor len, EP In
+    // address, size & polling interval
+    TUD_HID_DESCRIPTOR(ITF_NUM_PLOVER_HID, 0, HID_ITF_PROTOCOL_NONE,
+                       sizeof(desc_hid_plover_hid_report), EPNUM_PLOVER_HID,
+                       CFG_TUD_PLOVER_HID_EP_BUFSIZE, 1),
 
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT,
                        EPNUM_CDC_IN, 64),

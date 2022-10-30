@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "hid_report_buffer.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -13,6 +14,8 @@ public:
 
   bool HasData() const;
   void Flush();
+
+  static HidReportBuffer reportBuffer;
 
 private:
   struct Buffer {

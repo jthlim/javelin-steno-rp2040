@@ -9,6 +9,10 @@
 
 //---------------------------------------------------------------------------
 
+HidReportBuffer HidKeyboardReportBuilder::reportBuffer;
+
+//---------------------------------------------------------------------------
+
 const size_t MODIFIER_OFFSET = 0;
 
 void HidKeyboardReportBuilder::Press(uint8_t key) {
@@ -93,8 +97,7 @@ void HidKeyboardReportBuilder::Flush() {
 }
 
 void HidKeyboardReportBuilder::DoFlush() {
-  HidReportBuffer::instance.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data,
-                                       32);
+  reportBuffer.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data, 32);
 
   buffers[0] = buffers[1];
   memset(&buffers[1], 0, sizeof(buffers[1]));

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "console_buffer.h"
-#include "hid_report_buffer.h"
+#include "hid_keyboard_report_builder.h"
 #include "key_state.h"
 #include "usb_descriptors.h"
 
@@ -108,7 +108,8 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
                                 uint8_t len) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    HidReportBuffer::instance.SendNextReport();
+  case ITF_NUM_PLOVER_HID:
+    HidKeyboardReportBuilder::reportBuffer.SendNextReport();
     break;
   case ITF_NUM_CONSOLE:
     ConsoleBuffer::reportBuffer.SendNextReport();

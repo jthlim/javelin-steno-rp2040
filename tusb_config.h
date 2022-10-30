@@ -96,7 +96,7 @@ extern "C" {
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_HID 2 // 1 for keyboard, one for console
+#define CFG_TUD_HID 3 // 1 for keyboard, one for console
 #define CFG_TUD_CDC 1
 #define CFG_TUD_MSC 0
 #define CFG_TUD_MIDI 0
@@ -104,6 +104,8 @@ extern "C" {
 
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_EP_BUFSIZE 64
+
+#define CFG_TUD_PLOVER_HID_EP_BUFSIZE 8
 
 #define CFG_TUD_CDC_RX_BUFSIZE 64
 #define CFG_TUD_CDC_TX_BUFSIZE 64
