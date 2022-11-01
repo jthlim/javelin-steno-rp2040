@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 set(NAME javelin-steno-rp2040)
 
-include(pico_sdk_import.cmake)
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
 
 pico_sdk_init()
 
-add_definitions(-DJAVELIN_THREADS)
+add_definitions(-DJAVELIN_THREADS -DPICO_FLASH_SIZE_BYTES=0x1000000)
 
 add_executable(${NAME})
 
@@ -81,6 +81,7 @@ target_include_directories(${NAME} PUBLIC
 
 target_link_libraries(${NAME}
   hardware_clocks
+  hardware_flash
   hardware_gpio
   pico_multicore
   pico_stdlib
