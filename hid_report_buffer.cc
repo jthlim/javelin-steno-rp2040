@@ -10,10 +10,9 @@
 
 void HidReportBuffer::SendReport(uint8_t instance, uint8_t reportId,
                                  const uint8_t *data, size_t length) {
-  while (endIndex >= startIndex + NUMBER_OF_ENTRIES) {
-    // Wait!
+  do {
     tud_task();
-  }
+  } while (endIndex >= startIndex + NUMBER_OF_ENTRIES);
 
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
