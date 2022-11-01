@@ -34,7 +34,9 @@
 #include "uniV4/config.h"
 #include "usb_descriptors.h"
 
+#include "hardware/structs/clocks.h"
 #include "tusb.h"
+#include <hardware/clocks.h>
 #include <hardware/timer.h>
 
 //---------------------------------------------------------------------------
@@ -98,6 +100,13 @@ void StenoEngine_PrintInfo_Binding(void *context, const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
   const StenoConfigBlock *config =
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
+
+  uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
+  uint32_t usbClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_USB);
+
+  Console::Printf("Clocks\n");
+  Console::Printf("  System: %u MHz\n", systemClockKhz / 1000);
+  Console::Printf("  USB: %u MHz\n", usbClockKhz / 1000);
 
   engine->PrintInfo(config);
 }
@@ -221,10 +230,12 @@ void InitJavelinSteno() {
 
 void ProcessStenoKeyState(StenoKeyState keyState) {
   processor->Process(keyState);
-  reportBuilder.Flush();
 }
 
-void ProcessStenoTick() { processor->Tick(); }
+void ProcessStenoTick() {
+  processor->Tick();
+  reportBuilder.Flush();
+}
 
 //---------------------------------------------------------------------------
 

@@ -2,12 +2,14 @@
 
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
+#include "javelin/debounce.h"
 #include "key_state.h"
 #include "usb_descriptors.h"
 
 #include "tusb.h"
 
 #include <hardware/timer.h>
+#include <pico/stdlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,14 +24,18 @@ void InitJavelinSteno();
 void ProcessStenoKeyState(StenoKeyState keyState);
 void ProcessStenoTick();
 void SetIsNumLockOn(bool value);
+void InitMulticore();
 
 //---------------------------------------------------------------------------
 
 const uint64_t DEBOUNCE_TIME_US = 5000;
+bool processInput = false;
 
 //---------------------------------------------------------------------------
 
 int main(void) {
+  // set_sys_clock_khz(133000, false);
+  InitMulticore();
   KeyState::Init();
   InitJavelinSteno();
   tusb_init();
@@ -69,36 +75,28 @@ void tud_resume_cb(void) {}
 //---------------------------------------------------------------------------
 
 void hid_task(void) {
-  static StenoKeyState lastKeyState(0);
-  static uint64_t lastTriggerTime = 0;
+  static GlobalDeferredDebounce<StenoKeyState> debouncer(0);
 
-  StenoKeyState keyState = KeyState::Read();
-  if (keyState == lastKeyState) {
+  Debounced<StenoKeyState> keyState = debouncer.Update(KeyState::Read());
+  if (!keyState.isUpdated) {
     return;
   }
 
-  if (tud_suspended() && keyState.IsNotEmpty()) {
-    // Wake up host if we are in suspend mode
-    // and REMOTE_WAKEUP feature is enabled by host
-    tud_remote_wakeup();
-  } else {
-    // keyboard interface
-    if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
-      uint64_t now = time_us_64();
-      if (now - lastTriggerTime > DEBOUNCE_TIME_US) {
-        lastTriggerTime = now;
-        ProcessStenoKeyState(keyState);
-        lastKeyState = keyState;
-      }
+  if (tud_suspended()) {
+    if (keyState.value.IsNotEmpty()) {
+      // Wake up host if we are in suspend mode
+      // and REMOTE_WAKEUP feature is enabled by host
+      tud_remote_wakeup();
     }
+  } else if (processInput) {
+    ProcessStenoKeyState(keyState.value);
   }
 }
 
 // Invoked when received SET_PROTOCOL request
 // protocol is either HID_PROTOCOL_BOOT (0) or HID_PROTOCOL_REPORT (1)
 void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol) {
-  (void)instance;
-  (void)protocol;
+  processInput = protocol == HID_PROTOCOL_REPORT;
 }
 
 // Invoked when sent REPORT successfully to host

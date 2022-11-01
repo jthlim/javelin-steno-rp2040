@@ -1,32 +1,32 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
-set(FAMILY "rp2040")
-set(ENV{PICO_BOARD} pico_16mb)
+set(NAME javelin-steno-rp2040)
 
-include($ENV{PICO_SDK_PATH}/lib/tinyusb/hw/bsp/family_support.cmake)
+include(pico_sdk_import.cmake)
 
-# gets PROJECT name for the example (e.g. <BOARD>-<DIR_NAME>)
-family_get_project_name(PROJECT ${CMAKE_CURRENT_LIST_DIR})
+project(${NAME} C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-project(${PROJECT})
+set(CMAKE_C_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
 
-# Checks this example is valid for the family and initializes the project
-family_initialize_project(${PROJECT} ${CMAKE_CURRENT_LIST_DIR})
+pico_sdk_init()
 
-add_executable(${PROJECT})
+add_definitions(-DJAVELIN_THREADS)
 
-# Example source
-target_sources(${PROJECT} PUBLIC
+add_executable(${NAME})
+
+target_sources(${NAME} PUBLIC
   main.cc
   usb_descriptors.cc
-
   flash.cc
   key_state.cc
   console_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   pico_bindings.cc
-
+  pico_thread.cc
   javelin/chord.cc
   javelin/chord_history.cc
   javelin/console.cc
@@ -67,7 +67,7 @@ target_sources(${PROJECT} PUBLIC
   javelin/steno_key_code_buffer_functions.cc
   javelin/steno_key_code_emitter.cc
   javelin/steno_key_state.cc
-  javelin/string_util.cc
+  javelin/str.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc
@@ -75,8 +75,19 @@ target_sources(${PROJECT} PUBLIC
 )
 
 # Add the local directory so tinyusb can find tusb_config.h
-target_include_directories(${PROJECT} PUBLIC
+target_include_directories(${NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-family_configure_device_example(${PROJECT})
+target_link_libraries(${NAME}
+  hardware_clocks
+  hardware_gpio
+  pico_multicore
+  pico_stdlib
+  tinyusb_board
+  tinyusb_device
+)
+
+# create map/bin/hex file etc.
+pico_add_extra_outputs(${NAME})
+
