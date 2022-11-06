@@ -23,7 +23,10 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
     modifiers |= (1 << (key - 0xe0));
     if (maxPressIndex == 0) {
       buffers[0].data[MODIFIER_OFFSET] = modifiers;
-      buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
+      buffers[0].presenceFlags[MODIFIER_OFFSET] = 0xff;
+    } else {
+      buffers[1].data[MODIFIER_OFFSET] = modifiers;
+      buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
     }
     return;
   }
@@ -61,7 +64,10 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
     modifiers &= ~(1 << (key - 0xe0));
     if (maxPressIndex == 0) {
       buffers[0].data[MODIFIER_OFFSET] = modifiers;
-      buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
+      buffers[0].presenceFlags[MODIFIER_OFFSET] = 0xff;
+    } else {
+      buffers[1].data[MODIFIER_OFFSET] = modifiers;
+      buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
     }
     return;
   }
@@ -72,10 +78,13 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
   }
   int mask = (1 << (key & 7));
 
-  if (buffers[0].data[byte] & mask) {
+  if ((buffers[0].presenceFlags[byte] & mask) != 0 &&
+      (buffers[0].data[byte] & mask) != 0) {
     buffers[1].presenceFlags[byte] |= mask;
+    buffers[1].data[byte] &= ~mask;
   } else {
     buffers[0].presenceFlags[byte] |= mask;
+    buffers[0].data[byte] &= ~mask;
   }
 }
 
@@ -99,13 +108,15 @@ void HidKeyboardReportBuilder::Flush() {
 void HidKeyboardReportBuilder::DoFlush() {
   reportBuffer.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data, 32);
 
-  buffers[0] = buffers[1];
+  for (int i = 0; i < 32; ++i) {
+    buffers[0].data[i] = (buffers[1].presenceFlags[i] & buffers[1].data[i]) |
+                         (~buffers[1].presenceFlags[i] & buffers[0].data[i]);
+
+    buffers[0].presenceFlags[i] = buffers[1].presenceFlags[i];
+  }
+
   memset(&buffers[1], 0, sizeof(buffers[1]));
   maxPressIndex = 0;
-  if (modifiers != 0) {
-    buffers[0].data[MODIFIER_OFFSET] = modifiers;
-    buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
-  }
 }
 
 //---------------------------------------------------------------------------

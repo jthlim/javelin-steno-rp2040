@@ -2,6 +2,7 @@
 
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
+#include "hid_report_buffer.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -96,10 +97,23 @@ static StenoProcessorList alternateProcessor(alternateProcessors, 2);
 
 static StenoProcessor *processor;
 
-void StenoEngine_PrintInfo_Binding(void *context, const char *commandLine) {
+static void PrintInfo_Binding(void *context, const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
   const StenoConfigBlock *config =
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
+
+  uint32_t uptime = Clock::GetCurrentTime();
+  uint32_t microseconds = uptime % 1000;
+  uint32_t totalSeconds = uptime / 1000;
+  uint32_t seconds = totalSeconds % 60;
+  uint32_t totalMinutes = totalSeconds / 60;
+  uint32_t minutes = totalMinutes % 60;
+  uint32_t totalHours = totalMinutes / 60;
+  uint32_t hours = totalHours % 24;
+  uint32_t days = totalHours / 24;
+
+  Console::Printf("Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
+                  seconds, microseconds);
 
   uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   uint32_t usbClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_USB);
@@ -107,8 +121,10 @@ void StenoEngine_PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("Clocks\n");
   Console::Printf("  System: %u MHz\n", systemClockKhz / 1000);
   Console::Printf("  USB: %u MHz\n", usbClockKhz / 1000);
-
-  engine->PrintInfo(config);
+  Flash::PrintInfo();
+  HidReportBuffer::PrintInfo();
+  processor->PrintInfo();
+  Console::Write("\n", 1);
 }
 
 void SetUnicodeMode(void *context, const char *commandLine) {
@@ -123,6 +139,22 @@ void SetUnicodeMode(void *context, const char *commandLine) {
     Console::Write("OK\n\n", 4);
   } else {
     Console::Printf("ERR Unable to set mode: \"%s\"\n\n", mode);
+  }
+}
+
+void SetKeyboardLayout(void *context, const char *commandLine) {
+  const char *keyboardLayout = strchr(commandLine, ' ');
+  if (!keyboardLayout) {
+    Console::Printf("ERR No keyboard layout specified\n\n");
+    return;
+  }
+  ++keyboardLayout;
+
+  if (Key::SetKeyboardLayout(keyboardLayout)) {
+    Console::Write("OK\n\n", 4);
+  } else {
+    Console::Printf("ERR Unable to set keyboard layout: \"%s\"\n\n",
+                    keyboardLayout);
   }
 }
 
@@ -146,6 +178,7 @@ void InitJavelinSteno() {
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
 
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
+  Key::SetKeyboardLayout(config->keyboardLayout);
 
   const WordListData *const wordListData =
       (const WordListData *)STENO_WORD_LIST_ADDRESS;
@@ -156,17 +189,11 @@ void InitJavelinSteno() {
 
   // Setup dictionary list.
   const StenoDictionary **p = DICTIONARIES;
-#if USE_USER_DICTIONARY
 
+#if USE_USER_DICTIONARY
   StenoUserDictionary *userDictionary =
       new StenoUserDictionary(userDictionaryLayout);
   *p++ = userDictionary;
-
-  console.RegisterCommand(
-      "print_user_dictionary", "Prints the user dictionary in JSON format",
-      StenoUserDictionary_PrintJsonDictionary_Binding, userDictionary);
-  console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
-                          StenoUserDictionary_Reset_Binding, userDictionary);
 #endif
 
   if (config->useJeffShowStroke) {
@@ -197,10 +224,13 @@ void InitJavelinSteno() {
 #endif
   );
 
-  console.RegisterCommand("info", "System information",
-                          StenoEngine_PrintInfo_Binding, engine);
+  console.RegisterCommand("info", "System information", PrintInfo_Binding,
+                          nullptr);
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
+  console.RegisterCommand("set_keyboard_layout",
+                          "Sets the current keyboard layout", SetKeyboardLayout,
+                          nullptr);
   console.RegisterCommand("print_dictionary",
                           "Prints all dictionaries in JSON format",
                           StenoEngine_PrintDictionary_Binding, engine);
@@ -208,6 +238,13 @@ void InitJavelinSteno() {
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
 
+#if USE_USER_DICTIONARY
+  console.RegisterCommand(
+      "print_user_dictionary", "Prints the user dictionary in JSON format",
+      StenoUserDictionary_PrintJsonDictionary_Binding, userDictionary);
+  console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
+                          StenoUserDictionary_Reset_Binding, userDictionary);
+#endif
   StenoProcessorElement *processorElement =
       new StenoSwitch(*engine, alternateProcessor);
 
@@ -250,15 +287,9 @@ void Console::Write(const char *data, size_t length) {
   consoleSendBuffer.SendData((const uint8_t *)data, length);
 }
 
-void Key::Press(uint8_t key) { reportBuilder.Press(key); }
+void Key::PressRaw(uint8_t key) { reportBuilder.Press(key); }
 
-void Key::Release(uint8_t key) { reportBuilder.Release(key); }
-
-bool isNumLockOn = false;
-
-void SetIsNumLockOn(bool value) { isNumLockOn = value; }
-
-bool Key::IsNumLockOn() { return isNumLockOn; }
+void Key::ReleaseRaw(uint8_t key) { reportBuilder.Release(key); }
 
 void SerialPort::SendData(const uint8_t *data, size_t length) {
   tud_cdc_write(data, length);

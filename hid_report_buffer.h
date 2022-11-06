@@ -22,6 +22,9 @@ public:
   void SendNextReport();
 
   void Print(const char *p);
+  static void PrintInfo();
+
+  static uint32_t reportsSentCount[];
 
 private:
   static const size_t NUMBER_OF_ENTRIES = 16;

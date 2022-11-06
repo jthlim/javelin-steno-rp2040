@@ -45,6 +45,7 @@ target_sources(${NAME} PUBLIC
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc
+  javelin/key_code.cc
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
@@ -85,7 +86,6 @@ target_link_libraries(${NAME}
   hardware_gpio
   pico_multicore
   pico_stdlib
-  tinyusb_board
   tinyusb_device
 )
 

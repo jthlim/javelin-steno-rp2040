@@ -3,6 +3,7 @@
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
+#include "javelin/key_code.h"
 #include "key_state.h"
 #include "usb_descriptors.h"
 
@@ -10,7 +11,6 @@
 
 #include <hardware/timer.h>
 #include <pico/stdlib.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,13 +23,12 @@ void OnConsoleReceiveData(const uint8_t *data, uint8_t length);
 void InitJavelinSteno();
 void ProcessStenoKeyState(StenoKeyState keyState);
 void ProcessStenoTick();
-void SetIsNumLockOn(bool value);
 void InitMulticore();
 
 //---------------------------------------------------------------------------
 
 const uint64_t DEBOUNCE_TIME_US = 5000;
-bool processInput = false;
+bool isReady = false;
 
 //---------------------------------------------------------------------------
 
@@ -88,16 +87,17 @@ void hid_task(void) {
       // and REMOTE_WAKEUP feature is enabled by host
       tud_remote_wakeup();
     }
-  } else if (processInput) {
+  } else if (isReady) {
+    ProcessStenoKeyState(keyState.value);
+  } else if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
+    isReady = true;
     ProcessStenoKeyState(keyState.value);
   }
 }
 
 // Invoked when received SET_PROTOCOL request
 // protocol is either HID_PROTOCOL_BOOT (0) or HID_PROTOCOL_REPORT (1)
-void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol) {
-  processInput = protocol == HID_PROTOCOL_REPORT;
-}
+void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol) {}
 
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
@@ -134,7 +134,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
     if (report_type != HID_REPORT_TYPE_OUTPUT || bufsize < 1) {
       return;
     }
-    SetIsNumLockOn((buffer[0] & KEYBOARD_LED_NUMLOCK) != 0);
+    Key::SetIsNumLockOn((buffer[0] & KEYBOARD_LED_NUMLOCK) != 0);
     break;
 
   case ITF_NUM_CONSOLE:

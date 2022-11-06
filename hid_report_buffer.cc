@@ -1,10 +1,15 @@
 //---------------------------------------------------------------------------
 
 #include "hid_report_buffer.h"
+#include "javelin/console.h"
 #include "usb_descriptors.h"
 
 #include "tusb.h"
 #include <string.h>
+
+//---------------------------------------------------------------------------
+
+uint32_t HidReportBuffer::reportsSentCount[ITF_NUM_TOTAL] = {};
 
 //---------------------------------------------------------------------------
 
@@ -17,6 +22,7 @@ void HidReportBuffer::SendReport(uint8_t instance, uint8_t reportId,
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
     ++endIndex;
+    reportsSentCount[instance]++;
     tud_hid_n_report(instance, reportId, data, length);
     return;
   }
@@ -49,8 +55,18 @@ void HidReportBuffer::SendNextReport() {
 
   HidReportBufferEntry *entry = &entries[startIndex & (NUMBER_OF_ENTRIES - 1)];
 
+  reportsSentCount[entry->instance]++;
   tud_hid_n_report(entry->instance, entry->reportId, entry->data,
                    entry->dataLength);
+}
+
+//---------------------------------------------------------------------------
+
+void HidReportBuffer::PrintInfo() {
+  Console::Printf("HID reports sent\n");
+  Console::Printf("  Keyboard: %u\n", reportsSentCount[ITF_NUM_KEYBOARD]);
+  Console::Printf("  Plover HID: %u\n", reportsSentCount[ITF_NUM_PLOVER_HID]);
+  Console::Printf("  Console: %u\n", reportsSentCount[ITF_NUM_CONSOLE]);
 }
 
 //---------------------------------------------------------------------------
