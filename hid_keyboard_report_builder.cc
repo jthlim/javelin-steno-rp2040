@@ -4,12 +4,13 @@
 #include "hid_report_buffer.h"
 #include "usb_descriptors.h"
 
-#include "tusb.h"
 #include <string.h>
+#include <tusb.h>
 
 //---------------------------------------------------------------------------
 
 HidReportBuffer HidKeyboardReportBuilder::reportBuffer;
+bool HidKeyboardReportBuilder::compatibilityMode = false;
 
 //---------------------------------------------------------------------------
 
@@ -28,6 +29,9 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
       buffers[1].data[MODIFIER_OFFSET] = modifiers;
       buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
     }
+    if (compatibilityMode) {
+      Flush();
+    }
     return;
   }
 
@@ -40,11 +44,11 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
   if (key <= maxPressIndex ||
       (maxPressIndex != 0 && buffers[0].data[MODIFIER_OFFSET] != modifiers) ||
       (buffers[0].presenceFlags[byte] & mask)) {
-    DoFlush();
+    Flush();
   }
 
   if (buffers[0].presenceFlags[byte] & mask) {
-    DoFlush();
+    Flush();
   }
 
   buffers[0].data[MODIFIER_OFFSET] = modifiers;
@@ -53,6 +57,10 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
   buffers[0].presenceFlags[byte] |= mask;
   if (key > maxPressIndex) {
     maxPressIndex = key;
+  }
+
+  if (compatibilityMode) {
+    Flush();
   }
 }
 
@@ -68,6 +76,9 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
     } else {
       buffers[1].data[MODIFIER_OFFSET] = modifiers;
       buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
+    }
+    if (compatibilityMode) {
+      Flush();
     }
     return;
   }
@@ -86,6 +97,9 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
     buffers[0].presenceFlags[byte] |= mask;
     buffers[0].data[byte] &= ~mask;
   }
+  if (compatibilityMode) {
+    Flush();
+  }
 }
 
 bool HidKeyboardReportBuilder::HasData() const {
@@ -96,16 +110,16 @@ bool HidKeyboardReportBuilder::HasData() const {
   return false;
 }
 
-void HidKeyboardReportBuilder::Flush() {
+void HidKeyboardReportBuilder::FlushIfRequired() {
   if (HasData()) {
-    DoFlush();
+    Flush();
     if (HasData()) {
-      DoFlush();
+      Flush();
     }
   }
 }
 
-void HidKeyboardReportBuilder::DoFlush() {
+void HidKeyboardReportBuilder::Flush() {
   reportBuffer.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data, 32);
 
   for (int i = 0; i < 32; ++i) {

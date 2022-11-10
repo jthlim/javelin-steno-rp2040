@@ -4,8 +4,8 @@
 #include "javelin/console.h"
 #include "usb_descriptors.h"
 
-#include "tusb.h"
 #include <string.h>
+#include <tusb.h>
 
 //---------------------------------------------------------------------------
 

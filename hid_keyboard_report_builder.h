@@ -13,11 +13,15 @@ public:
   void Release(uint8_t key);
 
   bool HasData() const;
+  void FlushIfRequired();
   void Flush();
 
+  static void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
   static HidReportBuffer reportBuffer;
 
 private:
+  static bool compatibilityMode;
+
   struct Buffer {
     uint8_t data[32];
     uint8_t presenceFlags[32];
@@ -26,8 +30,6 @@ private:
   uint8_t modifiers = 0;
   uint8_t maxPressIndex = 0;
   Buffer buffers[2] = {};
-
-  void DoFlush();
 };
 
 //---------------------------------------------------------------------------

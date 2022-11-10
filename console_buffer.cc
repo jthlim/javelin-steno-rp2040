@@ -4,8 +4,8 @@
 #include "hid_report_buffer.h"
 #include "usb_descriptors.h"
 
-#include "tusb.h"
 #include <string.h>
+#include <tusb.h>
 
 //---------------------------------------------------------------------------
 

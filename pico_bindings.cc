@@ -35,10 +35,10 @@
 #include "uniV4/config.h"
 #include "usb_descriptors.h"
 
-#include "hardware/structs/clocks.h"
-#include "tusb.h"
 #include <hardware/clocks.h>
 #include <hardware/timer.h>
+#include <pico/platform.h>
+#include <tusb.h>
 
 //---------------------------------------------------------------------------
 
@@ -97,6 +97,8 @@ static StenoProcessorList alternateProcessor(alternateProcessors, 2);
 
 static StenoProcessor *processor;
 
+extern int resumeCount;
+
 static void PrintInfo_Binding(void *context, const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
   const StenoConfigBlock *config =
@@ -114,6 +116,9 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Console::Printf("Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
+  Console::Printf("Resume count: %d\n", resumeCount);
+  Console::Printf("Chip version: %u\n", rp2040_chip_version());
+  Console::Printf("ROM version: %u\n", rp2040_rom_version());
 
   uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   uint32_t usbClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_USB);
@@ -125,6 +130,15 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidReportBuffer::PrintInfo();
   processor->PrintInfo();
   Console::Write("\n", 1);
+}
+
+static void LaunchBootrom(void *const, const char *commandLine) {
+  const uint16_t *const functionTableAddress = (const uint16_t *)0x14;
+  size_t (*LookupMethod)(uint32_t table, uint32_t key) =
+      (size_t(*)(uint32_t, uint32_t))(size_t)functionTableAddress[2];
+  void (*UsbBoot)(int, int) = (void (*)(int, int))LookupMethod(
+      functionTableAddress[0], 'U' + 'B' * 256);
+  (*UsbBoot)(0, 0);
 }
 
 void SetUnicodeMode(void *context, const char *commandLine) {
@@ -177,6 +191,7 @@ void InitJavelinSteno() {
   const StenoConfigBlock *config =
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
 
+  HidKeyboardReportBuilder::SetCompatibilityMode(config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   Key::SetKeyboardLayout(config->keyboardLayout);
 
@@ -226,6 +241,8 @@ void InitJavelinSteno() {
 
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
+  console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
+                          LaunchBootrom, nullptr);
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
   console.RegisterCommand("set_keyboard_layout",
@@ -271,7 +288,7 @@ void ProcessStenoKeyState(StenoKeyState keyState) {
 
 void ProcessStenoTick() {
   processor->Tick();
-  reportBuilder.Flush();
+  reportBuilder.FlushIfRequired();
 }
 
 //---------------------------------------------------------------------------

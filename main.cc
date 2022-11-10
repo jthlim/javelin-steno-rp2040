@@ -7,17 +7,14 @@
 #include "key_state.h"
 #include "usb_descriptors.h"
 
-#include "tusb.h"
-
 #include <hardware/timer.h>
+#include <hardware/watchdog.h>
 #include <pico/stdlib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tusb.h>
 
 //---------------------------------------------------------------------------
-
-static void hid_task(void);
-static void cdc_task(void);
 
 void OnConsoleReceiveData(const uint8_t *data, uint8_t length);
 void InitJavelinSteno();
@@ -28,28 +25,7 @@ void InitMulticore();
 //---------------------------------------------------------------------------
 
 const uint64_t DEBOUNCE_TIME_US = 5000;
-bool isReady = false;
-
-//---------------------------------------------------------------------------
-
-int main(void) {
-  // set_sys_clock_khz(133000, false);
-  InitMulticore();
-  KeyState::Init();
-  InitJavelinSteno();
-  tusb_init();
-
-  while (1) {
-    tud_task(); // tinyusb device task
-    hid_task();
-    cdc_task();
-
-    ProcessStenoTick();
-    sleep_ms(1);
-  }
-
-  return 0;
-}
+int resumeCount = 0;
 
 //---------------------------------------------------------------------------
 // Device callbacks
@@ -64,16 +40,20 @@ void tud_umount_cb(void) {}
 // Invoked when usb bus is suspended
 // remote_wakeup_en : if host allow us  to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en) { (void)remote_wakeup_en; }
+void tud_suspend_cb(bool remote_wakeup_en) { set_sys_clock_khz(2000, false); }
 
 // Invoked when usb bus is resumed
-void tud_resume_cb(void) {}
+void tud_resume_cb(void) {
+  ++resumeCount;
+  set_sys_clock_khz(133000, false);
+}
 
 //---------------------------------------------------------------------------
 // USB HID
 //---------------------------------------------------------------------------
 
-void hid_task(void) {
+static void hid_task() {
+  static bool isReady = false;
   static GlobalDeferredDebounce<StenoKeyState> debouncer(0);
 
   Debounced<StenoKeyState> keyState = debouncer.Update(KeyState::Read());
@@ -145,7 +125,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
 
 //---------------------------------------------------------------------------
 
-void cdc_task(void) {
+static void cdc_task() {
   uint8_t itf;
 
   for (itf = 0; itf < CFG_TUD_CDC; itf++) {
@@ -160,6 +140,30 @@ void cdc_task(void) {
       }
     }
   }
+}
+
+//---------------------------------------------------------------------------
+
+int main(void) {
+  set_sys_clock_khz(133000, false);
+#if JAVELIN_THREADS
+  InitMulticore();
+#endif
+  KeyState::Init();
+  InitJavelinSteno();
+
+  tusb_init();
+
+  while (1) {
+    tud_task(); // tinyusb device task
+    hid_task();
+    cdc_task();
+
+    ProcessStenoTick();
+    sleep_us(100);
+  }
+
+  return 0;
 }
 
 //---------------------------------------------------------------------------
