@@ -37,6 +37,7 @@ target_sources(${NAME} PUBLIC
   javelin/chord_history.cc
   javelin/console.cc
   javelin/crc32.cc
+  javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/dictionary.cc
   javelin/dictionary/dictionary_list.cc
   javelin/dictionary/emily_symbols_dictionary.cc

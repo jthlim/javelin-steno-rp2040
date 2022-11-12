@@ -6,6 +6,7 @@
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
+#include "javelin/dictionary/corrupted_dictionary.h"
 #include "javelin/dictionary/dictionary.h"
 #include "javelin/dictionary/dictionary_list.h"
 #include "javelin/dictionary/emily_symbols_dictionary.h"
@@ -67,15 +68,6 @@ void StenoUserDictionary_Reset_Binding(void *context, const char *commandLine) {
 #endif
 
 void *operator new(size_t, void *p) { return p; }
-
-#define MAX_STENO_DICTIONARIES 6
-const StenoDictionary *DICTIONARIES[MAX_STENO_DICTIONARIES];
-// UserDictionary.
-// &StenoJeffShowStrokeDictionary::instance,
-// &StenoJeffPhrasingDictionary::instance,
-// &StenoJeffNumbersDictionary::instance,
-// &StenoEmilySymbolsDictionary::instance,
-// &mainDictionary,
 
 struct StenoDictionaryListContainer {
   StenoDictionaryListContainer() {}
@@ -172,6 +164,61 @@ void SetKeyboardLayout(void *context, const char *commandLine) {
   }
 }
 
+void StenoEngine_ListDictionaries_Binding(void *context,
+                                          const char *commandLine) {
+  StenoEngine *engine = (StenoEngine *)context;
+  engine->ListDictionaries();
+}
+void StenoEngine_EnableDictionary_Binding(void *context,
+                                          const char *commandLine) {
+  const char *dictionary = strchr(commandLine, ' ');
+  if (!dictionary) {
+    Console::Printf("ERR No dictionary specified\n\n");
+    return;
+  }
+  ++dictionary;
+
+  StenoEngine *engine = (StenoEngine *)context;
+  if (engine->EnableDictionary(dictionary)) {
+    Console::Write("OK\n\n", 4);
+  } else {
+    Console::Printf("ERR Unable to enable dictionary: \"%s\"\n\n", dictionary);
+  }
+}
+void StenoEngine_DisableDictionary_Binding(void *context,
+                                           const char *commandLine) {
+  const char *dictionary = strchr(commandLine, ' ');
+  if (!dictionary) {
+    Console::Printf("ERR No dictionary specified\n\n");
+    return;
+  }
+  ++dictionary;
+
+  StenoEngine *engine = (StenoEngine *)context;
+  if (engine->DisableDictionary(dictionary)) {
+    Console::Write("OK\n\n", 4);
+  } else {
+    Console::Printf("ERR Unable to disable dictionary: \"%s\"\n\n", dictionary);
+  }
+}
+
+void StenoEngine_ToggleDictionary_Binding(void *context,
+                                          const char *commandLine) {
+  const char *dictionary = strchr(commandLine, ' ');
+  if (!dictionary) {
+    Console::Printf("ERR No dictionary specified\n\n");
+    return;
+  }
+  ++dictionary;
+
+  StenoEngine *engine = (StenoEngine *)context;
+  if (engine->ToggleDictionary(dictionary)) {
+    Console::Write("OK\n\n", 4);
+  } else {
+    Console::Printf("ERR Unable to toggle dictionary: \"%s\"\n\n", dictionary);
+  }
+}
+
 void StenoEngine_PrintDictionary_Binding(void *context,
                                          const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
@@ -203,31 +250,43 @@ void InitJavelinSteno() {
          sizeof(config->keyMap));
 
   // Setup dictionary list.
-  const StenoDictionary **p = DICTIONARIES;
+  List<StenoDictionaryListEntry> *dictionaries =
+      new List<StenoDictionaryListEntry>();
 
 #if USE_USER_DICTIONARY
   StenoUserDictionary *userDictionary =
       new StenoUserDictionary(userDictionaryLayout);
-  *p++ = userDictionary;
+  dictionaries->Add(StenoDictionaryListEntry(userDictionary, true));
 #endif
 
-  if (config->useJeffShowStroke) {
-    *p++ = &StenoJeffShowStrokeDictionary::instance;
-  }
-  if (config->useJeffPhrasing) {
-    *p++ = &StenoJeffPhrasingDictionary::instance;
-  }
-  if (config->useJeffNumbers) {
-    *p++ = &StenoJeffNumbersDictionary::instance;
-  }
-  if (config->useEmilySymbols) {
-    *p++ = &StenoEmilySymbolsDictionary::instance;
-  }
-  *p++ = new StenoMapDictionary(
-      *(const StenoMapDictionaryDefinition *)STENO_MAIN_DICTIONARY_ADDRESS);
+  dictionaries->Add(StenoDictionaryListEntry(
+      &StenoJeffShowStrokeDictionary::instance, config->useJeffShowStroke));
 
-  new (dictionaryListContainer.buffer)
-      StenoDictionaryList(DICTIONARIES, p - DICTIONARIES);
+  dictionaries->Add(StenoDictionaryListEntry(
+      &StenoJeffPhrasingDictionary::instance, config->useJeffPhrasing));
+
+  dictionaries->Add(StenoDictionaryListEntry(
+      &StenoJeffNumbersDictionary::instance, config->useJeffNumbers));
+
+  dictionaries->Add(StenoDictionaryListEntry(
+      &StenoEmilySymbolsDictionary::instance, config->useEmilySymbols));
+
+  if (STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->magic !=
+      STENO_MAP_DICTIONARY_COLLECTION_MAGIC) {
+    dictionaries->Add(
+        StenoDictionaryListEntry(&StenoCorruptedDictionary::instance, true));
+  } else {
+    for (size_t i = 0;
+         i < STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->dictionaryCount; ++i) {
+      const StenoMapDictionaryDefinition *definition =
+          STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->dictionaries[i];
+
+      dictionaries->Add(StenoDictionaryListEntry(
+          new StenoMapDictionary(*definition), definition->defaultEnabled));
+    }
+  }
+
+  new (dictionaryListContainer.buffer) StenoDictionaryList(*dictionaries);
 
   // Set up processors.
   StenoEngine *engine = new StenoEngine(dictionaryListContainer.dictionaries,
@@ -248,6 +307,14 @@ void InitJavelinSteno() {
   console.RegisterCommand("set_keyboard_layout",
                           "Sets the current keyboard layout", SetKeyboardLayout,
                           nullptr);
+  console.RegisterCommand("list_dictionaries", "Lists dictionaries",
+                          StenoEngine_ListDictionaries_Binding, engine);
+  console.RegisterCommand("enable_dictionary", "Enables a dictionary",
+                          StenoEngine_EnableDictionary_Binding, engine);
+  console.RegisterCommand("disable_dictionary", "Disable a dictionary",
+                          StenoEngine_DisableDictionary_Binding, engine);
+  console.RegisterCommand("toggle_dictionary", "Toggle a dictionary",
+                          StenoEngine_ToggleDictionary_Binding, engine);
   console.RegisterCommand("print_dictionary",
                           "Prints all dictionaries in JSON format",
                           StenoEngine_PrintDictionary_Binding, engine);
@@ -289,6 +356,7 @@ void ProcessStenoKeyState(StenoKeyState keyState) {
 void ProcessStenoTick() {
   processor->Tick();
   reportBuilder.FlushIfRequired();
+  consoleSendBuffer.Flush();
 }
 
 //---------------------------------------------------------------------------
