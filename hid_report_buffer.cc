@@ -65,7 +65,9 @@ void HidReportBuffer::SendNextReport() {
 void HidReportBuffer::PrintInfo() {
   Console::Printf("HID reports sent\n");
   Console::Printf("  Keyboard: %u\n", reportsSentCount[ITF_NUM_KEYBOARD]);
+#if USE_PLOVER_HID
   Console::Printf("  Plover HID: %u\n", reportsSentCount[ITF_NUM_PLOVER_HID]);
+#endif
   Console::Printf("  Console: %u\n", reportsSentCount[ITF_NUM_CONSOLE]);
 }
 

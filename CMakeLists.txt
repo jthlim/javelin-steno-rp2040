@@ -47,8 +47,11 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/jeff_show_stroke_dictionary.cc
   javelin/dictionary/main_dictionary.cc
   javelin/dictionary/map_dictionary.cc
+  javelin/dictionary/reverse_auto_suffix_dictionary.cc
+  javelin/dictionary/reverse_map_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/engine_add_translation_mode.cc
+  javelin/engine_binding.cc
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc

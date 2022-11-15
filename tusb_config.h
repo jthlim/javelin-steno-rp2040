@@ -23,6 +23,8 @@
  *
  */
 
+#define USE_PLOVER_HID 0
+
 #ifndef _TUSB_CONFIG_H_
 #define _TUSB_CONFIG_H_
 
@@ -98,7 +100,7 @@ extern "C" {
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_HID 3 // 1 for keyboard, one for console
+#define CFG_TUD_HID 2 + USE_PLOVER_HID // 1 for keyboard, one for console
 #define CFG_TUD_CDC 1
 #define CFG_TUD_MSC 0
 #define CFG_TUD_MIDI 0
