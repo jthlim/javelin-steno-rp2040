@@ -9,7 +9,9 @@
 
 //---------------------------------------------------------------------------
 
-HidReportBuffer ConsoleBuffer::reportBuffer;
+HidReportBuffer<64> ConsoleBuffer::reportBuffer;
+
+//---------------------------------------------------------------------------
 
 void ConsoleBuffer::SendData(const uint8_t *data, size_t length) {
   // Fill up the previous buffer if it's not empty.

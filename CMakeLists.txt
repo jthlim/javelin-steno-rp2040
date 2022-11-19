@@ -8,6 +8,7 @@ add_definitions(
   -DNDEBUG=1
   -DPICO_NO_FPGA_CHECK=1
   -DPICO_FLASH_SPI_CLKDIV=4
+  -DUSE_PLOVER_HID=0
 )
 
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
@@ -17,7 +18,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_C_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
-set(CMAKE_CXX_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer -fno-exceptions")
 
 pico_sdk_init()
 
@@ -33,6 +34,8 @@ target_sources(${NAME} PUBLIC
   hid_report_buffer.cc
   pico_bindings.cc
   pico_thread.cc
+  plover_hid_report_buffer.cc
+
   javelin/chord.cc
   javelin/chord_history.cc
   javelin/console.cc

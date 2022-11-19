@@ -9,7 +9,7 @@
 
 //---------------------------------------------------------------------------
 
-HidReportBuffer HidKeyboardReportBuilder::reportBuffer;
+HidReportBuffer<32> HidKeyboardReportBuilder::reportBuffer;
 bool HidKeyboardReportBuilder::compatibilityMode = false;
 
 //---------------------------------------------------------------------------

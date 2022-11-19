@@ -14,7 +14,7 @@ public:
   void SendData(const uint8_t *data, size_t length);
   void Flush();
 
-  static HidReportBuffer reportBuffer;
+  static HidReportBuffer<64> reportBuffer;
 
 private:
   static const size_t MAX_BUFFER_SIZE = 64;

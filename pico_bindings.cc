@@ -31,9 +31,11 @@
 #include "javelin/processor/repeat.h"
 #include "javelin/processor/switch.h"
 #include "javelin/serial_port.h"
+#include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
+#include "plover_hid_report_buffer.h"
 
 #include "uniV4/config.h"
 #include "usb_descriptors.h"
@@ -55,19 +57,9 @@ HidKeyboardReportBuilder reportBuilder;
 StenoUserDictionaryData
     userDictionaryLayout((const uint8_t *)STENO_USER_DICTIONARY_ADDRESS,
                          STENO_USER_DICTIONARY_SIZE);
+static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
 #endif
 
-void *operator new(size_t, void *p) { return p; }
-
-struct StenoDictionaryListContainer {
-  StenoDictionaryListContainer() {}
-  union {
-    char buffer[sizeof(StenoDictionaryList)];
-    StenoDictionaryList dictionaries;
-  };
-};
-
-static StenoDictionaryListContainer dictionaryListContainer;
 static StenoGemini gemini;
 static StenoPloverHid ploverHid;
 
@@ -79,7 +71,23 @@ static constexpr StenoProcessorElement *alternateProcessors[] = {
 static StenoProcessorList alternateProcessor(alternateProcessors, 2);
 #endif
 
-static StenoProcessor *processor;
+static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
+static JavelinStaticAllocate<StenoEngine> engineContainer;
+static JavelinStaticAllocate<StenoSwitch> switchContainer;
+static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
+static JavelinStaticAllocate<StenoAllUp> allUpContainer;
+static JavelinStaticAllocate<StenoRepeat> repeatContainer;
+static JavelinStaticAllocate<StenoJeffModifiers> jeffModifiersContainer;
+static JavelinStaticAllocate<StenoProcessor> processorContainer;
+
+static JavelinStaticAllocate<StenoCompiledOrthography>
+    compiledOrthographyContainer;
+static JavelinStaticAllocate<StenoReverseMapDictionary>
+    reverseMapDictionaryContainer;
+static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
+    reverseAutoSuffixDictionaryContainer;
+
+static List<StenoDictionaryListEntry> dictionaries;
 
 extern int resumeCount;
 
@@ -111,8 +119,8 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("  System: %u MHz\n", systemClockKhz / 1000);
   Console::Printf("  USB: %u MHz\n", usbClockKhz / 1000);
   Flash::PrintInfo();
-  HidReportBuffer::PrintInfo();
-  processor->PrintInfo();
+  HidReportBufferBase::PrintInfo();
+  processorContainer->PrintInfo();
   Console::Write("\n", 1);
 }
 
@@ -166,8 +174,7 @@ struct WordListData {
 };
 
 void InitJavelinSteno() {
-  const StenoConfigBlock *config =
-      (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
+  const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
 
   HidKeyboardReportBuilder::SetCompatibilityMode(config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
@@ -181,30 +188,27 @@ void InitJavelinSteno() {
          sizeof(config->keyMap));
 
   // Setup dictionary list.
-  List<StenoDictionaryListEntry> *dictionaries =
-      new List<StenoDictionaryListEntry>();
-
 #if USE_USER_DICTIONARY
   StenoUserDictionary *userDictionary =
-      new StenoUserDictionary(userDictionaryLayout);
-  dictionaries->Add(StenoDictionaryListEntry(userDictionary, true));
+      new (userDictionaryContainer) StenoUserDictionary(userDictionaryLayout);
+  dictionaries.Add(StenoDictionaryListEntry(userDictionary, true));
 #endif
 
-  dictionaries->Add(StenoDictionaryListEntry(
+  dictionaries.Add(StenoDictionaryListEntry(
       &StenoJeffShowStrokeDictionary::instance, config->useJeffShowStroke));
 
-  dictionaries->Add(StenoDictionaryListEntry(
+  dictionaries.Add(StenoDictionaryListEntry(
       &StenoJeffPhrasingDictionary::instance, config->useJeffPhrasing));
 
-  dictionaries->Add(StenoDictionaryListEntry(
+  dictionaries.Add(StenoDictionaryListEntry(
       &StenoJeffNumbersDictionary::instance, config->useJeffNumbers));
 
-  dictionaries->Add(StenoDictionaryListEntry(
+  dictionaries.Add(StenoDictionaryListEntry(
       &StenoEmilySymbolsDictionary::instance, config->useEmilySymbols));
 
   if (STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->magic !=
       STENO_MAP_DICTIONARY_COLLECTION_MAGIC) {
-    dictionaries->Add(
+    dictionaries.Add(
         StenoDictionaryListEntry(&StenoCorruptedDictionary::instance, true));
   } else {
     for (size_t i = 0;
@@ -212,41 +216,40 @@ void InitJavelinSteno() {
       const StenoMapDictionaryDefinition *definition =
           STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->dictionaries[i];
 
-      dictionaries->Add(StenoDictionaryListEntry(
+      dictionaries.Add(StenoDictionaryListEntry(
           new StenoMapDictionary(*definition), definition->defaultEnabled));
     }
   }
 
-  new (dictionaryListContainer.buffer) StenoDictionaryList(*dictionaries);
+  new (dictionaryListContainer) StenoDictionaryList(dictionaries);
+  new (compiledOrthographyContainer)
+      StenoCompiledOrthography(*ORTHOGRAPHY_ADDRESS);
 
-  StenoDictionary *dictionary = &dictionaryListContainer.dictionaries;
-  StenoReverseAutoSuffixDictionary *reverseAutoSuffixDictionary = nullptr;
+  StenoDictionary *dictionary = &dictionaryListContainer.value;
+
+  new (compiledOrthographyContainer)
+      StenoCompiledOrthography(*ORTHOGRAPHY_ADDRESS);
 
   if (STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->hasReverseLookup) {
-    dictionary = new StenoReverseMapDictionary(
+    dictionary = new (reverseMapDictionaryContainer) StenoReverseMapDictionary(
         dictionary, (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
         STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
         STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
 
-    reverseAutoSuffixDictionary =
-        new StenoReverseAutoSuffixDictionary(dictionary, *ORTHOGRAPHY_ADDRESS);
-    dictionary = reverseAutoSuffixDictionary;
+    dictionary = new (reverseAutoSuffixDictionaryContainer)
+        StenoReverseAutoSuffixDictionary(dictionary,
+                                         compiledOrthographyContainer);
   }
 
   // Set up processors.
-  StenoEngine *engine = new StenoEngine(*dictionary, *ORTHOGRAPHY_ADDRESS,
+  StenoEngine *engine = new (engineContainer)
+      StenoEngine(*dictionary, compiledOrthographyContainer,
 #if USE_USER_DICTIONARY
-                                        userDictionary
+                  userDictionary
 #else
-                                        nullptr
+                  nullptr
 #endif
-  );
-
-  // TODO: Tidy up.
-  if (reverseAutoSuffixDictionary) {
-    reverseAutoSuffixDictionary->SetCompiledOrthography(
-        engine->GetCompiledOrthography());
-  }
+      );
 
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
@@ -287,34 +290,35 @@ void InitJavelinSteno() {
 #endif
   StenoProcessorElement *processorElement =
 #if USE_PLOVER_HID
-      new StenoSwitch(*engine, alternateProcessor);
+      new (switchContainer) StenoSwitch(*engine, alternateProcessor);
 #else
-      new StenoSwitch(*engine, gemini);
+      new (switchContainer) StenoSwitch(*engine, gemini);
 #endif
 
   if (config->useJeffModifiers) {
-    processorElement = new JeffModifiers(*processorElement);
+    processorElement =
+        new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
   }
 
   if (config->useFirstUp) {
-    processorElement = new StenoFirstUp(*processorElement);
+    processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
   } else {
-    processorElement = new StenoAllUp(*processorElement);
+    processorElement = new (allUpContainer) StenoAllUp(*processorElement);
   }
 
   if (config->useRepeat) {
-    processorElement = new StenoRepeat(*processorElement);
+    processorElement = new (repeatContainer) StenoRepeat(*processorElement);
   }
 
-  processor = new StenoProcessor(*processorElement);
+  new (processorContainer) StenoProcessor(*processorElement);
 }
 
 void ProcessStenoKeyState(StenoKeyState keyState) {
-  processor->Process(keyState);
+  processorContainer->Process(keyState);
 }
 
 void ProcessStenoTick() {
-  processor->Tick();
+  processorContainer->Tick();
   reportBuilder.FlushIfRequired();
   consoleSendBuffer.Flush();
 }
@@ -347,7 +351,7 @@ uint32_t Clock::GetCurrentTime() { return time_us_64() / 1000; }
 
 #if USE_PLOVER_HID
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
-  HidKeyboardReportBuilder::reportBuffer.SendReport(
+  PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
 }
 #endif

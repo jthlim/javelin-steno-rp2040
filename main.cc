@@ -5,6 +5,7 @@
 #include "javelin/debounce.h"
 #include "javelin/key_code.h"
 #include "key_state.h"
+#include "plover_hid_report_buffer.h"
 #include "usb_descriptors.h"
 
 #include <hardware/timer.h>
@@ -86,11 +87,13 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
                                 uint8_t len) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-#if USE_PLOVER_HID
-  case ITF_NUM_PLOVER_HID:
-#endif
     HidKeyboardReportBuilder::reportBuffer.SendNextReport();
     break;
+#if USE_PLOVER_HID
+  case ITF_NUM_PLOVER_HID:
+    PloverHidReportBuffer::instance.SendNextReport();
+    break;
+#endif
   case ITF_NUM_CONSOLE:
     ConsoleBuffer::reportBuffer.SendNextReport();
     break;

@@ -17,7 +17,7 @@ public:
   void Flush();
 
   static void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
-  static HidReportBuffer reportBuffer;
+  static HidReportBuffer<32> reportBuffer;
 
 private:
   static bool compatibilityMode;

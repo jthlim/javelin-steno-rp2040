@@ -9,12 +9,14 @@
 
 //---------------------------------------------------------------------------
 
-uint32_t HidReportBuffer::reportsSentCount[ITF_NUM_TOTAL] = {};
+uint32_t HidReportBufferBase::reportsSentCount[ITF_NUM_TOTAL] = {};
 
 //---------------------------------------------------------------------------
 
-void HidReportBuffer::SendReport(uint8_t instance, uint8_t reportId,
-                                 const uint8_t *data, size_t length) {
+void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
+                                     const uint8_t *data, size_t length) {
+  assert(length == dataSize);
+
   do {
     tud_task();
   } while (endIndex >= startIndex + NUMBER_OF_ENTRIES);
@@ -28,16 +30,17 @@ void HidReportBuffer::SendReport(uint8_t instance, uint8_t reportId,
   }
 
   HidReportBufferEntry *entry = &entries[endIndex & (NUMBER_OF_ENTRIES - 1)];
+  uint8_t *buffer = entryData + dataSize * (endIndex & (NUMBER_OF_ENTRIES - 1));
   ++endIndex;
   entry->instance = instance;
   entry->reportId = reportId;
   entry->dataLength = length;
-  memcpy(entry->data, data, length);
+  memcpy(buffer, data, length);
 }
 
 //---------------------------------------------------------------------------
 
-void HidReportBuffer::SendNextReport() {
+void HidReportBufferBase::SendNextReport() {
 
   // This should never happen!
   if (startIndex == endIndex)
@@ -54,15 +57,16 @@ void HidReportBuffer::SendNextReport() {
   }
 
   HidReportBufferEntry *entry = &entries[startIndex & (NUMBER_OF_ENTRIES - 1)];
+  uint8_t *buffer =
+      entryData + dataSize * (startIndex & (NUMBER_OF_ENTRIES - 1));
 
   reportsSentCount[entry->instance]++;
-  tud_hid_n_report(entry->instance, entry->reportId, entry->data,
-                   entry->dataLength);
+  tud_hid_n_report(entry->instance, entry->reportId, buffer, entry->dataLength);
 }
 
 //---------------------------------------------------------------------------
 
-void HidReportBuffer::PrintInfo() {
+void HidReportBufferBase::PrintInfo() {
   Console::Printf("HID reports sent\n");
   Console::Printf("  Keyboard: %u\n", reportsSentCount[ITF_NUM_KEYBOARD]);
 #if USE_PLOVER_HID
