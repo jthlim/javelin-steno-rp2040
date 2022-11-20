@@ -42,6 +42,7 @@
 
 #include <hardware/clocks.h>
 #include <hardware/timer.h>
+#include <malloc.h>
 #include <pico/platform.h>
 #include <tusb.h>
 
@@ -118,6 +119,14 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("Clocks\n");
   Console::Printf("  System: %u MHz\n", systemClockKhz / 1000);
   Console::Printf("  USB: %u MHz\n", usbClockKhz / 1000);
+
+  struct mallinfo info = mallinfo();
+  Console::Printf("Memory\n");
+  Console::Printf("  Arena: %zu\n", info.arena);
+  Console::Printf("  Free chunks: %zu\n", info.ordblks);
+  Console::Printf("  Used: %zu\n", info.uordblks);
+  Console::Printf("  Free: %zu\n", info.fordblks);
+
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
   processorContainer->PrintInfo();
