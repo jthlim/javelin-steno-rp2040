@@ -30,7 +30,8 @@
 extern "C" {
 #endif
 
-#define TUD_OPT_RP2040_USB_DEVICE_ENUMERATION_FIX 1
+// Not required for RP2040B2 or later.
+// #define TUD_OPT_RP2040_USB_DEVICE_ENUMERATION_FIX 1
 
 //--------------------------------------------------------------------
 // COMMON CONFIGURATION

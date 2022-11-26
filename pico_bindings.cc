@@ -7,6 +7,7 @@
 #include "javelin/config_block.h"
 #include "javelin/console.h"
 #include "javelin/dictionary/corrupted_dictionary.h"
+#include "javelin/dictionary/debug_dictionary.h"
 #include "javelin/dictionary/dictionary.h"
 #include "javelin/dictionary/dictionary_list.h"
 #include "javelin/dictionary/emily_symbols_dictionary.h"
@@ -197,6 +198,9 @@ void InitJavelinSteno() {
          sizeof(config->keyMap));
 
   // Setup dictionary list.
+  // dictionaries.Add(
+  //     StenoDictionaryListEntry(&StenoDebugDictionary::instance, true));
+
 #if USE_USER_DICTIONARY
   StenoUserDictionary *userDictionary =
       new (userDictionaryContainer) StenoUserDictionary(userDictionaryLayout);
@@ -277,6 +281,12 @@ void InitJavelinSteno() {
                           StenoEngine::DisableDictionary_Binding, engine);
   console.RegisterCommand("toggle_dictionary", "Toggle a dictionary",
                           StenoEngine::ToggleDictionary_Binding, engine);
+  console.RegisterCommand(
+      "enable_dictionary_status", "Enable sending dictionary status updates",
+      StenoDictionaryList::EnableDictionaryStatus_Binding, nullptr);
+  console.RegisterCommand(
+      "disable_dictionary_status", "Disable sending dictionary status updates",
+      StenoDictionaryList::DisableDictionaryStatus_Binding, nullptr);
   console.RegisterCommand("print_dictionary",
                           "Prints all dictionaries in JSON format",
                           StenoEngine::PrintDictionary_Binding, engine);

@@ -41,12 +41,14 @@ void tud_umount_cb(void) {}
 // Invoked when usb bus is suspended
 // remote_wakeup_en : if host allow us  to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en) { set_sys_clock_khz(2000, false); }
+void tud_suspend_cb(bool remote_wakeup_en) {
+  // set_sys_clock_khz(25000, true);
+}
 
 // Invoked when usb bus is resumed
 void tud_resume_cb(void) {
+  // set_sys_clock_khz(125000, true);
   ++resumeCount;
-  set_sys_clock_khz(133000, false);
 }
 
 //---------------------------------------------------------------------------
@@ -150,7 +152,6 @@ static void cdc_task() {
 //---------------------------------------------------------------------------
 
 int main(void) {
-  set_sys_clock_khz(133000, false);
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
