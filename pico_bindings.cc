@@ -3,6 +3,7 @@
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
+#include "javelin/button_manager.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -19,6 +20,7 @@
 #include "javelin/dictionary/map_dictionary_definition.h"
 #include "javelin/dictionary/reverse_auto_suffix_dictionary.h"
 #include "javelin/dictionary/reverse_map_dictionary.h"
+#include "javelin/dictionary/reverse_prefix_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/engine.h"
 #include "javelin/key_code.h"
@@ -27,18 +29,18 @@
 #include "javelin/processor/first_up.h"
 #include "javelin/processor/gemini.h"
 #include "javelin/processor/jeff_modifiers.h"
+#include "javelin/processor/passthrough.h"
 #include "javelin/processor/plover_hid.h"
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
-#include "javelin/processor/switch.h"
 #include "javelin/serial_port.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
 #include "plover_hid_report_buffer.h"
+#include "rp2040_divider.h"
 
-#include "uniV4/config.h"
 #include "usb_descriptors.h"
 
 #include <hardware/clocks.h>
@@ -46,6 +48,8 @@
 #include <malloc.h>
 #include <pico/platform.h>
 #include <tusb.h>
+
+#include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------
 
@@ -65,33 +69,29 @@ static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
 static StenoGemini gemini;
 static StenoPloverHid ploverHid;
 
-#if USE_PLOVER_HID
-static constexpr StenoProcessorElement *alternateProcessors[] = {
-    &gemini,
-    &ploverHid,
-};
-static StenoProcessorList alternateProcessor(alternateProcessors, 2);
-#endif
-
 static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
 static JavelinStaticAllocate<StenoEngine> engineContainer;
-static JavelinStaticAllocate<StenoSwitch> switchContainer;
+static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
 static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
 static JavelinStaticAllocate<StenoAllUp> allUpContainer;
 static JavelinStaticAllocate<StenoRepeat> repeatContainer;
 static JavelinStaticAllocate<StenoJeffModifiers> jeffModifiersContainer;
-static JavelinStaticAllocate<StenoProcessor> processorContainer;
+static StenoProcessorElement *processors;
 
 static JavelinStaticAllocate<StenoCompiledOrthography>
     compiledOrthographyContainer;
 static JavelinStaticAllocate<StenoReverseMapDictionary>
     reverseMapDictionaryContainer;
+static JavelinStaticAllocate<StenoReversePrefixDictionary>
+    reversePrefixDictionaryContainer;
 static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
     reverseAutoSuffixDictionaryContainer;
 
 static List<StenoDictionaryListEntry> dictionaries;
 
 extern int resumeCount;
+extern "C" char __data_start__[], __data_end__[];
+extern "C" char __bss_start__[], __bss_end__[];
 
 static void PrintInfo_Binding(void *context, const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
@@ -99,14 +99,18 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
       (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
 
   uint32_t uptime = Clock::GetCurrentTime();
-  uint32_t microseconds = uptime % 1000;
-  uint32_t totalSeconds = uptime / 1000;
-  uint32_t seconds = totalSeconds % 60;
-  uint32_t totalMinutes = totalSeconds / 60;
-  uint32_t minutes = totalMinutes % 60;
-  uint32_t totalHours = totalMinutes / 60;
-  uint32_t hours = totalHours % 24;
-  uint32_t days = totalHours / 24;
+  auto &uptimeDivider = divider->Divide(uptime, 1000);
+  uint32_t microseconds = uptimeDivider.remainder;
+  uint32_t totalSeconds = uptimeDivider.quotient;
+  auto &totalSecondsDivider = divider->Divide(totalSeconds, 60);
+  uint32_t seconds = totalSecondsDivider.remainder;
+  uint32_t totalMinutes = totalSecondsDivider.quotient;
+  auto &totalMinutesDivider = divider->Divide(totalMinutes, 60);
+  uint32_t minutes = totalMinutesDivider.remainder;
+  uint32_t totalHours = totalMinutesDivider.quotient;
+  auto &totalHoursDivider = divider->Divide(totalHours, 24);
+  uint32_t hours = totalHoursDivider.remainder;
+  uint32_t days = totalHoursDivider.quotient;
 
   Console::Printf("Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
@@ -115,14 +119,18 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("ROM version: %u\n", rp2040_rom_version());
 
   uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
+  uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
   uint32_t usbClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_USB);
+  uint32_t usbMhz = divider->Divide(usbClockKhz, 1000).quotient;
 
   Console::Printf("Clocks\n");
-  Console::Printf("  System: %u MHz\n", systemClockKhz / 1000);
-  Console::Printf("  USB: %u MHz\n", usbClockKhz / 1000);
+  Console::Printf("  System: %u MHz\n", systemMhz);
+  Console::Printf("  USB: %u MHz\n", usbMhz);
 
-  struct mallinfo info = mallinfo();
   Console::Printf("Memory\n");
+  Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
+  Console::Printf("  BSS: %zu\n", __bss_end__ - __bss_start__);
+  struct mallinfo info = mallinfo();
   Console::Printf("  Arena: %zu\n", info.arena);
   Console::Printf("  Free chunks: %zu\n", info.ordblks);
   Console::Printf("  Used: %zu\n", info.uordblks);
@@ -130,7 +138,10 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
-  processorContainer->PrintInfo();
+  Console::Printf("Processing chain\n");
+  processors->PrintInfo();
+  Console::Printf("Text block: %zu bytes\n",
+                  STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
   Console::Write("\n", 1);
 }
 
@@ -174,9 +185,34 @@ void SetKeyboardLayout(void *context, const char *commandLine) {
   }
 }
 
+void SetStenoMode(void *context, const char *commandLine) {
+  const char *stenoMode = strchr(commandLine, ' ');
+  if (!stenoMode) {
+    Console::Printf("ERR No steno mode layout specified\n\n");
+    return;
+  }
+
+  ++stenoMode;
+  if (Str::Eq(stenoMode, "embedded")) {
+    passthroughContainer->UpdateNext(&engineContainer.value);
+  } else if (Str::Eq(stenoMode, "gemini")) {
+    passthroughContainer->UpdateNext(&gemini);
+  } else if (Str::Eq(stenoMode, "plover_hid")) {
+    passthroughContainer->UpdateNext(&ploverHid);
+  } else {
+    Console::Printf("ERR Unable to set steno mode: \"%s\"\n\n", stenoMode);
+    return;
+  }
+
+  Console::Write("OK\n\n", 4);
+}
+
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
 }
+
+// void Debug_Test_Binding(void *context, const char *commandLine) {
+// }
 
 struct WordListData {
   uint32_t length;
@@ -239,10 +275,6 @@ void InitJavelinSteno() {
       StenoCompiledOrthography(*ORTHOGRAPHY_ADDRESS);
 
   StenoDictionary *dictionary = &dictionaryListContainer.value;
-
-  new (compiledOrthographyContainer)
-      StenoCompiledOrthography(*ORTHOGRAPHY_ADDRESS);
-
   if (STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->hasReverseLookup) {
     dictionary = new (reverseMapDictionaryContainer) StenoReverseMapDictionary(
         dictionary, (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
@@ -252,6 +284,13 @@ void InitJavelinSteno() {
     dictionary = new (reverseAutoSuffixDictionaryContainer)
         StenoReverseAutoSuffixDictionary(dictionary,
                                          compiledOrthographyContainer);
+
+    dictionary =
+        new (reversePrefixDictionaryContainer) StenoReversePrefixDictionary(
+            dictionary,
+            (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
   }
 
   // Set up processors.
@@ -268,6 +307,10 @@ void InitJavelinSteno() {
                           nullptr);
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
+  console.RegisterCommand(
+      "set_steno_mode",
+      "Sets the current steno mode [\"embedded\", \"gemini\", \"plover_hid\"]",
+      SetStenoMode, nullptr);
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
   console.RegisterCommand("set_keyboard_layout",
@@ -297,8 +340,14 @@ void InitJavelinSteno() {
                           StenoEngine::EnablePaperTape_Binding, engine);
   console.RegisterCommand("disable_paper_tape", "Disables paper tape output",
                           StenoEngine::DisablePaperTape_Binding, engine);
+  console.RegisterCommand("enable_suggestions", "Enables suggestions output",
+                          StenoEngine::EnableSuggestions_Binding, engine);
+  console.RegisterCommand("disable_suggestions", "Disables suggestions output",
+                          StenoEngine::DisableSuggestions_Binding, engine);
   console.RegisterCommand("lookup", "Looks up a word",
                           StenoEngine::Lookup_Binding, engine);
+  // console.RegisterCommand("debug_test", "Runs test", Debug_Test_Binding,
+  //                         nullptr);
 
 #if USE_USER_DICTIONARY
   console.RegisterCommand(
@@ -307,12 +356,9 @@ void InitJavelinSteno() {
   console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
                           StenoUserDictionary::Reset_Binding, userDictionary);
 #endif
-  StenoProcessorElement *processorElement =
-#if USE_PLOVER_HID
-      new (switchContainer) StenoSwitch(*engine, alternateProcessor);
-#else
-      new (switchContainer) StenoSwitch(*engine, gemini);
-#endif
+  StenoProcessorElement *processorElement = engine;
+  processorElement =
+      new (passthroughContainer) StenoPassthrough(processorElement);
 
   if (config->useJeffModifiers) {
     processorElement =
@@ -329,15 +375,27 @@ void InitJavelinSteno() {
     processorElement = new (repeatContainer) StenoRepeat(*processorElement);
   }
 
-  new (processorContainer) StenoProcessor(*processorElement);
+  processors = processorElement;
 }
 
-void ProcessStenoKeyState(StenoKeyState keyState) {
-  processorContainer->Process(keyState);
+void Script::OnStenoKeyPressed() {
+  processors->Process(stenoState, StenoAction::PRESS);
+}
+
+void Script::OnStenoKeyReleased() {
+  processors->Process(stenoState, StenoAction::RELEASE);
+}
+
+void Script::OnStenoStateCancelled() {
+  processors->Process(StenoKeyState(0), StenoAction::CANCEL);
+}
+
+void Script::SendText(const uint8_t *text) const {
+  engineContainer->SendText(text);
 }
 
 void ProcessStenoTick() {
-  processorContainer->Tick();
+  processors->Tick();
   reportBuilder.FlushIfRequired();
   consoleSendBuffer.Flush();
 }
@@ -351,7 +409,7 @@ void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
 
 //---------------------------------------------------------------------------
 
-void Console::Write(const char *data, size_t length) {
+void Console::RawWrite(const char *data, size_t length) {
   consoleSendBuffer.SendData((const uint8_t *)data, length);
 }
 
@@ -366,9 +424,11 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
   tud_cdc_write_flush();
 }
 
-uint32_t Clock::GetCurrentTime() { return time_us_64() / 1000; }
+uint32_t Clock::GetCurrentTime() {
+  return divider->Divide(time_us_64(), 1000).quotient;
+}
 
-#if USE_PLOVER_HID
+#if JAVELIN_USE_PLOVER_HID
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
   PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));

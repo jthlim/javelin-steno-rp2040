@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.12)
 
 set(NAME javelin-steno-rp2040)
+set(BOARD "" CACHE STRING "Target board, e.g. \"uni_v4\"")
+
+if ("${BOARD}" STREQUAL "")
+  message(FATAL_ERROR, "Target board must be specified")
+endif()
 
 add_definitions(
-  -DJAVELIN_THREADS
-  -DPICO_FLASH_SIZE_BYTES=0x1000000
-  -DNDEBUG=1
+  -DJAVELIN_THREADS=1
+  -DJAVELIN_USE_PLOVER_HID=1
+  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
   -DPICO_NO_FPGA_CHECK=1
+  -DPICO_FLASH_SIZE_BYTES=0x1000000
   -DPICO_FLASH_SPI_CLKDIV=4
-  -DUSE_PLOVER_HID=0
+  -DNDEBUG=1
 )
 
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
@@ -17,8 +23,8 @@ project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_C_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer")
-set(CMAKE_CXX_FLAGS "-O3 -mcpu=cortex-m0plus -mthumb -fomit-frame-pointer -fno-exceptions")
+set(CMAKE_C_FLAGS "-O2 -mcpu=cortex-m0plus -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS "-O2 -mcpu=cortex-m0plus -fomit-frame-pointer -fno-exceptions")
 
 pico_sdk_init()
 
@@ -36,6 +42,7 @@ target_sources(${NAME} PUBLIC
   pico_thread.cc
   plover_hid_report_buffer.cc
 
+  javelin/button_manager.cc
   javelin/chord.cc
   javelin/chord_history.cc
   javelin/console.cc
@@ -53,7 +60,9 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/map_dictionary.cc
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
+  javelin/dictionary/reverse_prefix_dictionary.cc
   javelin/dictionary/user_dictionary.cc
+  javelin/dictionary/wrapped_dictionary.cc
   javelin/engine_add_translation_mode.cc
   javelin/engine_binding.cc
   javelin/engine_normal_mode.cc
@@ -66,6 +75,7 @@ target_sources(${NAME} PUBLIC
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
+  javelin/pool_allocate.cc
   javelin/processor/all_up.cc
   javelin/processor/first_up.cc
   javelin/processor/gemini.cc
@@ -75,6 +85,7 @@ target_sources(${NAME} PUBLIC
   javelin/processor/processor_list.cc
   javelin/processor/repeat.cc
   javelin/processor/switch.cc
+  javelin/script.cc
   javelin/segment.cc
   javelin/state.cc
   javelin/steno_key_code.cc

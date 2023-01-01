@@ -99,7 +99,7 @@ extern "C" {
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_HID 2 + USE_PLOVER_HID // 1 for keyboard, one for console
+#define CFG_TUD_HID 2 + JAVELIN_USE_PLOVER_HID // 1 for each keyboard & console
 #define CFG_TUD_CDC 1
 #define CFG_TUD_MSC 0
 #define CFG_TUD_MIDI 0

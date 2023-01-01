@@ -1,9 +1,10 @@
 //--------------------------------------------------------------------+
 
 #include "usb_descriptors.h"
-#include "uniV4/config.h"
 
 #include <tusb.h>
+
+#include JAVELIN_BOARD_CONFIG
 
 //--------------------------------------------------------------------+
 
@@ -122,7 +123,7 @@ const uint8_t desc_hid_console_report[] = {
     HID_COLLECTION_END,
 };
 
-#if USE_PLOVER_HID
+#if JAVELIN_USE_PLOVER_HID
 const uint8_t desc_hid_plover_hid_report[] = {
      0x06, 0x50, 0xff,              // UsagePage (65360)
      0x0a, 0x56, 0x4c,              // Usage (19542)
@@ -151,7 +152,7 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
   case ITF_NUM_CONSOLE:
     return desc_hid_console_report;
 
-#if USE_PLOVER_HID
+#if JAVELIN_USE_PLOVER_HID
   case ITF_NUM_PLOVER_HID:
     return desc_hid_plover_hid_report;
 #endif
@@ -166,7 +167,7 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
 //--------------------------------------------------------------------+
 
 #define CONFIG_TOTAL_LEN                                                       \
-  (TUD_CONFIG_DESC_LEN + (1 + USE_PLOVER_HID) * TUD_HID_DESC_LEN +             \
+  (TUD_CONFIG_DESC_LEN + (1 + JAVELIN_USE_PLOVER_HID) * TUD_HID_DESC_LEN +     \
    TUD_HID_INOUT_DESC_LEN + TUD_CDC_DESC_LEN)
 
 #if CFG_TUSB_MCU == OPT_MCU_LPC175X_6X ||                                      \
@@ -198,7 +199,7 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
     // Config number, interface count, string index, total length, attribute,
     // power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN,
-                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
+                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 50),
 
     // Interface number, string index, protocol, report descriptor len, EP In
     // address, size & polling interval
@@ -215,7 +216,7 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
 
 // Interface number, string index, protocol, report descriptor len, EP In
 // address, size & polling interval
-#if USE_PLOVER_HID
+#if JAVELIN_USE_PLOVER_HID
     TUD_HID_DESCRIPTOR(ITF_NUM_PLOVER_HID, 0, HID_ITF_PROTOCOL_NONE,
                        sizeof(desc_hid_plover_hid_report), EPNUM_PLOVER_HID,
                        CFG_TUD_PLOVER_HID_EP_BUFSIZE, 1),

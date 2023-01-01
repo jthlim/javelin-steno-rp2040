@@ -1,0 +1,459 @@
+//---------------------------------------------------------------------------
+// Mac Tool Layer Uni v4 script.
+//
+// The layer is accessed by holding down the Tool key:
+//
+// Tool Layer:
+//     Tab   Alt  Ctrl _____ _____   VolUp <-Del    Up Del->  Home  PgUp
+//   Shift MetaZ MetaX MetaC MetaV   VolDn  Left  Down Right   End  PgDn
+//
+//              [Tool]  Meta [Swi]   _____ Space   Esc
+//
+// [Swi] Switches between embedded steno and gemini protocol.
+//
+//---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// USB Scan code values.
+//
+// These constants are used with inbuilt functions:
+//  * func pressScanCode(SC_xxx)
+//  * func releaseScanCode(SC_xxx)
+//  * func tapScanCode(SC_xxx)
+//  * func isScanCodePressed(SC_xxx) var
+//
+//---------------------------------------------------------------------------
+
+const SC_A = 0x04;
+const SC_B = 0x05;
+const SC_C = 0x06;
+const SC_D = 0x07;
+const SC_E = 0x08;
+const SC_F = 0x09;
+const SC_G = 0x0a;
+const SC_H = 0x0b;
+const SC_I = 0x0c;
+const SC_J = 0x0d;
+const SC_K = 0x0e;
+const SC_L = 0x0f;
+const SC_M = 0x10;
+const SC_N = 0x11;
+const SC_O = 0x12;
+const SC_P = 0x13;
+const SC_Q = 0x14;
+const SC_R = 0x15;
+const SC_S = 0x16;
+const SC_T = 0x17;
+const SC_U = 0x18;
+const SC_V = 0x19;
+const SC_W = 0x1a;
+const SC_X = 0x1b;
+const SC_Y = 0x1c;
+const SC_Z = 0x1d;
+
+const SC_1 = 0x1e;
+const SC_2 = 0x1f;
+const SC_3 = 0x20;
+const SC_4 = 0x21;
+const SC_5 = 0x22;
+const SC_6 = 0x23;
+const SC_7 = 0x24;
+const SC_8 = 0x25;
+const SC_9 = 0x26;
+const SC_0 = 0x27;
+
+const SC_ENTER = 0x28;
+const SC_ESC = 0x29;
+const SC_BACKSPACE = 0x2a;
+const SC_TAB = 0x2b;
+const SC_SPACE = 0x2c;
+const SC_MINUS = 0x2d;
+const SC_EQUAL = 0x2e;
+const SC_L_BRACKET = 0x2f;
+const SC_R_BRACKET = 0x30;
+const SC_BACKSLASH = 0x31;
+const SC_HASH_TILDE = 0x32;
+const SC_SEMICOLON = 0x33;
+const SC_APOSTROPHE = 0x34;
+const SC_GRAVE = 0x35;
+const SC_COMMA = 0x36;
+const SC_DOT = 0x37;
+const SC_SLASH = 0x38;
+const SC_CAPS = 0x39;
+
+const SC_F1 = 0x3a;
+const SC_F2 = 0x3b;
+const SC_F3 = 0x3c;
+const SC_F4 = 0x3d;
+const SC_F5 = 0x3e;
+const SC_F6 = 0x3f;
+const SC_F7 = 0x40;
+const SC_F8 = 0x41;
+const SC_F9 = 0x42;
+const SC_F10 = 0x43;
+const SC_F11 = 0x44;
+const SC_F12 = 0x45;
+
+const SC_SYS_RQ = 0x46;
+const SC_SCROLL_LOCK = 0x47;
+const SC_PAUSE = 0x48;
+const SC_INSERT = 0x49;
+const SC_HOME = 0x4a;
+const SC_PAGE_UP = 0x4b;
+const SC_DELETE = 0x4c;
+const SC_END = 0x4d;
+const SC_PAGE_DOWN = 0x4e;
+const SC_RIGHT = 0x4f;
+const SC_LEFT = 0x50;
+const SC_DOWN = 0x51;
+const SC_UP = 0x52;
+
+const SC_NUM_LOCK = 0x53;
+const SC_KP_SLASH = 0x54;
+const SC_KP_ASTERISK = 0x55;
+const SC_KP_MINUS = 0x56;
+const SC_KP_PLUS = 0x57;
+const SC_KP_ENTER = 0x58;
+const SC_KP_1 = 0x59;
+const SC_KP_2 = 0x5a;
+const SC_KP_3 = 0x5b;
+const SC_KP_4 = 0x5c;
+const SC_KP_5 = 0x5d;
+const SC_KP_6 = 0x5e;
+const SC_KP_7 = 0x5f;
+const SC_KP_8 = 0x60;
+const SC_KP_9 = 0x61;
+const SC_KP_0 = 0x62;
+const SC_KP_DOT = 0x63;
+
+const SC_BACKSLASH_PIPE = 0x64;
+const SC_COMPOSE = 0x65;
+const SC_POWER = 0x66;
+const SC_KP_EQUAL = 0x67;
+
+const SC_F13 = 0x68;
+const SC_F14 = 0x69;
+const SC_F15 = 0x6a;
+const SC_F16 = 0x6b;
+const SC_F17 = 0x6c;
+const SC_F18 = 0x6d;
+const SC_F19 = 0x6e;
+const SC_F20 = 0x6f;
+const SC_F21 = 0x70;
+const SC_F22 = 0x71;
+const SC_F23 = 0x72;
+const SC_F24 = 0x73;
+
+const SC_OPEN = 0x74;
+const SC_HELP = 0x75;
+const SC_MENU = 0x76;
+const SC_SELECT = 0x77;
+const SC_STOP = 0x78;
+const SC_AGAIN = 0x79;
+const SC_UNDO = 0x7a;
+const SC_CUT = 0x7b;
+const SC_COPY = 0x7c;
+const SC_PASTE = 0x7d;
+const SC_FIND = 0x7e;
+const SC_MUTE = 0x7f;
+const SC_VOLUME_UP = 0x80;
+const SC_VOLUME_DOWN = 0x81;
+
+const SC_KP_COMMA = 0x85;
+
+const SC_KP_LEFT_PAREN = 0xb6;
+const SC_KP_RIGHT_PAREN = 0xb7;
+
+const SC_L_CTRL = 0xe0;
+const SC_L_SHIFT = 0xe1;
+const SC_L_ALT = 0xe2;
+const SC_L_META = 0xe3;
+const SC_R_CTRL = 0xe4;
+const SC_R_SHIFT = 0xe5;
+const SC_R_ALT = 0xe6;
+const SC_R_META = 0xe7;
+
+const SC_MEDIA_PLAY_PAUSE = 0xe8;
+const SC_MEDIA_STOP_CD = 0xe9;
+const SC_MEDIA_PREVIOUS_SONG = 0xea;
+const SC_MEDIA_NEXT_SONG = 0xeb;
+const SC_MEDIA_EJECT_CD = 0xec;
+const SC_MEDIA_VOLUME_UP = 0xed;
+const SC_MEDIA_VOLUME_DOWN = 0xee;
+const SC_MEDIA_MUTE = 0xef;
+const SC_MEDIA_WWW = 0xf0;
+const SC_MEDIA_BACK = 0xf1;
+const SC_MEDIA_FORWARD = 0xf2;
+const SC_MEDIA_STOP = 0xf3;
+const SC_MEDIA_FIND = 0xf4;
+const SC_MEDIA_SCROLL_UP = 0xf5;
+const SC_MEDIA_SCROLL_DOWN = 0xf6;
+const SC_MEDIA_EDIT = 0xf7;
+const SC_MEDIA_SLEEP = 0xf8;
+const SC_MEDIA_COFFEE = 0xf9;
+const SC_MEDIA_REFRESH = 0xfa;
+const SC_MEDIA_CALC = 0xfb;
+
+//---------------------------------------------------------------------------
+// javelin-steno steno key values.
+//
+// These constants are used with inbuilt functions:
+//  * func pressStenoKey(SK_xxx)
+//  * func releaseStenoKey(SK_xxx)
+//  * func isStenoKeyPressed(SK_xxx) var
+//
+//---------------------------------------------------------------------------
+
+const SK_S1 = 0;
+const SK_S2 = 1;
+const SK_TL = 2;
+const SK_KL = 3;
+const SK_PL = 4;
+const SK_WL = 5;
+const SK_HL = 6;
+const SK_RL = 7;
+const SK_A = 8;
+const SK_O = 9;
+const SK_STAR1 = 10;
+const SK_STAR2 = 11;
+const SK_STAR3 = 12;
+const SK_STAR4 = 13;
+const SK_E = 14;
+const SK_U = 15;
+const SK_FR = 16;
+const SK_RR = 17;
+const SK_PR = 18;
+const SK_BR = 19;
+const SK_LR = 20;
+const SK_GR = 21;
+const SK_TR = 22;
+const SK_SR = 23;
+const SK_DR = 24;
+const SK_ZR = 25;
+const SK_NUM1 = 26;
+const SK_NUM2 = 27;
+const SK_NUM3 = 28;
+const SK_NUM4 = 29;
+const SK_NUM5 = 30;
+const SK_NUM6 = 31;
+const SK_NUM7 = 32;
+const SK_NUM8 = 33;
+const SK_NUM9 = 34;
+const SK_NUM10 = 35;
+const SK_NUM11 = 36;
+const SK_NUM12 = 37;
+const SK_FUNCTION = 38;
+const SK_POWER = 39;
+const SK_RES1 = 40;
+const SK_RES2 = 41;
+
+//---------------------------------------------------------------------------
+// Other functions:
+//
+//  * func releaseAll()
+//    - releases all pressed scan codes and steno keys.
+//  * func pressAll() 
+//    - call all press scripts for buttons that are pressed.
+//  * func isButtonPressed(buttonIndex) var 
+//    - Returns 1 if the physical button is pressed.
+//  * func checkButtonState("01 10") var
+//    - Returns if the current button state matches the string.
+//    - 0 = not pressed, space = ignore, all others = pressed.
+//      - The example string checks that:
+//        - button 0 is off.
+//        - button 1 is on.
+//        - button 3 is on.
+//        - button 4 is off.
+//    - The string should be the same length as the number of buttons.
+//  * func sendText("Example")
+//    - Sends all of the key presses required to emit the specified string.
+//    - e.g.,
+//      - Press Shift
+//      - Press E
+//      - Release E
+//      - Release Shift
+//      - Press X
+//      - Release X
+//      - etc.
+//
+// releaseAll() and pressAll() are useful for changing modes/layers, e.g.:
+//
+// if (layer != SYMBOL_LAYER) {
+//   releaseAll();
+//   layer = SYMBOL_LAYER;
+//   pressAll();
+// }
+//
+// This will allow keys on the symbol layer to be pressed 'out-of-order' but
+// still behave as expected.
+//
+// It is important that every pressAll() call in an onPress handler is guarded
+// to prevent infinite recursion, since the onPress will be re-run even for the
+// current key.
+//
+//---------------------------------------------------------------------------
+//
+// UniV4 button layout:
+//
+//     0   1   2   3   4     5   6   7   8   9  10
+//    11  12  13  14  15    16  17  18  19  20  21
+//
+//            22  23  24    25  26  27
+//
+//---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// The script needs to have onPress## and onRelease## functions for every
+// physical button.
+//---------------------------------------------------------------------------
+
+const STENO_LAYER = 0;
+const TOOL_LAYER = 1;
+
+const STENO_MODE_EMBEDDED = 0;
+const STENO_MODE_GEMINI = 1;
+
+var layer = STENO_LAYER;
+var stenoMode = STENO_MODE_EMBEDDED;
+
+func updateStenoMode() {
+  stenoMode = (stenoMode + 1) % 2;
+  if (stenoMode == 0) {
+    console("set_steno_mode embedded");
+  } else {
+    console("set_steno_mode gemini");
+  }
+}
+
+func handlePress(stenoKey, toolScanCode) {
+  if (layer == STENO_LAYER) {
+    pressStenoKey(stenoKey);
+  } else {
+    pressScanCode(toolScanCode);
+  }
+}
+func handleRelease(stenoKey, toolScanCode) {
+  if (layer == STENO_LAYER) {
+    releaseStenoKey(stenoKey);
+  } else {
+    releaseScanCode(toolScanCode);
+  }
+}
+
+func handleMetaPress(stenoKey, toolScanCode) {
+  if (layer == STENO_LAYER) {
+    pressStenoKey(stenoKey);
+  } else {
+    pressScanCode(SC_L_META);
+    pressScanCode(toolScanCode);
+  }
+}
+func handleMetaRelease(stenoKey, toolScanCode) {
+  if (layer == STENO_LAYER) {
+    releaseStenoKey(stenoKey);
+  } else {
+    releaseScanCode(toolScanCode);
+    if (!isButtonPressed(23)) {
+      releaseScanCode(SC_L_META);
+    }
+  }
+}
+
+func onPress0() { handlePress(SK_S1, SC_TAB); }
+func onRelease0() { handleRelease(SK_S1, SC_TAB); }
+
+func onPress1() { handlePress(SK_TL, SC_L_ALT); }
+func onRelease1() { handleRelease(SK_TL, SC_L_ALT); }
+
+func onPress2() { handlePress(SK_PL, SC_L_CTRL); }
+func onRelease2() { handleRelease(SK_PL, SC_L_CTRL); }
+
+func onPress3() { handlePress(SK_HL, 0); }
+func onRelease3() { handleRelease(SK_HL, 0); }
+
+func onPress4() { handlePress(SK_STAR1, 0); }
+func onRelease4() { handleRelease(SK_STAR1, 0); }
+
+func onPress5() { handlePress(SK_STAR2, SC_VOLUME_UP); }
+func onRelease5() { handleRelease(SK_STAR2, SC_VOLUME_UP); }
+
+func onPress6() { handlePress(SK_FR, SC_BACKSPACE); }
+func onRelease6() { handleRelease(SK_FR, SC_BACKSPACE); }
+
+func onPress7() { handlePress(SK_PR, SC_UP); }
+func onRelease7() { handleRelease(SK_PR, SC_UP); }
+
+func onPress8() { handlePress(SK_LR, SC_DELETE); }
+func onRelease8() { handleRelease(SK_LR, SC_DELETE); }
+
+func onPress9() { handlePress(SK_TR, SC_HOME); }
+func onRelease9() { handleRelease(SK_TR, SC_HOME); }
+
+func onPress10() { handlePress(SK_DR, SC_PAGE_UP); }
+func onRelease10() { handleRelease(SK_DR, SC_PAGE_UP); }
+
+func onPress11() { handlePress(SK_S2, SC_L_SHIFT); }
+func onRelease11() { handleRelease(SK_S2, SC_L_SHIFT); }
+
+func onPress12() { handleMetaPress(SK_KL, SC_Z); }
+func onRelease12() { handleMetaRelease(SK_KL, SC_Z); }
+
+func onPress13() { handleMetaPress(SK_WL, SC_X); }
+func onRelease13() { handleMetaRelease(SK_WL, SC_X); }
+
+func onPress14() { handleMetaPress(SK_RL, SC_C); }
+func onRelease14() { handleMetaRelease(SK_RL, SC_C); }
+
+func onPress15() { handleMetaPress(SK_STAR3, SC_V); }
+func onRelease15() { handleMetaRelease(SK_STAR3, SC_V); }
+
+func onPress16() { handlePress(SK_STAR4, SC_VOLUME_DOWN); }
+func onRelease16() { handleRelease(SK_STAR4, SC_VOLUME_DOWN); }
+
+func onPress17() { handlePress(SK_RR, SC_LEFT); }
+func onRelease17() { handleRelease(SK_RR, SC_LEFT); }
+
+func onPress18() { handlePress(SK_BR, SC_DOWN); }
+func onRelease18() { handleRelease(SK_BR, SC_DOWN); }
+
+func onPress19() { handlePress(SK_GR, SC_RIGHT); }
+func onRelease19() { handleRelease(SK_GR, SC_RIGHT); }
+
+func onPress20() { handlePress(SK_SR, SC_END); }
+func onRelease20() { handleRelease(SK_SR, SC_END); }
+
+func onPress21() { handlePress(SK_ZR, SC_PAGE_DOWN); }
+func onRelease21() { handleRelease(SK_ZR, SC_PAGE_DOWN); }
+
+func onPress22() {
+  if (layer == STENO_LAYER) {
+    releaseAll();
+    layer = TOOL_LAYER;
+    pressAll();
+  }
+}
+func onRelease22() {
+  releaseAll();
+  layer = STENO_LAYER;
+}
+
+func onPress23() { handlePress(SK_A, SC_L_META); }
+func onRelease23() { handleRelease(SK_A, SC_L_META); }
+
+func onPress24() { 
+  if (layer == STENO_LAYER) {
+    pressStenoKey(SK_O);
+  } else {
+    updateStenoMode();
+  }
+}
+func onRelease24() { handleRelease(SK_O, 0); }
+
+func onPress25() { handlePress(SK_E, 0); }
+func onRelease25() { handleRelease(SK_E, 0); }
+
+func onPress26() { handlePress(SK_U, SC_SPACE); }
+func onRelease26() { handleRelease(SK_U, SC_SPACE); }
+
+func onPress27() { handlePress(SK_NUM2, SC_ESC); }
+func onRelease27() { handleRelease(SK_NUM2, SC_ESC); }

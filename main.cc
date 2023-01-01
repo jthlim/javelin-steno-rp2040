@@ -1,9 +1,11 @@
 //---------------------------------------------------------------------------
 
+#include "config/uni_v4.h"
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
 #include "javelin/key_code.h"
+#include "javelin/static_allocate.h"
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
 #include "usb_descriptors.h"
@@ -19,7 +21,6 @@
 
 void OnConsoleReceiveData(const uint8_t *data, uint8_t length);
 void InitJavelinSteno();
-void ProcessStenoKeyState(StenoKeyState keyState);
 void ProcessStenoTick();
 void InitMulticore();
 
@@ -55,26 +56,26 @@ void tud_resume_cb(void) {
 // USB HID
 //---------------------------------------------------------------------------
 
-static void hid_task() {
+static void hid_task(ButtonManager &buttonManager) {
   static bool isReady = false;
-  static GlobalDeferredDebounce<StenoKeyState> debouncer(0);
+  static GlobalDeferredDebounce<ButtonState> debouncer;
 
-  Debounced<StenoKeyState> keyState = debouncer.Update(KeyState::Read());
+  Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
   if (!keyState.isUpdated) {
     return;
   }
 
   if (tud_suspended()) {
-    if (keyState.value.IsNotEmpty()) {
+    if (keyState.value.IsAnySet()) {
       // Wake up host if we are in suspend mode
       // and REMOTE_WAKEUP feature is enabled by host
       tud_remote_wakeup();
     }
   } else if (isReady) {
-    ProcessStenoKeyState(keyState.value);
+    buttonManager.Update(keyState.value);
   } else if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
     isReady = true;
-    ProcessStenoKeyState(keyState.value);
+    buttonManager.Update(keyState.value);
   }
 }
 
@@ -91,7 +92,7 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
   case ITF_NUM_KEYBOARD:
     HidKeyboardReportBuilder::reportBuffer.SendNextReport();
     break;
-#if USE_PLOVER_HID
+#if JAVELIN_USE_PLOVER_HID
   case ITF_NUM_PLOVER_HID:
     PloverHidReportBuffer::instance.SendNextReport();
     break;
@@ -151,18 +152,21 @@ static void cdc_task() {
 
 //---------------------------------------------------------------------------
 
+JavelinStaticAllocate<ButtonManager> buttonManagerContainer;
+
 int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
   KeyState::Init();
   InitJavelinSteno();
+  new (buttonManagerContainer) ButtonManager(BUTTON_MANAGER_BYTE_CODE);
 
   tusb_init();
 
   while (1) {
     tud_task(); // tinyusb device task
-    hid_task();
+    hid_task(buttonManagerContainer.value);
     cdc_task();
 
     ProcessStenoTick();

@@ -1,9 +1,10 @@
 //---------------------------------------------------------------------------
 
 #include "key_state.h"
-#include "uniV4/config.h"
 #include <hardware/gpio.h>
 #include <hardware/timer.h>
+
+#include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------
 
@@ -17,26 +18,29 @@ void KeyState::Init() {
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
 }
 
-StenoKeyState KeyState::Read() {
-  uint64_t state = 0;
+ButtonState KeyState::Read() {
+  ButtonState state;
+  state.ClearAll();
 
+#pragma GCC unroll 1
   for (int r = 0; r < sizeof(ROW_PINS); ++r) {
-    gpio_put(ROW_PINS[r], false);
+    gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK & ~(1 << ROW_PINS[r]));
     busy_wait_us_32(10);
 
+    int columnMask = gpio_get_all();
+#pragma GCC unroll 1
     for (int c = 0; c < sizeof(COLUMN_PINS); ++c) {
-      if (gpio_get(COLUMN_PINS[c]) == 0) {
-        StenoKey key = KEY_MAP[r][c];
-        if (key != StenoKey::NONE) {
-          state |= (1 << (int)key);
+      if (((columnMask >> COLUMN_PINS[c]) & 1) == 0) {
+        int buttonIndex = KEY_MAP[r][c];
+        if (buttonIndex >= 0) {
+          state.Set(buttonIndex);
         }
       }
     }
-
-    gpio_put(ROW_PINS[r], true);
   }
 
-  return StenoKeyState(state);
+  gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+  return state;
 }
 
 //---------------------------------------------------------------------------

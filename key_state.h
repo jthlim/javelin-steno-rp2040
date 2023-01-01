@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include "javelin/steno_key_state.h"
+#include "javelin/button_manager.h"
 
 //---------------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ class KeyState {
 public:
   static void Init();
 
-  static StenoKeyState Read();
+  static ButtonState Read();
 };
 
 //---------------------------------------------------------------------------
