@@ -15,21 +15,26 @@ public:
   bool HasData() const;
   void FlushIfRequired();
   void Flush();
+  void SendNextReport() { reportBuffer.SendNextReport(); }
 
-  static void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
-  static HidReportBuffer<32> reportBuffer;
+  void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
+
+  static HidKeyboardReportBuilder instance;
 
 private:
-  static bool compatibilityMode;
+  HidKeyboardReportBuilder() = default;
 
   struct Buffer {
     uint8_t data[32];
     uint8_t presenceFlags[32];
   };
 
+  bool compatibilityMode = false;
   uint8_t modifiers = 0;
   uint8_t maxPressIndex = 0;
   Buffer buffers[2] = {};
+
+  HidReportBuffer<32> reportBuffer;
 };
 
 //---------------------------------------------------------------------------

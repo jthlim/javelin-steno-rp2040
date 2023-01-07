@@ -8,6 +8,7 @@
 #include "javelin/static_allocate.h"
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
+#include "rp2040_crc32.h"
 #include "usb_descriptors.h"
 
 #include <hardware/timer.h>
@@ -90,7 +91,7 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
                                 uint8_t len) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    HidKeyboardReportBuilder::reportBuffer.SendNextReport();
+    HidKeyboardReportBuilder::instance.SendNextReport();
     break;
 #if JAVELIN_USE_PLOVER_HID
   case ITF_NUM_PLOVER_HID:
@@ -98,7 +99,7 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
     break;
 #endif
   case ITF_NUM_CONSOLE:
-    ConsoleBuffer::reportBuffer.SendNextReport();
+    ConsoleBuffer::instance.SendNextReport();
     break;
   }
 }
@@ -159,6 +160,7 @@ int main(void) {
   InitMulticore();
 #endif
   KeyState::Init();
+  Rp2040Crc32::Initialize();
   InitJavelinSteno();
   new (buttonManagerContainer) ButtonManager(BUTTON_MANAGER_BYTE_CODE);
 

@@ -54,8 +54,6 @@
 //---------------------------------------------------------------------------
 
 Console console;
-ConsoleBuffer consoleSendBuffer;
-HidKeyboardReportBuilder reportBuilder;
 
 //---------------------------------------------------------------------------
 
@@ -222,7 +220,8 @@ struct WordListData {
 void InitJavelinSteno() {
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
 
-  HidKeyboardReportBuilder::SetCompatibilityMode(config->hidCompatibilityMode);
+  HidKeyboardReportBuilder::instance.SetCompatibilityMode(
+      config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   Key::SetKeyboardLayout(config->keyboardLayout);
 
@@ -230,7 +229,7 @@ void InitJavelinSteno() {
       (const WordListData *)STENO_WORD_LIST_ADDRESS;
   WordList::SetData(wordListData->data, wordListData->length);
 
-  memcpy(StenoKeyState::CHORD_BIT_INDEX_LOOKUP, config->keyMap,
+  memcpy(StenoKeyState::STROKE_BIT_INDEX_LOOKUP, config->keyMap,
          sizeof(config->keyMap));
 
   // Setup dictionary list.
@@ -356,6 +355,7 @@ void InitJavelinSteno() {
   console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
                           StenoUserDictionary::Reset_Binding, userDictionary);
 #endif
+
   StenoProcessorElement *processorElement = engine;
   processorElement =
       new (passthroughContainer) StenoPassthrough(processorElement);
@@ -396,40 +396,46 @@ void Script::SendText(const uint8_t *text) const {
 
 void ProcessStenoTick() {
   processors->Tick();
-  reportBuilder.FlushIfRequired();
-  consoleSendBuffer.Flush();
+  HidKeyboardReportBuilder::instance.FlushIfRequired();
+  ConsoleBuffer::instance.Flush();
 }
 
 //---------------------------------------------------------------------------
 
 void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
   console.HandleInput((char *)data, length);
-  consoleSendBuffer.Flush();
+  ConsoleBuffer::instance.Flush();
 }
 
 //---------------------------------------------------------------------------
 
 void Console::RawWrite(const char *data, size_t length) {
-  consoleSendBuffer.SendData((const uint8_t *)data, length);
+  ConsoleBuffer::instance.SendData((const uint8_t *)data, length);
 }
 
-void Console::Flush() { consoleSendBuffer.Flush(); }
+void Console::Flush() { ConsoleBuffer::instance.Flush(); }
 
-void Key::PressRaw(uint8_t key) { reportBuilder.Press(key); }
+void Key::PressRaw(uint8_t key) {
+  HidKeyboardReportBuilder::instance.Press(key);
+}
 
-void Key::ReleaseRaw(uint8_t key) { reportBuilder.Release(key); }
+void Key::ReleaseRaw(uint8_t key) {
+  HidKeyboardReportBuilder::instance.Release(key);
+}
 
 void SerialPort::SendData(const uint8_t *data, size_t length) {
   tud_cdc_write(data, length);
   tud_cdc_write_flush();
 }
 
-uint32_t Clock::GetCurrentTime() {
-  return divider->Divide(time_us_64(), 1000).quotient;
-}
+uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }
 
 #if JAVELIN_USE_PLOVER_HID
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
+  if (!tud_hid_n_ready(ITF_NUM_PLOVER_HID)) {
+    return;
+  }
+
   PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
 }

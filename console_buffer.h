@@ -9,18 +9,22 @@
 
 struct ConsoleBuffer {
 public:
-  ConsoleBuffer() {}
-
   void SendData(const uint8_t *data, size_t length);
   void Flush();
 
-  static HidReportBuffer<64> reportBuffer;
+  void SendNextReport() { reportBuffer.SendNextReport(); }
+
+  static ConsoleBuffer instance;
 
 private:
+  ConsoleBuffer() = default;
+
   static const size_t MAX_BUFFER_SIZE = 64;
 
   int bufferSize = 0;
   uint8_t buffer[MAX_BUFFER_SIZE];
+
+  HidReportBuffer<64> reportBuffer;
 };
 
 //---------------------------------------------------------------------------

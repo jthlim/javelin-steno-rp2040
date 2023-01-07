@@ -41,10 +41,9 @@ target_sources(${NAME} PUBLIC
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
+  rp2040_crc32.cc
 
   javelin/button_manager.cc
-  javelin/chord.cc
-  javelin/chord_history.cc
   javelin/console.cc
   javelin/crc32.cc
   javelin/dictionary/corrupted_dictionary.cc
@@ -94,6 +93,8 @@ target_sources(${NAME} PUBLIC
   javelin/steno_key_code_emitter.cc
   javelin/steno_key_state.cc
   javelin/str.cc
+  javelin/stroke.cc
+  javelin/stroke_history.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc
