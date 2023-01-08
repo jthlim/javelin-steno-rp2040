@@ -44,6 +44,7 @@
 #include "usb_descriptors.h"
 
 #include <hardware/clocks.h>
+#include <hardware/flash.h>
 #include <hardware/timer.h>
 #include <malloc.h>
 #include <pico/platform.h>
@@ -119,6 +120,14 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("Resume count: %d\n", resumeCount);
   Console::Printf("Chip version: %u\n", rp2040_chip_version());
   Console::Printf("ROM version: %u\n", rp2040_rom_version());
+
+  Console::Printf("Serial number: ");
+  uint8_t serialId[8];
+  flash_get_unique_id(serialId);
+  for (size_t i = 0; i < 8; ++i) {
+    Console::Printf("%02x", serialId[i]);
+  }
+  Console::Printf("\n");
 
   uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
