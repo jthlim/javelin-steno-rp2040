@@ -53,6 +53,10 @@
 
 //---------------------------------------------------------------------------
 
+#define TRACE_RELEASE_PROCESSING_TIME 0
+
+//---------------------------------------------------------------------------
+
 Console console;
 
 //---------------------------------------------------------------------------
@@ -383,7 +387,14 @@ void Script::OnStenoKeyPressed() {
 }
 
 void Script::OnStenoKeyReleased() {
+#if TRACE_RELEASE_PROCESSING_TIME
+  uint32_t t0 = time_us_32();
+#endif
   processors->Process(stenoState, StenoAction::RELEASE);
+#if TRACE_RELEASE_PROCESSING_TIME
+  uint32_t t1 = time_us_32();
+  Console::Printf("Release processing time: %u\n", t1 - t0);
+#endif
 }
 
 void Script::OnStenoStateCancelled() {

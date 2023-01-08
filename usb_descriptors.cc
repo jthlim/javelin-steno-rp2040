@@ -1,6 +1,7 @@
 //--------------------------------------------------------------------+
 
 #include "usb_descriptors.h"
+#include <hardware/flash.h>
 
 #include <tusb.h>
 
@@ -257,6 +258,16 @@ const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     offset = 1;
     break;
 
+  case 3: {
+    uint8_t id[8];
+    flash_get_unique_id(id);
+    for (size_t i = 0; i < 8; ++i) {
+      buffer[i * 2 + 1] = "0123456789abcdef"[id[i] >> 4];
+      buffer[i * 2 + 2] = "0123456789abcdef"[id[i] & 0xf];
+    }
+    offset = 16;
+    break;
+  }
   default:
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
