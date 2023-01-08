@@ -31,7 +31,9 @@ void Rp2040Crc32::Initialize() {
 uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
   bool use32BitTransfer = ((intptr_t(data) | length) & 3) == 0;
 
+#if JAVELIN_THREADS
   spinlock16->Lock();
+#endif
 
   sniff->data = 0xffffffff;
 
@@ -59,7 +61,9 @@ uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
   dma0->WaitUntilComplete();
   uint32_t value = sniff->data;
 
+#if JAVELIN_THREADS
   spinlock16->Unlock();
+#endif
 
   return value;
 }
