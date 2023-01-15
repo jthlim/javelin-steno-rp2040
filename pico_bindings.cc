@@ -47,7 +47,6 @@
 #include <hardware/flash.h>
 #include <hardware/timer.h>
 #include <malloc.h>
-#include <pico/platform.h>
 #include <tusb.h>
 
 #include JAVELIN_BOARD_CONFIG
@@ -128,6 +127,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     Console::Printf("%02x", serialId[i]);
   }
   Console::Printf("\n");
+  HidKeyboardReportBuilder::instance.PrintInfo();
 
   uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
@@ -212,6 +212,27 @@ void SetStenoMode(void *context, const char *commandLine) {
     passthroughContainer->UpdateNext(&ploverHid);
   } else {
     Console::Printf("ERR Unable to set steno mode: \"%s\"\n\n", stenoMode);
+    return;
+  }
+
+  Console::Write("OK\n\n", 4);
+}
+
+void SetKeyboardProtocol(void *context, const char *commandLine) {
+  const char *keyboardProtocol = strchr(commandLine, ' ');
+  if (!keyboardProtocol) {
+    Console::Printf("ERR No keyboard protocol specified\n\n");
+    return;
+  }
+
+  ++keyboardProtocol;
+  if (Str::Eq(keyboardProtocol, "default")) {
+    HidKeyboardReportBuilder::instance.SetCompatibilityMode(false);
+  } else if (Str::Eq(keyboardProtocol, "compatibility")) {
+    HidKeyboardReportBuilder::instance.SetCompatibilityMode(true);
+  } else {
+    Console::Printf("ERR Unable to set keyboard protocol: \"%s\"\n\n",
+                    keyboardProtocol);
     return;
   }
 
@@ -323,6 +344,10 @@ void InitJavelinSteno() {
       "set_steno_mode",
       "Sets the current steno mode [\"embedded\", \"gemini\", \"plover_hid\"]",
       SetStenoMode, nullptr);
+  console.RegisterCommand(
+      "set_keyboard_protocol",
+      "Sets the current keyboard protocol [\"default\", \"compatibility\"]",
+      SetKeyboardProtocol, nullptr);
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
   console.RegisterCommand("set_keyboard_layout",
@@ -367,6 +392,12 @@ void InitJavelinSteno() {
       StenoUserDictionary::PrintJsonDictionary_Binding, userDictionary);
   console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
                           StenoUserDictionary::Reset_Binding, userDictionary);
+  console.RegisterCommand(
+      "add_user_entry", "Adds a definition to the user dictionary",
+      StenoUserDictionary::AddEntry_Binding, userDictionary);
+  console.RegisterCommand(
+      "remove_user_entry", "Removes a definition from the user dictionary",
+      StenoUserDictionary::RemoveEntry_Binding, userDictionary);
 #endif
 
   StenoProcessorElement *processorElement = engine;
@@ -443,6 +474,8 @@ void Key::ReleaseRaw(uint8_t key) {
   HidKeyboardReportBuilder::instance.Release(key);
 }
 
+void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }
+
 void SerialPort::SendData(const uint8_t *data, size_t length) {
   tud_cdc_write(data, length);
   tud_cdc_write_flush();
@@ -450,7 +483,6 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
 
 uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }
 
-#if JAVELIN_USE_PLOVER_HID
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
   if (!tud_hid_n_ready(ITF_NUM_PLOVER_HID)) {
     return;
@@ -459,6 +491,5 @@ void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
   PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
 }
-#endif
 
 //---------------------------------------------------------------------------

@@ -11,9 +11,6 @@
 #include "rp2040_crc32.h"
 #include "usb_descriptors.h"
 
-#include <hardware/timer.h>
-#include <hardware/watchdog.h>
-#include <pico/stdlib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tusb.h>
@@ -57,10 +54,19 @@ void tud_resume_cb(void) {
 // USB HID
 //---------------------------------------------------------------------------
 
-static void hid_task(ButtonManager &buttonManager) {
-  static bool isReady = false;
-  static GlobalDeferredDebounce<ButtonState> debouncer;
+class HidTask {
+public:
+  HidTask() : buttonManager(BUTTON_MANAGER_BYTE_CODE) {}
 
+  void Update();
+
+private:
+  bool isReady = false;
+  GlobalDeferredDebounce<ButtonState> debouncer;
+  ButtonManager buttonManager;
+};
+
+void HidTask::Update() {
   Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
   if (!keyState.isUpdated) {
     return;
@@ -93,11 +99,9 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
   case ITF_NUM_KEYBOARD:
     HidKeyboardReportBuilder::instance.SendNextReport();
     break;
-#if JAVELIN_USE_PLOVER_HID
   case ITF_NUM_PLOVER_HID:
     PloverHidReportBuffer::instance.SendNextReport();
     break;
-#endif
   case ITF_NUM_CONSOLE:
     ConsoleBuffer::instance.SendNextReport();
     break;
@@ -153,7 +157,7 @@ static void cdc_task() {
 
 //---------------------------------------------------------------------------
 
-JavelinStaticAllocate<ButtonManager> buttonManagerContainer;
+JavelinStaticAllocate<HidTask> hidTaskContainer;
 
 int main(void) {
 #if JAVELIN_THREADS
@@ -162,13 +166,13 @@ int main(void) {
   KeyState::Init();
   Rp2040Crc32::Initialize();
   InitJavelinSteno();
-  new (buttonManagerContainer) ButtonManager(BUTTON_MANAGER_BYTE_CODE);
+  new (hidTaskContainer) HidTask;
 
   tusb_init();
 
   while (1) {
     tud_task(); // tinyusb device task
-    hid_task(buttonManagerContainer.value);
+    hidTaskContainer->Update();
     cdc_task();
 
     ProcessStenoTick();

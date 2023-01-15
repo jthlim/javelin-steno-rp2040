@@ -14,7 +14,7 @@ public:
     }
   }
 
-  void Unlock() { spinlock = 0; }
+  void Unlock() { spinlock = (intptr_t)(this); }
 
 private:
   volatile uint32_t spinlock;

@@ -2,6 +2,7 @@
 
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
+#include "javelin/console.h"
 #include "usb_descriptors.h"
 
 #include <string.h>
@@ -130,6 +131,13 @@ void HidKeyboardReportBuilder::Flush() {
 
   memset(&buffers[1], 0, sizeof(buffers[1]));
   maxPressIndex = 0;
+}
+
+//---------------------------------------------------------------------------
+
+void HidKeyboardReportBuilder::PrintInfo() const {
+  Console::Printf("Keyboard protocol: %s\n",
+                  compatibilityMode ? "compatibility" : "default");
 }
 
 //---------------------------------------------------------------------------

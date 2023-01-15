@@ -19,6 +19,8 @@ public:
 
   void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
 
+  void PrintInfo() const;
+
   static HidKeyboardReportBuilder instance;
 
 private:

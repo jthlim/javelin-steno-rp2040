@@ -15,8 +15,8 @@ public:
   Rp2040Divider() = delete;
 
   __attribute__((always_inline)) void DividerDelay() {
-    asm volatile("push { r0, r1, r2 }" : :);
-    asm volatile("pop { r0, r1, r2 }" : :);
+    asm volatile("push { r0, r1, r2, r3 }" : :);
+    asm volatile("pop { r0, r1, r2, r3 }" : :);
   }
 
   __attribute__((always_inline)) volatile Rp2040DividerResult &

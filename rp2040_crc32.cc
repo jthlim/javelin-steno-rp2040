@@ -1,12 +1,37 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_crc32.h"
+#include "rp2040_dma.h"
 #include "rp2040_spinlock.h"
 
 //---------------------------------------------------------------------------
 
+struct Rp2040DmaSniffControl {
+  enum class Calculate : uint32_t {
+    CRC_32 = 0,
+    BIT_REVERSED_CRC_32 = 1,
+    CRC_16_CCITT = 2,
+    BIT_REVERSED_CRC_16_CCITT = 3,
+    CHECKSUM = 0xf,
+  };
+
+  uint32_t enable : 1;
+  uint32_t dmaChannel : 4;
+  Calculate calculate : 4;
+  uint32_t bswap : 1;
+  uint32_t bitReverseOutput : 1;
+  uint32_t bitInvertOutput : 1;
+  uint32_t _reserved12 : 20;
+
+  void operator=(const Rp2040DmaSniffControl &control) volatile {
+    memcpy((void *)this, &control, sizeof(Rp2040DmaSniffControl));
+  }
+};
+static_assert(sizeof(Rp2040DmaSniffControl) == 4,
+              "Unexpected DmaSniffControl size");
+
 struct Rp2040DmaSniff {
-  volatile uint32_t control;
+  volatile Rp2040DmaSniffControl control;
   volatile uint32_t data;
 };
 
@@ -21,16 +46,17 @@ void Rp2040Crc32::Initialize() {
   // Trigger every sys_clk.
   *dmaTimer0 = 0x10001;
 
-  sniff->control = (1 << 11) | // OUT_INV
-                   (1 << 10) | // OUT_REV
-                   (1 << 5) |  // CALC = CRC-32 with bit reverse data.
-                   (0 << 1) |  // DMACH = dma0
-                   1;          // EN
+  Rp2040DmaSniffControl sniffControl = {
+      .enable = true,
+      .dmaChannel = 0,
+      .calculate = Rp2040DmaSniffControl::Calculate::BIT_REVERSED_CRC_32,
+      .bitReverseOutput = true,
+      .bitInvertOutput = true,
+  };
+  sniff->control = sniffControl;
 }
 
 uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
-  bool use32BitTransfer = ((intptr_t(data) | length) & 3) == 0;
-
 #if JAVELIN_THREADS
   spinlock16->Lock();
 #endif
@@ -38,25 +64,36 @@ uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
   sniff->data = 0xffffffff;
 
   dma0->source = data;
+
+  bool use32BitTransfer = ((intptr_t(data) | length) & 3) == 0;
+  Rp2040DmaControl control;
   if (use32BitTransfer) {
-    dma0->count = length >> 2;
-    dma0->controlTrigger = (1 << 23) |    // SNIFF_EN
-                           (0x3b << 15) | // TREQ_SEL = Timer0
-                           (0 << 11) |    // CHAIN_TO = dma0 = Disabled
-                           (0 << 5) |     // INCR_WRITE
-                           (1 << 4) |     // INCR_READ
-                           (2 << 2) |     // DATA_SIZE = SIZE_WORD
-                           1;             // EN
+    length >>= 2;
+    Rp2040DmaControl dmaControl32BitTransfer = {
+        .enable = true,
+        .dataSize = Rp2040DmaControl::DataSize::WORD,
+        .incrementRead = true,
+        .incrementWrite = false,
+        .chainToDma = 0,
+        .transferRequest = Rp2040DmaControl::TransferRequest::TIMER_0,
+        .sniffEnable = true,
+    };
+    control = dmaControl32BitTransfer;
   } else {
-    dma0->count = length;
-    dma0->controlTrigger = (1 << 23) |    // SNIFF_EN
-                           (0x3b << 15) | // TREQ_SEL = Timer0
-                           (0 << 11) |    // CHAIN_TO = dma0 = Disabled
-                           (0 << 5) |     // INCR_WRITE
-                           (1 << 4) |     // INCR_READ
-                           (0 << 2) |     // DATA_SIZE = SIZE_BYTE
-                           1;             // EN
+    Rp2040DmaControl dmaControl8BitTransfer = {
+        .enable = true,
+        .dataSize = Rp2040DmaControl::DataSize::BYTE,
+        .incrementRead = true,
+        .incrementWrite = false,
+        .chainToDma = 0,
+        .transferRequest = Rp2040DmaControl::TransferRequest::TIMER_0,
+        .sniffEnable = true,
+    };
+
+    control = dmaControl8BitTransfer;
   }
+  dma0->count = length;
+  dma0->controlTrigger = control;
 
   dma0->WaitUntilComplete();
   uint32_t value = sniff->data;

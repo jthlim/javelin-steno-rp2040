@@ -2,34 +2,75 @@
 
 #pragma once
 #include <stdint.h>
+#include <string.h>
 
 //---------------------------------------------------------------------------
+
+struct Rp2040DmaControl {
+  enum class TransferRequest : uint32_t {
+    DREQ_0 = 0,
+    TIMER_0 = 0x3b,
+    TIMER_1 = 0x3c,
+    TIMER_2 = 0x3d,
+    TIMER_3 = 0x3e,
+    PERMANENT = 0x3f,
+  };
+
+  enum class DataSize : uint32_t {
+    BYTE = 0,
+    HALF_WORD = 1,
+    WORD = 2,
+  };
+
+  uint32_t enable : 1;
+  uint32_t highPriority : 1;
+  DataSize dataSize : 2;
+  uint32_t incrementRead : 1;
+  uint32_t incrementWrite : 1;
+  uint32_t ringSizeShift : 4;
+  uint32_t ringSel : 1;
+  uint32_t chainToDma : 4;
+  TransferRequest transferRequest : 6;
+  uint32_t quietIrq : 1;
+  uint32_t bswap : 1;
+  uint32_t sniffEnable : 1;
+  uint32_t busy : 1;
+  uint32_t _reserved25 : 4;
+  uint32_t writeError : 1;
+  uint32_t readError : 1;
+  uint32_t ahbError : 1;
+
+  void operator=(const Rp2040DmaControl &control) volatile {
+    memcpy((void *)this, &control, sizeof(Rp2040DmaControl));
+  }
+};
+static_assert(sizeof(Rp2040DmaControl) == 4, "Unexpected DmaControl size");
 
 struct Rp2040Dma {
   const void *volatile source;
   void *volatile destination;
   volatile uint32_t count;
-  volatile uint32_t controlTrigger;
+  volatile Rp2040DmaControl controlTrigger;
 
   // Alias 1
-  volatile uint32_t controlAlias1;
+  volatile Rp2040DmaControl controlAlias1;
   const void *volatile sourceAlias1;
   void *volatile destinationAlias1;
   volatile uint32_t countTrigger;
 
   // Alias 2
-  volatile uint32_t controlAlias2;
+  volatile Rp2040DmaControl controlAlias2;
   volatile uint32_t countAlias2;
   const void *volatile sourceAlias2;
   void *volatile destinationTrigger;
 
   // Alias 3
-  volatile uint32_t controlAlias3;
+  volatile Rp2040DmaControl controlAlias3;
   void *volatile destinationAlias3;
   volatile uint32_t countAlias3;
   const void *volatile sourceTrigger;
 
-  inline bool IsBusy() const { return (controlAlias1 & (1 << 24)) != 0; }
+  inline bool IsBusy() const { return controlAlias1.busy; }
 
   inline void WaitUntilComplete() const {
     while (IsBusy()) {
