@@ -9,7 +9,8 @@ endif()
 
 add_definitions(
   -DJAVELIN_THREADS=1
-  -DJAVELIN_USE_PLOVER_HID=1
+  -DJAVELIN_USE_CUSTOM_POP_COUNT=1
+  -DJAVELIN_ASSEMBLER_THUMB2=1
   -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
   -DPICO_NO_FPGA_CHECK=1
   -DPICO_FLASH_SIZE_BYTES=0x1000000
@@ -43,6 +44,7 @@ target_sources(${NAME} PUBLIC
   plover_hid_report_buffer.cc
   rp2040_crc32.cc
 
+  javelin/bit.cc
   javelin/button_manager.cc
   javelin/console.cc
   javelin/crc32.cc
@@ -67,7 +69,8 @@ target_sources(${NAME} PUBLIC
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc
-  javelin/key_code.cc
+  javelin/key.cc
+  javelin/keyboard_layout.cc
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
@@ -95,6 +98,7 @@ target_sources(${NAME} PUBLIC
   javelin/str.cc
   javelin/stroke.cc
   javelin/stroke_history.cc
+  javelin/unicode.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc

@@ -4,7 +4,7 @@
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
-#include "javelin/key_code.h"
+#include "javelin/key.h"
 #include "javelin/static_allocate.h"
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"

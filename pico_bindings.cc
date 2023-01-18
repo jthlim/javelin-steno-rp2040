@@ -23,7 +23,7 @@
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/engine.h"
-#include "javelin/key_code.h"
+#include "javelin/key.h"
 #include "javelin/orthography.h"
 #include "javelin/processor/all_up.h"
 #include "javelin/processor/first_up.h"
@@ -188,7 +188,7 @@ void SetKeyboardLayout(void *context, const char *commandLine) {
   }
   ++keyboardLayout;
 
-  if (Key::SetKeyboardLayout(keyboardLayout)) {
+  if (KeyboardLayout::SetActiveLayout(keyboardLayout)) {
     Console::Write("OK\n\n", 4);
   } else {
     Console::Printf("ERR Unable to set keyboard layout: \"%s\"\n\n",
@@ -205,11 +205,11 @@ void SetStenoMode(void *context, const char *commandLine) {
 
   ++stenoMode;
   if (Str::Eq(stenoMode, "embedded")) {
-    passthroughContainer->UpdateNext(&engineContainer.value);
+    passthroughContainer->SetNext(&engineContainer.value);
   } else if (Str::Eq(stenoMode, "gemini")) {
-    passthroughContainer->UpdateNext(&gemini);
+    passthroughContainer->SetNext(&gemini);
   } else if (Str::Eq(stenoMode, "plover_hid")) {
-    passthroughContainer->UpdateNext(&ploverHid);
+    passthroughContainer->SetNext(&ploverHid);
   } else {
     Console::Printf("ERR Unable to set steno mode: \"%s\"\n\n", stenoMode);
     return;
@@ -257,7 +257,7 @@ void InitJavelinSteno() {
   HidKeyboardReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
-  Key::SetKeyboardLayout(config->keyboardLayout);
+  KeyboardLayout::SetActiveLayout(config->keyboardLayout);
 
   const WordListData *const wordListData =
       (const WordListData *)STENO_WORD_LIST_ADDRESS;
