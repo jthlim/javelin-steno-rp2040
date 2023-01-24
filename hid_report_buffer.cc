@@ -19,13 +19,13 @@ void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
 
   do {
     tud_task();
-  } while (endIndex >= startIndex + NUMBER_OF_ENTRIES);
+  } while (endIndex - startIndex >= NUMBER_OF_ENTRIES);
 
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
     ++endIndex;
     reportsSentCount[instance]++;
-    tud_hid_n_report(instance, reportId, data, length);
+    tud_hid_n_report(instance, reportId, data, dataSize);
     return;
   }
 
@@ -34,8 +34,7 @@ void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
   ++endIndex;
   entry->instance = instance;
   entry->reportId = reportId;
-  entry->dataLength = length;
-  memcpy(buffer, data, length);
+  memcpy(buffer, data, dataSize);
 }
 
 //---------------------------------------------------------------------------
@@ -43,15 +42,11 @@ void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
 void HidReportBufferBase::SendNextReport() {
 
   // This should never happen!
-  if (startIndex == endIndex)
+  if (startIndex == endIndex) {
     return;
-
-  ++startIndex;
-  if (startIndex >= NUMBER_OF_ENTRIES) {
-    startIndex -= NUMBER_OF_ENTRIES;
-    endIndex -= NUMBER_OF_ENTRIES;
   }
 
+  ++startIndex;
   if (startIndex == endIndex) {
     return;
   }
@@ -61,7 +56,7 @@ void HidReportBufferBase::SendNextReport() {
       entryData + dataSize * (startIndex & (NUMBER_OF_ENTRIES - 1));
 
   reportsSentCount[entry->instance]++;
-  tud_hid_n_report(entry->instance, entry->reportId, buffer, entry->dataLength);
+  tud_hid_n_report(entry->instance, entry->reportId, buffer, dataSize);
 }
 
 //---------------------------------------------------------------------------

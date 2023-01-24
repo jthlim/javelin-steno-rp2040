@@ -125,10 +125,10 @@ void HidKeyboardReportBuilder::Flush() {
   for (int i = 0; i < 32; ++i) {
     buffers[0].data[i] = (buffers[1].presenceFlags[i] & buffers[1].data[i]) |
                          (~buffers[1].presenceFlags[i] & buffers[0].data[i]);
-
-    buffers[0].presenceFlags[i] = buffers[1].presenceFlags[i];
   }
 
+  memcpy(buffers[0].presenceFlags, buffers[1].presenceFlags,
+         sizeof(buffers[0].presenceFlags));
   memset(&buffers[1], 0, sizeof(buffers[1]));
   maxPressIndex = 0;
 }

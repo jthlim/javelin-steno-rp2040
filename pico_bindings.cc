@@ -57,10 +57,6 @@
 
 //---------------------------------------------------------------------------
 
-Console console;
-
-//---------------------------------------------------------------------------
-
 #if USE_USER_DICTIONARY
 StenoUserDictionaryData
     userDictionaryLayout((const uint8_t *)STENO_USER_DICTIONARY_ADDRESS,
@@ -174,7 +170,7 @@ void SetUnicodeMode(void *context, const char *commandLine) {
   ++mode;
 
   if (StenoKeyCodeEmitter::SetUnicodeMode(mode)) {
-    Console::Write("OK\n\n", 4);
+    Console::SendOk();
   } else {
     Console::Printf("ERR Unable to set mode: \"%s\"\n\n", mode);
   }
@@ -189,7 +185,7 @@ void SetKeyboardLayout(void *context, const char *commandLine) {
   ++keyboardLayout;
 
   if (KeyboardLayout::SetActiveLayout(keyboardLayout)) {
-    Console::Write("OK\n\n", 4);
+    Console::SendOk();
   } else {
     Console::Printf("ERR Unable to set keyboard layout: \"%s\"\n\n",
                     keyboardLayout);
@@ -215,7 +211,7 @@ void SetStenoMode(void *context, const char *commandLine) {
     return;
   }
 
-  Console::Write("OK\n\n", 4);
+  Console::SendOk();
 }
 
 void SetKeyboardProtocol(void *context, const char *commandLine) {
@@ -236,7 +232,7 @@ void SetKeyboardProtocol(void *context, const char *commandLine) {
     return;
   }
 
-  Console::Write("OK\n\n", 4);
+  Console::SendOk();
 }
 
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
@@ -336,6 +332,7 @@ void InitJavelinSteno() {
 #endif
       );
 
+  Console &console = Console::instance;
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
@@ -381,6 +378,10 @@ void InitJavelinSteno() {
                           StenoEngine::EnableSuggestions_Binding, engine);
   console.RegisterCommand("disable_suggestions", "Disables suggestions output",
                           StenoEngine::DisableSuggestions_Binding, engine);
+  console.RegisterCommand("enable_text_log", "Enables suggestions output",
+                          StenoEngine::EnableTextLog_Binding, engine);
+  console.RegisterCommand("disable_text_log", "Disables suggestions output",
+                          StenoEngine::DisableTextLog_Binding, engine);
   console.RegisterCommand("lookup", "Looks up a word",
                           StenoEngine::Lookup_Binding, engine);
   // console.RegisterCommand("debug_test", "Runs test", Debug_Test_Binding,
@@ -454,7 +455,7 @@ void ProcessStenoTick() {
 //---------------------------------------------------------------------------
 
 void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
-  console.HandleInput((char *)data, length);
+  Console::instance.HandleInput((char *)data, length);
   ConsoleBuffer::instance.Flush();
 }
 

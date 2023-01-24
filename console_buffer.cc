@@ -17,26 +17,24 @@ void ConsoleBuffer::SendData(const uint8_t *data, size_t length) {
   // Fill up the previous buffer if it's not empty.
   if (bufferSize != 0) {
     int remaining = MAX_BUFFER_SIZE - bufferSize;
-    if (remaining > 0) {
-      int bytesToAdd = length > remaining ? remaining : length;
-      memcpy(buffer + bufferSize, data, bytesToAdd);
-      bufferSize += bytesToAdd;
+    int bytesToAdd = length > remaining ? remaining : length;
+    memcpy(buffer + bufferSize, data, bytesToAdd);
+    bufferSize += bytesToAdd;
 
-      data += bytesToAdd;
-      length -= bytesToAdd;
+    data += bytesToAdd;
+    length -= bytesToAdd;
 
-      if (bufferSize == MAX_BUFFER_SIZE) {
-        reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, buffer, MAX_BUFFER_SIZE);
-        bufferSize = 0;
-      }
+    if (bufferSize == MAX_BUFFER_SIZE) {
+      reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, buffer, MAX_BUFFER_SIZE);
+      bufferSize = 0;
+    }
 
-      if (length == 0) {
-        return;
-      }
+    if (length == 0) {
+      return;
     }
   }
 
-  // Send full length requests
+  // Send all full length requests.
   while (length >= MAX_BUFFER_SIZE) {
     reportBuffer.SendReport(ITF_NUM_CONSOLE, 0, data, MAX_BUFFER_SIZE);
     data += MAX_BUFFER_SIZE;

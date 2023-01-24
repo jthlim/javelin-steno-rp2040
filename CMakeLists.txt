@@ -8,14 +8,18 @@ if ("${BOARD}" STREQUAL "")
 endif()
 
 add_definitions(
+  -DJAVELIN_ASSEMBLER_THUMB2=1  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
+  -DJAVELIN_PLATFORM_PICO_SDK=1
   -DJAVELIN_THREADS=1
   -DJAVELIN_USE_CUSTOM_POP_COUNT=1
-  -DJAVELIN_ASSEMBLER_THUMB2=1
-  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
-  -DPICO_NO_FPGA_CHECK=1
+  -DNDEBUG=1
   -DPICO_FLASH_SIZE_BYTES=0x1000000
   -DPICO_FLASH_SPI_CLKDIV=4
-  -DNDEBUG=1
+  -DPICO_MALLOC_PANIC=0
+  -DPICO_NO_FPGA_CHECK=1
+  -DPICO_PRINTF_SUPPORT_FLOAT=0
+  -DPICO_PRINTF_SUPPORT_LONG_LONG=0
+  -DPICO_PRINTF_SUPPORT_PTRDIFF_T=0
 )
 
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
@@ -24,8 +28,8 @@ project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_C_FLAGS "-O2 -mcpu=cortex-m0plus -fomit-frame-pointer")
-set(CMAKE_CXX_FLAGS "-O2 -mcpu=cortex-m0plus -fomit-frame-pointer -fno-exceptions")
+set(CMAKE_C_FLAGS "-O2 -mcpu=cortex-m0plus")
+set(CMAKE_CXX_FLAGS "-O2 -mcpu=cortex-m0plus -fno-exceptions -fno-devirtualize-speculatively")
 
 pico_sdk_init()
 
@@ -39,6 +43,7 @@ target_sources(${NAME} PUBLIC
   console_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
+  libc_stubs.cc
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
@@ -115,6 +120,7 @@ target_link_libraries(${NAME}
   hardware_flash
   hardware_gpio
   pico_multicore
+  pico_printf
   pico_stdlib
   tinyusb_device
 )

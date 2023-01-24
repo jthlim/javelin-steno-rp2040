@@ -196,7 +196,7 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
     // Config number, interface count, string index, total length, attribute,
     // power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN,
-                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 50),
+                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
 
     // Interface number, string index, protocol, report descriptor len, EP In
     // address, size & polling interval
