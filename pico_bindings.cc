@@ -332,6 +332,8 @@ void InitJavelinSteno() {
 #endif
       );
 
+  engine->SetSpaceAfter(config->useSpaceAfter);
+
   Console &console = Console::instance;
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
@@ -350,6 +352,9 @@ void InitJavelinSteno() {
   console.RegisterCommand("set_keyboard_layout",
                           "Sets the current keyboard layout", SetKeyboardLayout,
                           nullptr);
+  console.RegisterCommand("set_space_position",
+                          "Controls space position before or after",
+                          StenoEngine::SetSpacePosition_Binding, engine);
   console.RegisterCommand("list_dictionaries", "Lists dictionaries",
                           StenoEngine::ListDictionaries_Binding, engine);
   console.RegisterCommand("enable_dictionary", "Enables a dictionary",
