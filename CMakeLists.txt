@@ -108,6 +108,7 @@ target_sources(${NAME} PUBLIC
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc
   javelin/word_list_data.cc
+  javelin/writer.cc
 )
 
 # Add the local directory so tinyusb can find tusb_config.h

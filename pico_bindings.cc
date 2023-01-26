@@ -466,7 +466,7 @@ void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
 
 //---------------------------------------------------------------------------
 
-void Console::RawWrite(const char *data, size_t length) {
+void ConsoleWriter::Write(const char *data, size_t length) {
   ConsoleBuffer::instance.SendData((const uint8_t *)data, length);
 }
 
