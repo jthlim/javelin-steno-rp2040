@@ -383,9 +383,9 @@ void InitJavelinSteno() {
                           StenoEngine::EnableSuggestions_Binding, engine);
   console.RegisterCommand("disable_suggestions", "Disables suggestions output",
                           StenoEngine::DisableSuggestions_Binding, engine);
-  console.RegisterCommand("enable_text_log", "Enables suggestions output",
+  console.RegisterCommand("enable_text_log", "Enables text log output",
                           StenoEngine::EnableTextLog_Binding, engine);
-  console.RegisterCommand("disable_text_log", "Disables suggestions output",
+  console.RegisterCommand("disable_text_log", "Disables text log output",
                           StenoEngine::DisableTextLog_Binding, engine);
   console.RegisterCommand("lookup", "Looks up a word",
                           StenoEngine::Lookup_Binding, engine);
