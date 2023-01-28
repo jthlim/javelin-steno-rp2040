@@ -389,6 +389,8 @@ void InitJavelinSteno() {
                           StenoEngine::DisableTextLog_Binding, engine);
   console.RegisterCommand("lookup", "Looks up a word",
                           StenoEngine::Lookup_Binding, engine);
+  console.RegisterCommand("lookup_stroke", "Looks up a stroke",
+                          StenoEngine::LookupStroke_Binding, engine);
   // console.RegisterCommand("debug_test", "Runs test", Debug_Test_Binding,
   //                         nullptr);
 
