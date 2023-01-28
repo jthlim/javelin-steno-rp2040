@@ -461,13 +461,6 @@ void ProcessStenoTick() {
 
 //---------------------------------------------------------------------------
 
-void OnConsoleReceiveData(const uint8_t *data, uint8_t length) {
-  Console::instance.HandleInput((char *)data, length);
-  ConsoleBuffer::instance.Flush();
-}
-
-//---------------------------------------------------------------------------
-
 void ConsoleWriter::Write(const char *data, size_t length) {
   ConsoleBuffer::instance.SendData((const uint8_t *)data, length);
 }

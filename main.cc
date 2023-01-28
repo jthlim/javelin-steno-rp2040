@@ -2,6 +2,7 @@
 
 #include "config/uni_v4.h"
 #include "console_buffer.h"
+#include "console_input_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
 #include "javelin/key.h"
@@ -17,7 +18,6 @@
 
 //---------------------------------------------------------------------------
 
-void OnConsoleReceiveData(const uint8_t *data, uint8_t length);
 void InitJavelinSteno();
 void ProcessStenoTick();
 void InitMulticore();
@@ -131,7 +131,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
     break;
 
   case ITF_NUM_CONSOLE:
-    OnConsoleReceiveData(buffer, bufsize);
+    ConsoleInputBuffer::instance.Add(buffer, bufsize);
     break;
   }
 }
@@ -176,6 +176,7 @@ int main(void) {
     cdc_task();
 
     ProcessStenoTick();
+    ConsoleInputBuffer::instance.Process();
     sleep_us(100);
   }
 

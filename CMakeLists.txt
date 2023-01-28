@@ -41,6 +41,7 @@ target_sources(${NAME} PUBLIC
   flash.cc
   key_state.cc
   console_buffer.cc
+  console_input_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   libc_stubs.cc
