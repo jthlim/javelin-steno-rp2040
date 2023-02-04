@@ -441,7 +441,7 @@ void Script::OnStenoKeyReleased() {
   processors->Process(stenoState, StenoAction::RELEASE);
 #if TRACE_RELEASE_PROCESSING_TIME
   uint32_t t1 = time_us_32();
-  Console::Printf("Release processing time: %u\n", t1 - t0);
+  Console::Printf("Release processing time: %u\n\n", t1 - t0);
 #endif
 }
 
