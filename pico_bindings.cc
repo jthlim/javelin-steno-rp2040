@@ -25,6 +25,7 @@
 #include "javelin/engine.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
+#include "javelin/pixel.h"
 #include "javelin/processor/all_up.h"
 #include "javelin/processor/first_up.h"
 #include "javelin/processor/gemini.h"
@@ -40,8 +41,9 @@
 #include "javelin/word_list.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
-
+#include "split_tx_rx.h"
 #include "usb_descriptors.h"
+#include "ws2812.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
@@ -54,6 +56,7 @@
 //---------------------------------------------------------------------------
 
 #define TRACE_RELEASE_PROCESSING_TIME 0
+#define ENABLE_DEBUG_COMMAND 0
 
 //---------------------------------------------------------------------------
 
@@ -176,22 +179,6 @@ void SetUnicodeMode(void *context, const char *commandLine) {
   }
 }
 
-void SetKeyboardLayout(void *context, const char *commandLine) {
-  const char *keyboardLayout = strchr(commandLine, ' ');
-  if (!keyboardLayout) {
-    Console::Printf("ERR No keyboard layout specified\n\n");
-    return;
-  }
-  ++keyboardLayout;
-
-  if (KeyboardLayout::SetActiveLayout(keyboardLayout)) {
-    Console::SendOk();
-  } else {
-    Console::Printf("ERR Unable to set keyboard layout: \"%s\"\n\n",
-                    keyboardLayout);
-  }
-}
-
 void SetStenoMode(void *context, const char *commandLine) {
   const char *stenoMode = strchr(commandLine, ' ');
   if (!stenoMode) {
@@ -239,13 +226,20 @@ void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
 }
 
-// void Debug_Test_Binding(void *context, const char *commandLine) {
-// }
+#if ENABLE_DEBUG_COMMAND
+void Debug_Binding(void *context, const char *commandLine) {}
+#endif
 
 struct WordListData {
   uint32_t length;
   uint8_t data[1];
 };
+
+void InitSlave() {
+  Console &console = Console::instance;
+  console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
+                          LaunchBootrom, nullptr);
+}
 
 void InitJavelinSteno() {
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
@@ -350,8 +344,8 @@ void InitJavelinSteno() {
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
   console.RegisterCommand("set_keyboard_layout",
-                          "Sets the current keyboard layout", SetKeyboardLayout,
-                          nullptr);
+                          "Sets the current keyboard layout",
+                          &KeyboardLayout::SetKeyboardLayout_Binding, nullptr);
   console.RegisterCommand("set_space_position",
                           "Controls space position before or after",
                           StenoEngine::SetSpacePosition_Binding, engine);
@@ -391,8 +385,15 @@ void InitJavelinSteno() {
                           StenoEngine::Lookup_Binding, engine);
   console.RegisterCommand("lookup_stroke", "Looks up a stroke",
                           StenoEngine::LookupStroke_Binding, engine);
-  // console.RegisterCommand("debug_test", "Runs test", Debug_Test_Binding,
-  //                         nullptr);
+
+  if (Ws2812::IsAvailable()) {
+    console.RegisterCommand("set_pixel", "Sets a pixel RGB (index, r, g, b)",
+                            Pixel::SetPixel_Binding, nullptr);
+  }
+
+#if ENABLE_DEBUG_COMMAND
+  console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
+#endif
 
 #if USE_USER_DICTIONARY
   console.RegisterCommand(

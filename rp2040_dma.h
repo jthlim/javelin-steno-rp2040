@@ -8,7 +8,46 @@
 
 struct Rp2040DmaControl {
   enum class TransferRequest : uint32_t {
-    DREQ_0 = 0,
+    PIO0_TX0 = 0,
+    PIO0_TX1,
+    PIO0_TX2,
+    PIO0_TX3,
+    PIO0_RX0,
+    PIO0_RX1,
+    PIO0_RX2,
+    PIO0_RX3,
+    PIO1_TX0,
+    PIO1_TX1,
+    PIO1_TX2,
+    PIO1_TX3,
+    PIO1_RX0,
+    PIO1_RX1,
+    PIO1_RX2,
+    PIO1_RX3,
+    SPI0_TX,
+    SPI0_RX,
+    SPI1_TX,
+    SPI1_RX,
+    UART0_TX,
+    UART0_RX,
+    UART1_TX,
+    UART1_RX,
+    PWM_WRAP0,
+    PWM_WRAP1,
+    PWM_WRAP2,
+    PWM_WRAP3,
+    PWM_WRAP4,
+    PWM_WRAP5,
+    PWM_WRAP6,
+    PWM_WRAP7,
+    I2C0_TX,
+    I2C0_RX,
+    I2C1_TX,
+    I2C1_RX,
+    ADC,
+    XIP_STREAM,
+    XIP_SSITX,
+    XIP_SSIRX,
     TIMER_0 = 0x3b,
     TIMER_1 = 0x3c,
     TIMER_2 = 0x3d,
@@ -46,36 +85,53 @@ struct Rp2040DmaControl {
 };
 static_assert(sizeof(Rp2040DmaControl) == 4, "Unexpected DmaControl size");
 
+struct Rp2040DmaAbort {
+  volatile uint32_t value;
+
+  void Abort(int channelIndex) {
+    value = (1 << channelIndex);
+    while (value) {
+    }
+  }
+};
+
+static Rp2040DmaAbort *const dmaAbort = (Rp2040DmaAbort *)0x50000444;
+
 struct Rp2040Dma {
-  const void *volatile source;
-  void *volatile destination;
+  const volatile void *volatile source;
+  const volatile void *volatile destination;
   volatile uint32_t count;
   volatile Rp2040DmaControl controlTrigger;
 
   // Alias 1
-  volatile Rp2040DmaControl controlAlias1;
-  const void *volatile sourceAlias1;
-  void *volatile destinationAlias1;
+  union {
+    volatile Rp2040DmaControl control;
+    volatile Rp2040DmaControl controlAlias1;
+  };
+  const volatile void *volatile sourceAlias1;
+  const volatile void *volatile destinationAlias1;
   volatile uint32_t countTrigger;
 
   // Alias 2
   volatile Rp2040DmaControl controlAlias2;
   volatile uint32_t countAlias2;
-  const void *volatile sourceAlias2;
-  void *volatile destinationTrigger;
+  const volatile void *volatile sourceAlias2;
+  const volatile void *volatile destinationTrigger;
 
   // Alias 3
   volatile Rp2040DmaControl controlAlias3;
-  void *volatile destinationAlias3;
+  const volatile void *volatile destinationAlias3;
   volatile uint32_t countAlias3;
-  const void *volatile sourceTrigger;
+  const volatile void *volatile sourceTrigger;
 
-  inline bool IsBusy() const { return controlAlias1.busy; }
+  inline bool IsBusy() const { return control.busy; }
 
   inline void WaitUntilComplete() const {
     while (IsBusy()) {
     }
   }
+
+  void Abort() { dmaAbort->Abort(this - (Rp2040Dma *)0x50000000); }
 };
 
 static Rp2040Dma *const dma0 = (Rp2040Dma *)0x50000000;

@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 #include "usb_descriptors.h"
 #include <hardware/flash.h>
@@ -7,7 +7,7 @@
 
 #include JAVELIN_BOARD_CONFIG
 
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 /* A combination of interfaces must have a unique product id, since PC will save
  * device driver after the first plug. Same VID/PID with different interface e.g
@@ -21,9 +21,9 @@
   (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) |           \
    _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4))
 
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 // Device Descriptors
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 const tusb_desc_device_t DEVICE_DESCRIPTOR = {
     .bLength = sizeof(tusb_desc_device_t),
@@ -47,13 +47,13 @@ const tusb_desc_device_t DEVICE_DESCRIPTOR = {
 
 // Invoked when received GET DEVICE DESCRIPTOR
 // Application return pointer to descriptor
-const uint8_t *tud_descriptor_device_cb(void) {
+extern "C" const uint8_t *tud_descriptor_device_cb(void) {
   return (const uint8_t *)&DEVICE_DESCRIPTOR;
 }
 
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 // HID Report Descriptor
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 // clang-format off
 const uint8_t desc_hid_keyboard_report[] = {
@@ -143,7 +143,7 @@ const uint8_t desc_hid_plover_hid_report[] = {
 // Invoked when received GET HID REPORT DESCRIPTOR
 // Application return pointer to descriptor
 // Descriptor contents must exist long enough for transfer to complete
-const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
+extern "C" const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
     return desc_hid_keyboard_report;
@@ -159,9 +159,9 @@ const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
   }
 }
 
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 // Configuration Descriptor
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 #define CONFIG_TOTAL_LEN                                                       \
   (TUD_CONFIG_DESC_LEN + 2 * TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN +       \
@@ -224,13 +224,13 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
 // Descriptor contents must exist long enough for transfer to complete
-const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
+extern "C" const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
   return MAIN_CONFIGURATION_DESCRIPTOR;
 }
 
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 // String Descriptors
-//--------------------------------------------------------------------+
+//---------------------------------------------------------------------------
 
 // array of pointer to string descriptors
 const char *const STRING_DESCRIPTORS[] = {
@@ -243,7 +243,8 @@ const char *const STRING_DESCRIPTORS[] = {
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long
 // enough for transfer to complete
-const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
+extern "C" const uint16_t *tud_descriptor_string_cb(uint8_t index,
+                                                    uint16_t langid) {
   size_t offset;
   static uint16_t buffer[32];
 

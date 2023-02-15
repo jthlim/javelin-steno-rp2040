@@ -16,6 +16,10 @@ HidKeyboardReportBuilder HidKeyboardReportBuilder::instance;
 
 const size_t MODIFIER_OFFSET = 0;
 
+HidKeyboardReportBuilder::HidKeyboardReportBuilder() {
+  memset(&buffers, 0, sizeof(buffers));
+}
+
 void HidKeyboardReportBuilder::Press(uint8_t key) {
   if (key == 0) {
     return;
@@ -103,8 +107,8 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
 }
 
 bool HidKeyboardReportBuilder::HasData() const {
-  for (size_t i = 0; i < 32; ++i) {
-    if (buffers[0].presenceFlags[i] != 0)
+  for (size_t i = 0; i < 8; ++i) {
+    if (buffers[0].presenceFlags32[i] != 0)
       return true;
   }
   return false;
@@ -122,9 +126,10 @@ void HidKeyboardReportBuilder::FlushIfRequired() {
 void HidKeyboardReportBuilder::Flush() {
   reportBuffer.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data, 32);
 
-  for (int i = 0; i < 32; ++i) {
-    buffers[0].data[i] = (buffers[1].presenceFlags[i] & buffers[1].data[i]) |
-                         (~buffers[1].presenceFlags[i] & buffers[0].data[i]);
+  for (int i = 0; i < 8; ++i) {
+    buffers[0].data32[i] =
+        (buffers[1].presenceFlags32[i] & buffers[1].data32[i]) |
+        (~buffers[1].presenceFlags32[i] & buffers[0].data32[i]);
   }
 
   memcpy(buffers[0].presenceFlags, buffers[1].presenceFlags,

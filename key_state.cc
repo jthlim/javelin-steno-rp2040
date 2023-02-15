@@ -1,24 +1,48 @@
 //---------------------------------------------------------------------------
 
 #include "key_state.h"
-#include "javelin/console.h"
+#include "split_tx_rx.h"
 #include <hardware/gpio.h>
 #include <hardware/structs/ioqspi.h>
 #include <hardware/structs/sio.h>
 #include <hardware/sync.h>
 #include <hardware/timer.h>
-#include <pico/stdlib.h>
 
 #include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------
 
-void KeyState::Init() {
+#if JAVELIN_SPLIT
+auto COLUMN_PINS = MASTER_COLUMN_PINS;
+auto COLUMN_PIN_MASK = MASTER_COLUMN_PIN_MASK;
+auto ROW_PINS = MASTER_ROW_PINS;
+auto ROW_PIN_MASK = MASTER_ROW_PIN_MASK;
+auto KEY_MAP = MASTER_KEY_MAP;
+const size_t COLUMN_PIN_COUNT = sizeof(MASTER_COLUMN_PINS);
+const size_t ROW_PIN_COUNT = sizeof(MASTER_ROW_PINS);
+#else
+const size_t COLUMN_PIN_COUNT = sizeof(COLUMN_PINS);
+const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
+#endif
+
+//---------------------------------------------------------------------------
+
+void KeyState::Initialize() {
+#if JAVELIN_SPLIT
+  if (!SplitTxRx::IsMaster()) {
+    COLUMN_PINS = SLAVE_COLUMN_PINS;
+    COLUMN_PIN_MASK = SLAVE_COLUMN_PIN_MASK;
+    ROW_PINS = SLAVE_ROW_PINS;
+    ROW_PIN_MASK = SLAVE_ROW_PIN_MASK;
+    KEY_MAP = SLAVE_KEY_MAP;
+  }
+#endif
+
   gpio_init_mask(COLUMN_PIN_MASK | ROW_PIN_MASK);
   gpio_set_dir_masked(COLUMN_PIN_MASK | ROW_PIN_MASK, ROW_PIN_MASK);
 
-  for (uint8_t input : COLUMN_PINS) {
-    gpio_pull_up(input);
+  for (size_t i = 0; i < COLUMN_PIN_COUNT; ++i) {
+    gpio_pull_up(COLUMN_PINS[i]);
   }
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
 }
@@ -32,7 +56,7 @@ void KeyState::Init() {
 //
 // This doesn't work if others are trying to access flash at the same time,
 // e.g. XIP streamer, or the other core.
-bool __no_inline_not_in_flash_func(get_bootsel_button)() {
+static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
   const int CS_PIN_INDEX = 1;
 
   // Must disable interrupts, as interrupt handlers may be in flash, and flash
@@ -68,14 +92,14 @@ ButtonState KeyState::Read() {
   ButtonState state;
   state.ClearAll();
 
-  for (int r = 0; r < sizeof(ROW_PINS); ++r) {
+  for (int r = 0; r < ROW_PIN_COUNT; ++r) {
     gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK & ~(1 << ROW_PINS[r]));
     // Seems to work solidly with 2us wait. Use 10 for safety.
     busy_wait_us_32(10);
 
     int columnMask = gpio_get_all();
 #pragma GCC unroll 1
-    for (int c = 0; c < sizeof(COLUMN_PINS); ++c) {
+    for (int c = 0; c < COLUMN_PIN_COUNT; ++c) {
       if (((columnMask >> COLUMN_PINS[c]) & 1) == 0) {
         int buttonIndex = KEY_MAP[r][c];
         if (buttonIndex >= 0) {
@@ -88,7 +112,7 @@ ButtonState KeyState::Read() {
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
 
 #if defined(BOOTSEL_BUTTON_INDEX)
-  if (get_bootsel_button()) {
+  if (isBootSelButtonPressed()) {
     state.Set(BOOTSEL_BUTTON_INDEX);
   }
 #endif

@@ -3,10 +3,11 @@
 #include "console_input_buffer.h"
 #include "console_buffer.h"
 #include "javelin/console.h"
+#include <string.h>
 
 //---------------------------------------------------------------------------
 
-ConsoleInputBuffer ConsoleInputBuffer::instance;
+ConsoleInputBuffer::ConsoleInputBufferData ConsoleInputBuffer::instance;
 
 //---------------------------------------------------------------------------
 
@@ -21,13 +22,14 @@ ConsoleInputBuffer::Entry *ConsoleInputBuffer::Entry::Create(const void *data,
 
 //---------------------------------------------------------------------------
 
-void ConsoleInputBuffer::Add(const uint8_t *data, size_t length) {
+void ConsoleInputBuffer::ConsoleInputBufferData::Add(const uint8_t *data,
+                                                     size_t length) {
   Entry *entry = Entry::Create(data, length);
   *tail = entry;
   tail = &entry->next;
 }
 
-void ConsoleInputBuffer::Process() {
+void ConsoleInputBuffer::ConsoleInputBufferData::Process() {
   while (head) {
     Entry *entry = head;
     head = entry->next;

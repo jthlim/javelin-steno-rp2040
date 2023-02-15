@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
-#include "config/uni_v4.h"
+#include JAVELIN_BOARD_CONFIG
+
 #include "console_buffer.h"
 #include "console_input_buffer.h"
 #include "hid_keyboard_report_builder.h"
@@ -10,15 +11,17 @@
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_crc32.h"
+#include "split_tx_rx.h"
 #include "usb_descriptors.h"
+#include "ws2812.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <tusb.h>
 
 //---------------------------------------------------------------------------
 
 void InitJavelinSteno();
+void InitSlave();
 void ProcessStenoTick();
 void InitMulticore();
 
@@ -32,20 +35,20 @@ int resumeCount = 0;
 //---------------------------------------------------------------------------
 
 // Invoked when device is mounted
-void tud_mount_cb(void) {}
+extern "C" void tud_mount_cb(void) {}
 
 // Invoked when device is unmounted
-void tud_umount_cb(void) {}
+extern "C" void tud_umount_cb(void) {}
 
 // Invoked when usb bus is suspended
 // remote_wakeup_en : if host allow us  to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en) {
+extern "C" void tud_suspend_cb(bool remote_wakeup_en) {
   // set_sys_clock_khz(25000, true);
 }
 
 // Invoked when usb bus is resumed
-void tud_resume_cb(void) {
+extern "C" void tud_resume_cb(void) {
   // set_sys_clock_khz(125000, true);
   ++resumeCount;
 }
@@ -54,7 +57,11 @@ void tud_resume_cb(void) {
 // USB HID
 //---------------------------------------------------------------------------
 
+#if JAVELIN_SPLIT
+class HidTask final : public SplitRxHandler {
+#else
 class HidTask {
+#endif
 public:
   HidTask() : buttonManager(BUTTON_MANAGER_BYTE_CODE) {}
 
@@ -62,11 +69,66 @@ public:
 
 private:
   bool isReady = false;
+#if JAVELIN_SPLIT
+  bool isSplitUpdated = false;
+  ButtonState splitState;
+#endif
   GlobalDeferredDebounce<ButtonState> debouncer;
   ButtonManager buttonManager;
+
+#if JAVELIN_SPLIT
+  virtual void OnConnectionReset() { splitState.ClearAll(); }
+  virtual void OnDataReceived(const void *data, size_t length) {
+    const ButtonState &newSplitState = *(const ButtonState *)data;
+    if (newSplitState == splitState) {
+      return;
+    }
+    splitState = newSplitState;
+    isSplitUpdated = true;
+  }
+#endif
 };
 
 void HidTask::Update() {
+  Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
+
+#if JAVELIN_SPLIT
+  if (!keyState.isUpdated && !isSplitUpdated) {
+    return;
+  }
+  const ButtonState newKeyState = keyState.value | splitState;
+  isSplitUpdated = false;
+#else
+  if (!keyState.isUpdated) {
+    return;
+  }
+  const ButtonState &newKeyState = keyState.value;
+#endif
+
+  if (tud_suspended()) {
+    if (newKeyState.IsAnySet()) {
+      // Wake up host if we are in suspend mode
+      // and REMOTE_WAKEUP feature is enabled by host
+      tud_remote_wakeup();
+    }
+  } else if (isReady) {
+    buttonManager.Update(newKeyState);
+  } else if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
+    isReady = true;
+    buttonManager.Update(newKeyState);
+  }
+}
+
+class SlaveHidTask final : public SplitTxHandler {
+public:
+  void Update();
+  void UpdateBuffer(TxBuffer &buffer);
+
+private:
+  GlobalDeferredDebounce<ButtonState> debouncer;
+};
+
+void SlaveHidTask::Update() {
   Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
   if (!keyState.isUpdated) {
     return;
@@ -78,23 +140,24 @@ void HidTask::Update() {
       // and REMOTE_WAKEUP feature is enabled by host
       tud_remote_wakeup();
     }
-  } else if (isReady) {
-    buttonManager.Update(keyState.value);
-  } else if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
-    isReady = true;
-    buttonManager.Update(keyState.value);
   }
+}
+
+void SlaveHidTask::UpdateBuffer(TxBuffer &buffer) {
+  buffer.Add(SplitHandlerId::KEY_STATE, &debouncer.GetState(),
+             sizeof(ButtonState));
 }
 
 // Invoked when received SET_PROTOCOL request
 // protocol is either HID_PROTOCOL_BOOT (0) or HID_PROTOCOL_REPORT (1)
-void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol) {}
+extern "C" void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol) {}
 
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
 // Note: For composite reports, report[0] is report ID
-void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
-                                uint8_t len) {
+extern "C" void tud_hid_report_complete_cb(uint8_t instance,
+                                           const uint8_t *report,
+                                           uint16_t len) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
     HidKeyboardReportBuilder::instance.SendNextReport();
@@ -111,17 +174,17 @@ void tud_hid_report_complete_cb(uint8_t instance, const uint8_t *report,
 // Invoked when received GET_REPORT control request
 // Application must fill buffer report's content and return its length.
 // Return zero will cause the stack to STALL request
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
-                               hid_report_type_t report_type, uint8_t *buffer,
-                               uint16_t reqlen) {
+extern "C" uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
+                                          hid_report_type_t report_type,
+                                          uint8_t *buffer, uint16_t reqlen) {
   return 0;
 }
 
 // Invoked when received SET_REPORT control request or
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
-                           hid_report_type_t report_type, const uint8_t *buffer,
-                           uint16_t bufsize) {
+extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
+                                      hid_report_type_t report_type,
+                                      const uint8_t *buffer, uint16_t bufsize) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
     if (report_type != HID_REPORT_TYPE_OUTPUT || bufsize < 1) {
@@ -131,7 +194,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
     break;
 
   case ITF_NUM_CONSOLE:
-    ConsoleInputBuffer::instance.Add(buffer, bufsize);
+    ConsoleInputBuffer::Add(buffer, bufsize);
     break;
   }
 }
@@ -158,26 +221,65 @@ static void cdc_task() {
 //---------------------------------------------------------------------------
 
 JavelinStaticAllocate<HidTask> hidTaskContainer;
+JavelinStaticAllocate<SlaveHidTask> slaveHidTaskContainer;
+
+void DoMasterRunLoop() {
+  new (hidTaskContainer) HidTask;
+
+  SplitTxRx::RegisterRxHandler(SplitHandlerId::KEY_STATE,
+                               &hidTaskContainer.value);
+
+  while (1) {
+    tud_task(); // tinyusb device task
+    SplitTxRx::Update();
+    hidTaskContainer->Update();
+    cdc_task();
+
+    ProcessStenoTick();
+    ConsoleInputBuffer::Process();
+    Ws2812::Update();
+
+    sleep_us(100);
+  }
+}
+
+void DoSlaveRunLoop() {
+  new (slaveHidTaskContainer) SlaveHidTask;
+
+  SplitTxRx::RegisterTxHandler(&slaveHidTaskContainer.value);
+
+  while (1) {
+    tud_task(); // tinyusb device task
+    SplitTxRx::Update();
+    slaveHidTaskContainer->Update();
+    cdc_task();
+
+    HidKeyboardReportBuilder::instance.FlushIfRequired();
+    ConsoleBuffer::instance.Flush();
+    ConsoleInputBuffer::Process();
+    Ws2812::Update();
+
+    sleep_us(100);
+  }
+}
 
 int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
-  KeyState::Init();
+  KeyState::Initialize();
   Rp2040Crc32::Initialize();
-  InitJavelinSteno();
-  new (hidTaskContainer) HidTask;
+  Ws2812::Initialize();
+  SplitTxRx::Initialize();
 
-  tusb_init();
-
-  while (1) {
-    tud_task(); // tinyusb device task
-    hidTaskContainer->Update();
-    cdc_task();
-
-    ProcessStenoTick();
-    ConsoleInputBuffer::instance.Process();
-    sleep_us(100);
+  if (SplitTxRx::IsMaster()) {
+    InitJavelinSteno();
+    tusb_init();
+    DoMasterRunLoop();
+  } else {
+    InitSlave();
+    tusb_init();
+    DoSlaveRunLoop();
   }
 
   return 0;

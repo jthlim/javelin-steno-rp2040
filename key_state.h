@@ -7,7 +7,7 @@
 
 class KeyState {
 public:
-  static void Init();
+  static void Initialize();
 
   static ButtonState Read();
 };

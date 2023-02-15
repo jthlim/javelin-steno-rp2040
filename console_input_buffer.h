@@ -3,20 +3,18 @@
 #pragma once
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 //---------------------------------------------------------------------------
 
 class ConsoleInputBuffer {
 public:
-  void Add(const uint8_t *data, size_t length);
-  void Process();
+  static void Add(const uint8_t *data, size_t length) {
+    instance.Add(data, length);
+  };
 
-  static ConsoleInputBuffer instance;
+  static void Process() { instance.Process(); }
 
 private:
-  ConsoleInputBuffer() : head(nullptr), tail(&head) {}
-
   struct Entry {
     Entry *next;
     size_t length;
@@ -25,8 +23,17 @@ private:
     static Entry *Create(const void *data, size_t length);
   };
 
-  Entry *head;
-  Entry **tail;
+  struct ConsoleInputBufferData {
+    ConsoleInputBufferData() : head(nullptr), tail(&head) {}
+
+    Entry *head;
+    Entry **tail;
+
+    void Add(const uint8_t *data, size_t length);
+    void Process();
+  };
+
+  static ConsoleInputBufferData instance;
 };
 
 //---------------------------------------------------------------------------

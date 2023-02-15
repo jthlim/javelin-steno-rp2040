@@ -8,7 +8,8 @@ if ("${BOARD}" STREQUAL "")
 endif()
 
 add_definitions(
-  -DJAVELIN_ASSEMBLER_THUMB2=1  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
+  -DJAVELIN_ASSEMBLER_THUMB2=1
+  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
   -DJAVELIN_PLATFORM_PICO_SDK=1
   -DJAVELIN_THREADS=1
   -DJAVELIN_USE_CUSTOM_POP_COUNT=1
@@ -49,6 +50,8 @@ target_sources(${NAME} PUBLIC
   pico_thread.cc
   plover_hid_report_buffer.cc
   rp2040_crc32.cc
+  split_tx_rx.cc
+  ws2812.cc
 
   javelin/bit.cc
   javelin/button_manager.cc
@@ -83,6 +86,7 @@ target_sources(${NAME} PUBLIC
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
+  javelin/pixel.cc
   javelin/pool_allocate.cc
   javelin/processor/all_up.cc
   javelin/processor/first_up.cc
@@ -122,6 +126,7 @@ target_link_libraries(${NAME}
   hardware_clocks
   hardware_flash
   hardware_gpio
+  hardware_pio
   pico_multicore
   pico_printf
   pico_stdlib
