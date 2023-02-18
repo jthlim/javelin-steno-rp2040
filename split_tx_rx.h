@@ -1,6 +1,8 @@
 //---------------------------------------------------------------------------
 
+#pragma once
 #include JAVELIN_BOARD_CONFIG
+#include <hardware/pio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -8,6 +10,7 @@
 
 enum SplitHandlerId {
   KEY_STATE,
+  RGB,
 };
 
 struct TxRxHeader {
@@ -63,15 +66,23 @@ public:
     instance.rxHandlers[id] = handler;
   }
 
+  static void PrintInfo() { instance.PrintInfo(); }
+
 private:
   struct SplitTxRxData {
+    enum class State {
+      READY_TO_SEND,
+      SENDING,
+      RECEIVING,
+    };
+
     SplitTxRxData();
 
     static const size_t BUFFER_SIZE = 2048;
 
-    bool isSending;
-    uint32_t lastSendTime;
-    uint32_t lastReceiveTime;
+    State state;
+    uint32_t programOffset;
+    uint32_t receiveStartTime;
 
     size_t txHandlerCount = 0;
     SplitTxHandler *txHandlers[8];
@@ -80,17 +91,31 @@ private:
     TxBuffer txBuffer;
     RxBuffer rxBuffer;
 
-    void Initialize();
-    void InitializeTx(uint32_t offset);
-    void InitializeRx(uint32_t offset);
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+    pio_sm_config config;
+#endif
 
+    void Initialize();
+    void StartTx();
+    void StartRx();
+
+    void SendData();
     void SendTxBuffer();
     void Update();
     void ResetRxDma();
+    void OnReceiveFailed();
+    void OnReceiveTimeout();
+    void OnReceiveEnd();
     void ProcessReceiveBuffer();
 
-    void ProcessSend();
     void ProcessReceive();
+
+    static void TxIrqHandler();
+
+    size_t rxPacketCount;
+    size_t txIrqCount;
+    size_t receiveStatusReason[8];
+    void PrintInfo();
   };
 
   static SplitTxRxData instance;
@@ -103,6 +128,8 @@ public:
   static void Initialize() {}
   static bool IsMaster() { return true; }
   static void Update() {}
+
+  static void PrintInfo() {}
 
   static void RegisterTxHandler(void *handler) {}
   static void RegisterRxHandler(SplitHandlerId id, void *handler) {}

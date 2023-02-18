@@ -1,4 +1,4 @@
-; Adapted from pico-examples/pio/ws2812.pio.
+; Taken from pico-examples/pio/ws2812.pio.
 ;
 ; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
 ;

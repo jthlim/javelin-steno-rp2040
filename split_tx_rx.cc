@@ -6,6 +6,7 @@
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
 #include "rp2040_spinlock.h"
+#include "split_tx_rx.pio.h"
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
 #include <hardware/timer.h>
@@ -35,126 +36,63 @@ SplitTxRx::SplitTxRxData SplitTxRx::instance;
 
 //---------------------------------------------------------------------------
 
-const int differential_manchester_tx_wrap_target = 0;
-const int differential_manchester_tx_wrap = 7;
-const int differential_manchester_tx_offset_start = 0;
-
-const int differential_manchester_rx_wrap_target = 5;
-const int differential_manchester_rx_wrap = 9;
-const int differential_manchester_rx_offset_start = 0;
-
 const PIO PIO_INSTANCE = pio1;
+
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 const int TX_STATE_MACHINE_INDEX = 0;
-const int RX_STATE_MACHINE_INDEX = 1;
+const int RX_STATE_MACHINE_INDEX = 0;
+#else
+#error Not implemented yet
+#endif
 
 const uint32_t SYNC_DATA = 0;
 const uint32_t MAGIC = 0x5352534a; // 'JSRS';
 
-// clang-format off
-static const uint16_t TX_PROGRAM_INSTRUCTIONS[] = {
-            //     .wrap_target
-    0x6021, //  0: out    x, 1
-    0x1c23, //  1: jmp    !x, 3           side 1 [4]
-    0x1300, //  2: jmp    0               side 0 [3]
-    0x0304, //  3: jmp    4                      [3]
-    0x6021, //  4: out    x, 1
-    0x1427, //  5: jmp    !x, 7           side 0 [4]
-    0x1b04, //  6: jmp    4               side 1 [3]
-    0x0300, //  7: jmp    0                      [3]
-            //     .wrap
-};
+const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
+const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 50000;
 
-static const uint16_t RX_PROGRAM_INSTRUCTIONS[] = {
-    0x25a0, //  0: wait   1 pin, 0               [5]
-    0x00c4, //  1: jmp    pin, 4
-    0x4021, //  2: in     x, 1
-    0x0000, //  3: jmp    0
-    0x4141, //  4: in     y, 1                   [1]
-            //     .wrap_target
-    0x2520, //  5: wait   0 pin, 0               [5]
-    0x00c9, //  6: jmp    pin, 9
-    0x4041, //  7: in     y, 1
-    0x0000, //  8: jmp    0
-    0x4121, //  9: in     x, 1                   [1]
-            //     .wrap
-};
-// clang-format on
-
-static const struct pio_program TX_PROGRAM = {
-    .instructions = TX_PROGRAM_INSTRUCTIONS,
-    .length = 10,
-    .origin = -1,
-};
-
-static const struct pio_program RX_PROGRAM = {
-    .instructions = RX_PROGRAM_INSTRUCTIONS,
-    .length = 10,
-    .origin = -1,
-};
-
-static inline pio_sm_config
-differential_manchester_tx_program_get_default_config(uint offset) {
-  pio_sm_config c = pio_get_default_sm_config();
-  sm_config_set_wrap(&c, offset + differential_manchester_tx_wrap_target,
-                     offset + differential_manchester_tx_wrap);
-  sm_config_set_sideset(&c, 2, true, false);
-  return c;
-}
-
-void SplitTxRx::SplitTxRxData::InitializeTx(uint32_t offset) {
+void SplitTxRx::SplitTxRxData::StartTx() {
   const PIO pio = PIO_INSTANCE;
   const int sm = TX_STATE_MACHINE_INDEX;
   const int pin = JAVELIN_SPLIT_TX_PIN;
 
+  pio_sm_set_enabled(pio, sm, false);
   pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
   pio_gpio_init(pio, pin);
-  pio_sm_config c =
-      differential_manchester_tx_program_get_default_config(offset);
-  sm_config_set_sideset_pins(&c, pin);
-  sm_config_set_out_shift(&c, true, true, 32);
-  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-  sm_config_set_clkdiv(&c, 1.0);
-  pio_sm_init(pio, sm, offset + differential_manchester_tx_offset_start, &c);
-  // Execute a blocking pull so that we maintain the initial line state until
-  // data is available
-  pio_sm_exec(pio, sm, pio_encode_pull(false, true));
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_tx_start, &config);
+#else
+  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_tx_start, &txConfig);
+#endif
+
   pio_sm_set_enabled(pio, sm, true);
 }
 
-static inline pio_sm_config
-differential_manchester_rx_program_get_default_config(uint32_t offset) {
-  pio_sm_config c = pio_get_default_sm_config();
-  sm_config_set_wrap(&c, offset + differential_manchester_rx_wrap_target,
-                     offset + differential_manchester_rx_wrap);
-  return c;
+SplitTxRx::SplitTxRxData::SplitTxRxData() {
+  state = IsMaster() ? State::READY_TO_SEND : State::RECEIVING;
 }
-
-SplitTxRx::SplitTxRxData::SplitTxRxData() { isSending = !IsMaster(); }
 
 bool SplitTxRx::IsMaster() { return gpio_get(JAVELIN_SPLIT_SIDE_PIN); }
 
-void SplitTxRx::SplitTxRxData::InitializeRx(uint32_t offset) {
+void SplitTxRx::SplitTxRxData::StartRx() {
   const PIO pio = PIO_INSTANCE;
   const int sm = RX_STATE_MACHINE_INDEX;
   const int pin = JAVELIN_SPLIT_RX_PIN;
 
+  pio_sm_set_enabled(pio, sm, false);
+  pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
-  pio_gpio_init(pio, pin);
-  pio_sm_config c =
-      differential_manchester_rx_program_get_default_config(offset);
-  sm_config_set_in_pins(&c, pin); // for WAIT
-  sm_config_set_jmp_pin(&c, pin); // for JMP
-  sm_config_set_in_shift(&c, true, true, 32);
-  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-  sm_config_set_clkdiv(&c, 1.0);
-  pio_sm_init(pio, sm, offset, &c);
-  // X and Y are set to 0 and 1, to conveniently emit these to ISR/FIFO.
-  pio_sm_exec(pio, sm, pio_encode_set(pio_x, 1));
-  pio_sm_exec(pio, sm, pio_encode_set(pio_y, 0));
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_rx_start, &config);
+#else
+  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_rx_start, &rxConfig);
+#endif
   pio_sm_set_enabled(pio, sm, true);
 
   ResetRxDma();
+  state = State::RECEIVING;
+  receiveStartTime = time_us_32();
 }
 
 void SplitTxRx::SplitTxRxData::ResetRxDma() {
@@ -169,24 +107,59 @@ void SplitTxRx::SplitTxRxData::ResetRxDma() {
       .incrementRead = false,
       .incrementWrite = true,
       .chainToDma = 3,
-      .transferRequest = Rp2040DmaControl::TransferRequest::PIO1_RX1,
+      .transferRequest = Rp2040DmaControl::TransferRequest::PIO1_RX0,
       .sniffEnable = false,
   };
   dma3->controlTrigger = receiveControl;
 }
 
 void SplitTxRx::SplitTxRxData::Initialize() {
+  programOffset = pio_add_program(PIO_INSTANCE, &split_tx_rx_program);
 
-  if (isSending) {
-    uint32_t txOffset = pio_add_program(PIO_INSTANCE, &TX_PROGRAM);
-    InitializeTx(txOffset);
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+  config = split_tx_rx_program_get_default_config(programOffset);
+  sm_config_set_in_pins(&config, JAVELIN_SPLIT_RX_PIN);
+  sm_config_set_jmp_pin(&config, JAVELIN_SPLIT_RX_PIN);
+  sm_config_set_out_pins(&config, JAVELIN_SPLIT_TX_PIN, 1);
+  sm_config_set_set_pins(&config, JAVELIN_SPLIT_TX_PIN, 1);
+  sm_config_set_sideset_pins(&config, JAVELIN_SPLIT_TX_PIN);
+  sm_config_set_in_shift(&config, true, true, 32);
+  sm_config_set_out_shift(&config, true, true, 32);
+  sm_config_set_clkdiv_int_frac(&config, 1, 0);
+#else
+  rxConfig = split_tx_rx_program_get_default_config(programOffset);
+  sm_config_set_in_pins(&rxConfig, JAVELIN_SPLIT_RX_PIN);
+  sm_config_set_jmp_pin(&rxConfig, JAVELIN_SPLIT_RX_PIN);
+  sm_config_set_in_shift(&rxConfig, true, true, 32);
+  sm_config_set_clkdiv(&rxConfig, 1.0);
+
+  txConfig = split_tx_rx_program_get_default_config(programOffset);
+  sm_config_set_sideset_pins(&txConfig, JAVELIN_SPLIT_TX_PIN);
+  sm_config_set_out_shift(&txConfig, true, true, 32);
+  sm_config_set_fifo_join(&txConfig, PIO_FIFO_JOIN_TX);
+  sm_config_set_in_pins(&txConfig, JAVELIN_SPLIT_TX_PIN);
+  sm_config_set_jmp_pin(&txConfig, JAVELIN_SPLIT_TX_PIN);
+  sm_config_set_in_shift(&txConfig, true, true, 32);
+  sm_config_set_clkdiv(&txConfig, 1.0);
+#endif
+
+  irq_set_exclusive_handler(PIO1_IRQ_0, TxIrqHandler);
+  irq_set_enabled(PIO1_IRQ_0, true);
+  pio_set_irq0_source_enabled(PIO_INSTANCE, pis_interrupt0, true);
+
+  gpio_pull_down(JAVELIN_SPLIT_RX_PIN);
+
+  if (IsMaster()) {
+    // TODO: Anything?
   } else {
-    uint32_t rxOffset = pio_add_program(PIO_INSTANCE, &RX_PROGRAM);
-    InitializeRx(rxOffset);
+    StartRx();
   }
 }
 
 void SplitTxRx::SplitTxRxData::SendTxBuffer() {
+  // Since Rx immediately follows Tx, set Rx dma before sending anything.
+  ResetRxDma();
+
   txBuffer.header.syncData = SYNC_DATA;
   txBuffer.header.magic = MAGIC;
   txBuffer.header.crc =
@@ -194,7 +167,12 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
 
   dma2->source = &txBuffer.header;
   dma2->destination = &PIO_INSTANCE->txf[TX_STATE_MACHINE_INDEX];
-  dma2->count = txBuffer.header.count + sizeof(TxRxHeader) / sizeof(uint32_t);
+  size_t wordCount =
+      txBuffer.header.count + sizeof(TxRxHeader) / sizeof(uint32_t);
+  dma2->count = wordCount;
+
+  size_t bitCount = 32 * wordCount;
+  pio_sm_put_blocking(PIO_INSTANCE, TX_STATE_MACHINE_INDEX, bitCount - 1);
 
   Rp2040DmaControl sendControl = {
       .enable = true,
@@ -227,16 +205,89 @@ void SplitTxRx::SplitTxRxData::ProcessReceiveBuffer() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::ProcessSend() {
-  uint32_t now = time_us_32();
-  uint32_t timeSinceLastUpdate = now - lastSendTime;
-  if (timeSinceLastUpdate < 1000) {
+void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
+  if (IsMaster()) {
+    state = State::READY_TO_SEND;
+  } else {
+    StartRx();
+  }
+}
+
+void SplitTxRx::SplitTxRxData::OnReceiveEnd() { state = State::READY_TO_SEND; }
+
+void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
+  if (IsMaster()) {
+    // TODO: Run this after ~1 sec.
+    // for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
+    //   SplitRxHandler *handler = rxHandlers[i];
+    //   if (handler) {
+    //     handler->OnConnectionReset();
+    //   }
+    // }
+  }
+  OnReceiveFailed();
+}
+
+void SplitTxRx::SplitTxRxData::ProcessReceive() {
+  size_t dma3Count = dma3->count;
+  if (dma3Count > BUFFER_SIZE) {
+    // Header has not been received.
+    receiveStatusReason[1]++;
     return;
   }
-  lastSendTime = now;
 
+  if (rxBuffer.header.magic != MAGIC) {
+    // if (time_us_32() > 3000000) {
+    //   Console::Printf("Bad magic: %08x, crc: %08x\n\n",
+    //   rxBuffer.header.magic,
+    //                   rxBuffer.header.crc);
+    // }
+    receiveStatusReason[2]++;
+    //    OnReceiveFailed();
+    OnReceiveEnd();
+    return;
+  }
+
+  size_t bufferCount = BUFFER_SIZE - dma3Count;
+  if (bufferCount < rxBuffer.header.count) {
+    receiveStatusReason[3]++;
+    return;
+  }
+
+  if (rxBuffer.header.count != bufferCount) {
+    // if (time_us_32() > 3000000) {
+    //   Console::Printf("Extra data: %zu vs %u\n\n", bufferCount,
+    //                   rxBuffer.header.count);
+    // }
+    receiveStatusReason[4]++;
+  }
+
+  uint32_t expectedCrc =
+      Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.count);
+  if (rxBuffer.header.crc != expectedCrc) {
+    // if (time_us_32() > 3000000) {
+    //   Console::Printf("Bad CRC: %08x vs %08x, %u\n", rxBuffer.header.crc,
+    //                   expectedCrc, rxBuffer.header.count);
+    //   for (int i = 0; i < rxBuffer.header.count; ++i) {
+    //     Console::Printf(" %08x", rxBuffer.buffer[i]);
+    //   }
+    //   Console::Printf("\n\n");
+    // }
+    receiveStatusReason[5]++;
+    //    OnReceiveFailed();
+    OnReceiveEnd();
+    return;
+  }
+
+  ++rxPacketCount;
+  ProcessReceiveBuffer();
+  OnReceiveEnd();
+}
+
+void SplitTxRx::SplitTxRxData::SendData() {
   dma2->WaitUntilComplete();
-
+  StartTx();
+  state = State::SENDING;
   txBuffer.Reset();
   for (size_t i = 0; i < txHandlerCount; ++i) {
     txHandlers[i]->UpdateBuffer(txBuffer);
@@ -244,70 +295,47 @@ void SplitTxRx::SplitTxRxData::ProcessSend() {
   SendTxBuffer();
 }
 
-void SplitTxRx::SplitTxRxData::ProcessReceive() {
-  uint32_t now = time_us_32();
-  uint32_t timeSinceLastUpdate = now - lastReceiveTime;
-  if (timeSinceLastUpdate > 100000) {
-    // 100ms has passed without receiving anything -> reset.
-    lastReceiveTime = now;
-
-    pio_sm_restart(PIO_INSTANCE, RX_STATE_MACHINE_INDEX);
-    ResetRxDma();
-    return;
-  }
-
-  size_t dma3Count = dma3->count;
-  if (dma3Count > BUFFER_SIZE) {
-    // Header has not been received.
-    return;
-  }
-
-  if (rxBuffer.header.magic != MAGIC) {
-    if (time_us_32() > 3000000) {
-      Console::Printf("Bad magic: %08x, crc: %08x\n\n", rxBuffer.header.magic,
-                      rxBuffer.header.crc);
-    }
-    ResetRxDma();
-    return;
-  }
-
-  size_t bufferCount = BUFFER_SIZE - dma3Count;
-  if (bufferCount < rxBuffer.header.count) {
-    return;
-  }
-
-  if (rxBuffer.header.count != bufferCount) {
-    if (time_us_32() > 3000000) {
-      Console::Printf("Extra data: %zu vs %u\n\n", bufferCount,
-                      rxBuffer.header.count);
-    }
-  }
-
-  uint32_t expectedCrc =
-      Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.count);
-  if (rxBuffer.header.crc != expectedCrc) {
-    if (time_us_32() > 3000000) {
-      Console::Printf("Bad CRC: %08x vs %08x, %u\n", rxBuffer.header.crc,
-                      expectedCrc, rxBuffer.header.count);
-      for (int i = 0; i < rxBuffer.header.count; ++i) {
-        Console::Printf(" %08x", rxBuffer.buffer[i]);
-      }
-      Console::Printf("\n\n");
-    }
-    ResetRxDma();
-    return;
-  }
-  lastReceiveTime = now;
-  ProcessReceiveBuffer();
-  ResetRxDma();
-}
-
 void SplitTxRx::SplitTxRxData::Update() {
-  if (isSending) {
-    ProcessSend();
-  } else {
+  switch (state) {
+  case State::READY_TO_SEND:
+    SendData();
+    break;
+
+  case State::SENDING:
+    // Do nothing, wait until TxIRQ happens.
+    break;
+
+  case State::RECEIVING:
+    uint32_t now = time_us_32();
+    uint32_t timeSinceLastUpdate = now - receiveStartTime;
+    uint32_t receiveTimeout =
+        IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
+    if (timeSinceLastUpdate > receiveTimeout) {
+      receiveStatusReason[0]++;
+      OnReceiveTimeout();
+      return;
+    }
+
     ProcessReceive();
   }
+}
+
+void SplitTxRx::SplitTxRxData::PrintInfo() {
+  Console::Printf("Split data\n");
+  Console::Printf("  Transmitted packets: %zu\n", txIrqCount);
+  Console::Printf("  Received packets: %zu\n", rxPacketCount);
+  Console::Printf("  Receive status:");
+  for (size_t reason : receiveStatusReason) {
+    Console::Printf(" %zu", reason);
+  }
+  Console::Printf("\n");
+}
+
+void __no_inline_not_in_flash_func(SplitTxRx::SplitTxRxData::TxIrqHandler)() {
+  pio_interrupt_clear(PIO_INSTANCE, 0);
+  instance.txIrqCount++;
+  instance.state = State::RECEIVING;
+  instance.receiveStartTime = time_us_32();
 }
 
 //---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ struct StenoMapDictionaryCollection;
 //---------------------------------------------------------------------------
 
 #define USE_USER_DICTIONARY 1
+#define JAVELIN_USB_MILLIAMPS 100
 #define BOOTSEL_BUTTON_INDEX 28
 
 constexpr uint8_t COLUMN_PINS[] = {24, 23, 21, 20, 19, 6, 5, 4, 3, 2, 1};

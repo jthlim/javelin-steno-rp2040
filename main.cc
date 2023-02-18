@@ -228,6 +228,7 @@ void DoMasterRunLoop() {
 
   SplitTxRx::RegisterRxHandler(SplitHandlerId::KEY_STATE,
                                &hidTaskContainer.value);
+  Ws2812::RegisterTxHandler();
 
   while (1) {
     tud_task(); // tinyusb device task
@@ -247,6 +248,7 @@ void DoSlaveRunLoop() {
   new (slaveHidTaskContainer) SlaveHidTask;
 
   SplitTxRx::RegisterTxHandler(&slaveHidTaskContainer.value);
+  Ws2812::RegisterRxHandler();
 
   while (1) {
     tud_task(); // tinyusb device task

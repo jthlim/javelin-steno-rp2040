@@ -1,66 +1,54 @@
 ; Adapted from differential_manchester in pico-examples.
-;
-; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
-;
-; SPDX-License-Identifier: BSD-3-Clause
-;
 
-.program differential_manchester_tx
+.program split_tx_rx
 .side_set 1 opt
 
-; Transmit one bit every 16 cycles. In each bit period:
-; - A '0' is encoded as a transition at the start of the bit period
-; - A '1' is encoded as a transition at the start *and* in the middle
-;
-; Side-set bit 0 must be mapped to the data output pin.
-; Autopull must be enabled.
+public tx_start:
+    out y, 32
 
-public start:
-initial_high:
-    out x, 1                     ; Start of bit period: always assert transition
-    jmp !x high_0     side 1 [4] ; Test the data bit we just shifted out of OSR
-high_1:
-    jmp initial_high  side 0 [3] ; For `1` bits, also transition in the middle
-high_0:
-    jmp initial_low          [3] ; Otherwise, the line is stable in the middle
+tx_1:
+    out x, 1
+    jmp !x tx_1_0  side 1 [4]
+tx_1_1:
+    jmp y--, tx_1  side 0 [3]
+    jmp tx_end
+tx_1_0:
+    jmp y--, tx_0         [3]
+    jmp tx_end
 
-initial_low:
-    out x, 1                     ; Always shift 1 bit from OSR to X so we can
-    jmp !x low_0      side 0 [4] ; branch on it. Autopull refills OSR for us.
-low_1:
-    jmp initial_low   side 1 [3] ; If there are two transitions, return to
-low_0:
-    jmp initial_high         [3] ; the initial line state is flipped!
+tx_0:
+    out x, 1
+    jmp !x tx_0_0  side 0 [4]
+tx_0_1:
+    jmp y--, tx_0  side 1 [3]
+    jmp tx_end
+tx_0_0:
+    jmp y--, tx_1         [3]
 
-.program differential_manchester_rx
+tx_end:
+    irq 0          side 0 [7]
+    set pindirs, 0
 
-; Assumes line is idle low
-; One bit is 16 cycles. In each bit period:
-; - A '0' is encoded as a transition at time 0
-; - A '1' is encoded as a transition at time 0 and a transition at time T/2
-;
-; The IN mapping and the JMP pin select must both be mapped to the GPIO used for
-; RX data. Autopush must be enabled.
+public rx_start:
+    set x, 0
+    set y, 1
 
-public start:
-initial_high:           ; Find rising edge at start of bit period
-    wait 1 pin, 0  [5]  ; Delay to eye of second half-period (i.e 3/4 of way
-    jmp pin high_0      ; through bit) and branch on RX pin high/low.
-high_1:
-    in x, 1             ; Second transition detected (a `1` data symbol)
-    jmp initial_high
-high_0:
-    in y, 1 [1]         ; Line still high, no centre transition (data is `0`)
-    ; Fall-through
+rx_1:
+    wait 1 pin, 0 [5]
+    jmp pin rx_1_1
+rx_1_0:
+    in y, 1
+    jmp rx_1
+rx_1_1:
+    in x, 1 [1]
 
 .wrap_target
-initial_low:            ; Find falling edge at start of bit period
-    wait 0 pin, 0 [5]   ; Delay to eye of second half-period
-    jmp pin low_1
-low_0:
-    in y, 1             ; Line still low, no centre transition (data is `0`)
-    jmp initial_high
-low_1:                  ; Second transition detected (data is `1`)
-    in x, 1 [1]
+rx_0:
+    wait 0 pin, 0 [5]
+    jmp pin rx_0_1
+rx_0_0:
+    in x, 1
+    jmp rx_1
+rx_0_1:
+    in y, 1       [1]
 .wrap
-

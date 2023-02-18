@@ -148,6 +148,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
+  SplitTxRx::PrintInfo();
   Console::Printf("Processing chain\n");
   processors->PrintInfo();
   Console::Printf("Text block: %zu bytes\n",
@@ -239,6 +240,9 @@ void InitSlave() {
   Console &console = Console::instance;
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
+#if ENABLE_DEBUG_COMMAND
+  console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
+#endif
 }
 
 void InitJavelinSteno() {

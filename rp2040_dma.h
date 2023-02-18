@@ -85,6 +85,30 @@ struct Rp2040DmaControl {
 };
 static_assert(sizeof(Rp2040DmaControl) == 4, "Unexpected DmaControl size");
 
+struct Rp2040DmaIrqControl {
+  struct Irq {
+    volatile uint32_t enableMask;
+    volatile uint32_t forceMask;
+    volatile uint32_t status;
+
+    uint32_t AckAllIrqs() {
+      uint32_t mask = status;
+      status = mask;
+      return mask;
+    }
+    void AckIrq(int dmaChannel) { status = (1 << dmaChannel); }
+    void EnableIrq(int dmaChannel) { enableMask |= (1 << dmaChannel); }
+  };
+
+  volatile uint32_t status;
+  Irq irq0;
+  uint32_t _unused10;
+  Irq irq1;
+};
+
+static Rp2040DmaIrqControl *const dmaIrqControl =
+    (Rp2040DmaIrqControl *)0x50000400;
+
 struct Rp2040DmaAbort {
   volatile uint32_t value;
 

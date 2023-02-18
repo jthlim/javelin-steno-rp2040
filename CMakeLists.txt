@@ -36,6 +36,9 @@ pico_sdk_init()
 
 add_executable(${NAME})
 
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/split_tx_rx.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
+
 target_sources(${NAME} PUBLIC
   main.cc
   usb_descriptors.cc
