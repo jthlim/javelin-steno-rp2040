@@ -19,6 +19,11 @@ public:
   void SendNextReport();
 
   void Print(const char *p);
+  void Reset() {
+    startIndex = 0;
+    endIndex = 0;
+  }
+
   static void PrintInfo();
 
   static uint32_t reportsSentCount[];

@@ -23,6 +23,7 @@
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/engine.h"
+#include "javelin/gpio.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
 #include "javelin/pixel.h"
@@ -490,12 +491,14 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
 uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }
 
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
-  if (!tud_hid_n_ready(ITF_NUM_PLOVER_HID)) {
-    return;
-  }
-
   PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
+}
+
+void Gpio::SetPin(int pin, bool value) {
+  gpio_init(pin);
+  gpio_set_dir(pin, true);
+  gpio_put(pin, value);
 }
 
 //---------------------------------------------------------------------------

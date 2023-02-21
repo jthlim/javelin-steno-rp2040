@@ -14,15 +14,18 @@ enum SplitHandlerId {
 };
 
 struct TxRxHeader {
-  uint32_t syncData;
-  uint32_t magic;
-  uint32_t count;
+  uint16_t magic;
+  uint16_t wordCount;
   uint32_t crc;
+
+  static const uint16_t MAGIC = 0x534a; // 'JS';
 };
 
 class TxBuffer {
 public:
-  void Reset() { header.count = 0; }
+  TxBuffer() { header.magic = TxRxHeader::MAGIC; }
+
+  void Reset() { header.wordCount = 0; }
   void Add(SplitHandlerId id, const void *data, size_t length);
 
   static const size_t BUFFER_SIZE = 2048;
@@ -40,6 +43,7 @@ struct RxBuffer {
 
 class SplitTxHandler {
 public:
+  virtual void OnConnectionReset() {}
   virtual void UpdateBuffer(TxBuffer &buffer);
 };
 
@@ -83,6 +87,9 @@ private:
     State state;
     uint32_t programOffset;
     uint32_t receiveStartTime;
+    size_t rxPacketCount;
+    size_t txIrqCount;
+    size_t receiveStatusReason[6];
 
     size_t txHandlerCount = 0;
     SplitTxHandler *txHandlers[8];
@@ -105,16 +112,12 @@ private:
     void ResetRxDma();
     void OnReceiveFailed();
     void OnReceiveTimeout();
-    void OnReceiveEnd();
     void ProcessReceiveBuffer();
 
-    void ProcessReceive();
+    bool ProcessReceive();
 
     static void TxIrqHandler();
 
-    size_t rxPacketCount;
-    size_t txIrqCount;
-    size_t receiveStatusReason[8];
     void PrintInfo();
   };
 

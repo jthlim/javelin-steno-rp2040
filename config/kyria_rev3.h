@@ -16,7 +16,7 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_USB_MILLIAMPS 500
 
 #define JAVELIN_RGB_COUNT 62
-#define JAVELIN_RGB_SPLIT_COUNT 31
+#define JAVELIN_RGB_MASTER_COUNT 31
 #define JAVELIN_RGB_PIN 0
 #define JAVELIN_USE_RGB_MAP 1
 

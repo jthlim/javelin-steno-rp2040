@@ -16,17 +16,10 @@ public:
   static size_t GetCount() { return JAVELIN_RGB_COUNT; }
 
   static void SetPixel(size_t pixelId, int r, int g, int b) {
-    SetPixel(pixelId, (r << 16) | (g << 24) | (b << 8));
+    instance.SetPixel(pixelId, (r << 16) | (g << 24) | (b << 8));
   }
   static void SetPixel(size_t pixelId, uint32_t ws2812Color) {
-    if (pixelId >= JAVELIN_RGB_COUNT) {
-      return;
-    }
-#if JAVELIN_USE_RGB_MAP
-    pixelId = RGB_MAP[pixelId];
-#endif
-    instance.dirty = true;
-    instance.pixelValues[pixelId] = ws2812Color;
+    instance.SetPixel(pixelId, ws2812Color);
   }
 
   static void RegisterTxHandler() { SplitTxRx::RegisterTxHandler(&instance); }
@@ -42,14 +35,40 @@ private:
   struct Ws28128Data {
 #endif
     bool dirty;
+#if JAVELIN_SPLIT
+    bool slaveDirty;
+#endif
+
     uint32_t lastUpdate;
     uint32_t pixelValues[JAVELIN_RGB_COUNT];
 
     void Update();
+    void SetPixel(size_t pixelId, uint32_t ws2812Color) {
+      if (pixelId >= JAVELIN_RGB_COUNT) {
+        return;
+      }
+#if JAVELIN_USE_RGB_MAP
+      pixelId = RGB_MAP[pixelId];
+#endif
+      if (pixelValues[pixelId] == ws2812Color) {
+        return;
+      }
+#if JAVELIN_SPLIT
+      if (pixelId < JAVELIN_RGB_MASTER_COUNT) {
+        dirty = true;
+      } else {
+        slaveDirty = true;
+      }
+#else
+      dirty = true;
+#endif
+      pixelValues[pixelId] = ws2812Color;
+    }
 
 #if JAVELIN_SPLIT
     virtual void UpdateBuffer(TxBuffer &buffer);
     virtual void OnDataReceived(const void *data, size_t length);
+    virtual void OnConnectionReset();
 #endif
   };
 

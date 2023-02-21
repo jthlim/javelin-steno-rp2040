@@ -24,6 +24,9 @@ Ws2812::Ws28128Data Ws2812::instance;
 //---------------------------------------------------------------------------
 
 void Ws2812::Initialize() {
+  const int CYCLES_PER_BIT = 10;
+  const float FREQUENCY = 800000.0;
+
   uint offset = pio_add_program(PIO_INSTANCE, &ws2812_program);
 
   pio_gpio_init(PIO_INSTANCE, JAVELIN_RGB_PIN);
@@ -31,11 +34,10 @@ void Ws2812::Initialize() {
                                  JAVELIN_RGB_PIN, 1, true);
   pio_sm_config config = ws2812_program_get_default_config(offset);
   sm_config_set_sideset_pins(&config, JAVELIN_RGB_PIN);
+  sm_config_set_out_pins(&config, JAVELIN_RGB_PIN, 1);
   sm_config_set_out_shift(&config, false, true, 24);
   sm_config_set_fifo_join(&config, PIO_FIFO_JOIN_TX);
-  int cycles_per_bit = ws2812_T1 + ws2812_T2 + ws2812_T3;
-  const float frequency = 800000;
-  float div = clock_get_hz(clk_sys) / (frequency * cycles_per_bit);
+  float div = clock_get_hz(clk_sys) * (1.0f / (FREQUENCY * CYCLES_PER_BIT));
   sm_config_set_clkdiv(&config, div);
   pio_sm_init(PIO_INSTANCE, STATE_MACHINE_INDEX, offset, &config);
   pio_sm_set_enabled(PIO_INSTANCE, STATE_MACHINE_INDEX, true);
@@ -52,11 +54,20 @@ void Ws2812::Initialize() {
       .sniffEnable = false,
   };
   dma1->control = dmaControl;
-#if defined(JAVLEIN_RGB_SPLIT_COUNT)
-  dma1->count = JAVELIN_RGB_SPLIT_COUNT;
+
+  // clang-format off
+#if JAVELIN_SPLIT
+  #define JAVELIN_RGB_SLAVE_COUNT (JAVELIN_RGB_COUNT - JAVELIN_RGB_MASTER_COUNT)
+  #if JAVELIN_RGB_COUNT == 2 * JAVELIN_RGB_MASTER_COUNT
+    dma1->count = JAVELIN_RGB_MASTER_COUNT;
+  #else
+    dma1->count = IsMaster() ? JAVELIN_RGB_MASTER_COUNT
+                           : JAVELIN_RGB_SLAVE_COUNT;
+  #endif // JAVELIN_RGB_COUNT == 2 * JAVELIN_RGB_MASTER_COUNT
 #else
   dma1->count = JAVELIN_RGB_COUNT;
-#endif
+#endif // JAVELIN_SPLIT
+  // clang-format on
 }
 
 void Ws2812::Ws28128Data::Update() {
@@ -64,33 +75,48 @@ void Ws2812::Ws28128Data::Update() {
     return;
   }
 
-  // Don't update more than once every 2ms.
+  // Don't update more than once every 10ms.
   uint32_t now = time_us_32();
   uint32_t timeSinceLastUpdate = now - lastUpdate;
-  if (timeSinceLastUpdate < 2000) {
+  if (timeSinceLastUpdate < 10000) {
     return;
   }
 
   dirty = false;
   lastUpdate = now;
 
+#if JAVELIN_SPLIT
+  dma1->sourceTrigger = SplitTxRx::IsMaster()
+                            ? pixelValues
+                            : pixelValues + JAVELIN_RGB_MASTER_COUNT;
+#else
   dma1->sourceTrigger = &pixelValues;
+#endif
 }
 
 #if JAVELIN_SPLIT
 void Ws2812::Ws28128Data::UpdateBuffer(TxBuffer &buffer) {
-  buffer.Add(SplitHandlerId::RGB, pixelValues + JAVELIN_RGB_SPLIT_COUNT,
-             sizeof(uint32_t) * JAVELIN_RGB_SPLIT_COUNT);
+  if (!slaveDirty) {
+    return;
+  }
+
+  slaveDirty = false;
+  buffer.Add(SplitHandlerId::RGB, pixelValues + JAVELIN_RGB_MASTER_COUNT,
+             sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT);
 }
 
 void Ws2812::Ws28128Data::OnDataReceived(const void *data, size_t length) {
-  if (memcmp(data, pixelValues, sizeof(uint32_t) * JAVELIN_RGB_SPLIT_COUNT) ==
-      0) {
+  if (memcmp(data, pixelValues + JAVELIN_RGB_MASTER_COUNT,
+             sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT) == 0) {
     return;
   }
   dirty = true;
-  memcpy(pixelValues, data, sizeof(uint32_t) * JAVELIN_RGB_SPLIT_COUNT);
+  memcpy(pixelValues + JAVELIN_RGB_MASTER_COUNT, data,
+         sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT);
 }
+
+void Ws2812::Ws28128Data::OnConnectionReset() { slaveDirty = true; }
+
 #endif
 
 //---------------------------------------------------------------------------

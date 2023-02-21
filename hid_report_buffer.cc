@@ -16,16 +16,20 @@ uint32_t HidReportBufferBase::reportsSentCount[ITF_NUM_TOTAL] = {};
 void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
                                      const uint8_t *data, size_t length) {
   assert(length == dataSize);
-
   do {
     tud_task();
   } while (endIndex - startIndex >= NUMBER_OF_ENTRIES);
 
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
-    ++endIndex;
-    reportsSentCount[instance]++;
-    tud_hid_n_report(instance, reportId, data, dataSize);
+    if (!tud_hid_n_ready(instance)) {
+      return;
+    }
+
+    if (tud_hid_n_report(instance, reportId, data, dataSize)) {
+      ++endIndex;
+      reportsSentCount[instance]++;
+    }
     return;
   }
 
@@ -46,17 +50,22 @@ void HidReportBufferBase::SendNextReport() {
     return;
   }
 
-  ++startIndex;
-  if (startIndex == endIndex) {
-    return;
+  for (;;) {
+    ++startIndex;
+    if (startIndex == endIndex) {
+      return;
+    }
+
+    HidReportBufferEntry *entry =
+        &entries[startIndex & (NUMBER_OF_ENTRIES - 1)];
+    uint8_t *buffer =
+        entryData + dataSize * (startIndex & (NUMBER_OF_ENTRIES - 1));
+
+    reportsSentCount[entry->instance]++;
+    if (tud_hid_n_report(entry->instance, entry->reportId, buffer, dataSize)) {
+      return;
+    }
   }
-
-  HidReportBufferEntry *entry = &entries[startIndex & (NUMBER_OF_ENTRIES - 1)];
-  uint8_t *buffer =
-      entryData + dataSize * (startIndex & (NUMBER_OF_ENTRIES - 1));
-
-  reportsSentCount[entry->instance]++;
-  tud_hid_n_report(entry->instance, entry->reportId, buffer, dataSize);
 }
 
 //---------------------------------------------------------------------------

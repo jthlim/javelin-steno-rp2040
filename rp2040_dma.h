@@ -112,11 +112,7 @@ static Rp2040DmaIrqControl *const dmaIrqControl =
 struct Rp2040DmaAbort {
   volatile uint32_t value;
 
-  void Abort(int channelIndex) {
-    value = (1 << channelIndex);
-    while (value) {
-    }
-  }
+  void Abort(int channelIndex) { value = (1 << channelIndex); }
 };
 
 static Rp2040DmaAbort *const dmaAbort = (Rp2040DmaAbort *)0x50000444;
@@ -155,7 +151,10 @@ struct Rp2040Dma {
     }
   }
 
-  void Abort() { dmaAbort->Abort(this - (Rp2040Dma *)0x50000000); }
+  void Abort() {
+    dmaAbort->Abort(this - (Rp2040Dma *)0x50000000);
+    WaitUntilComplete();
+  }
 };
 
 static Rp2040Dma *const dma0 = (Rp2040Dma *)0x50000000;

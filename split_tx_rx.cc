@@ -6,7 +6,9 @@
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
 #include "rp2040_spinlock.h"
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 #include "split_tx_rx.pio.h"
+#endif
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
 #include <hardware/timer.h>
@@ -15,15 +17,15 @@
 
 void TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
   uint32_t wordLength = (length + 3) >> 2;
-  if (header.count + 1 + wordLength > BUFFER_SIZE) {
+  if (header.wordCount + 1 + wordLength > BUFFER_SIZE) {
     return;
   }
 
   uint32_t blockHeader = (id << 16) | length;
-  buffer[header.count++] = blockHeader;
+  buffer[header.wordCount++] = blockHeader;
 
-  memcpy(&buffer[header.count], data, length);
-  header.count += wordLength;
+  memcpy(&buffer[header.wordCount], data, length);
+  header.wordCount += wordLength;
 }
 
 //---------------------------------------------------------------------------
@@ -44,9 +46,6 @@ const int RX_STATE_MACHINE_INDEX = 0;
 #else
 #error Not implemented yet
 #endif
-
-const uint32_t SYNC_DATA = 0;
-const uint32_t MAGIC = 0x5352534a; // 'JSRS';
 
 const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
 const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 50000;
@@ -88,11 +87,12 @@ void SplitTxRx::SplitTxRxData::StartRx() {
 #else
   pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_rx_start, &rxConfig);
 #endif
-  pio_sm_set_enabled(pio, sm, true);
 
   ResetRxDma();
   state = State::RECEIVING;
   receiveStartTime = time_us_32();
+
+  pio_sm_set_enabled(pio, sm, true);
 }
 
 void SplitTxRx::SplitTxRxData::ResetRxDma() {
@@ -160,15 +160,13 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
   // Since Rx immediately follows Tx, set Rx dma before sending anything.
   ResetRxDma();
 
-  txBuffer.header.syncData = SYNC_DATA;
-  txBuffer.header.magic = MAGIC;
   txBuffer.header.crc =
-      Crc32(txBuffer.buffer, sizeof(uint32_t) * txBuffer.header.count);
+      Crc32(txBuffer.buffer, sizeof(uint32_t) * txBuffer.header.wordCount);
 
   dma2->source = &txBuffer.header;
   dma2->destination = &PIO_INSTANCE->txf[TX_STATE_MACHINE_INDEX];
   size_t wordCount =
-      txBuffer.header.count + sizeof(TxRxHeader) / sizeof(uint32_t);
+      txBuffer.header.wordCount + sizeof(TxRxHeader) / sizeof(uint32_t);
   dma2->count = wordCount;
 
   size_t bitCount = 32 * wordCount;
@@ -188,7 +186,7 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
 
 void SplitTxRx::SplitTxRxData::ProcessReceiveBuffer() {
   size_t offset = 0;
-  while (offset < rxBuffer.header.count) {
+  while (offset < rxBuffer.header.wordCount) {
     uint32_t blockHeader = rxBuffer.buffer[offset++];
     int type = blockHeader >> 16;
     size_t length = blockHeader & 0xffff;
@@ -213,75 +211,61 @@ void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::OnReceiveEnd() { state = State::READY_TO_SEND; }
-
 void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
   if (IsMaster()) {
-    // TODO: Run this after ~1 sec.
-    // for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
-    //   SplitRxHandler *handler = rxHandlers[i];
-    //   if (handler) {
-    //     handler->OnConnectionReset();
-    //   }
-    // }
+    for (size_t i = 0; i < txHandlerCount; ++i) {
+      txHandlers[i]->OnConnectionReset();
+    }
+
+    for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
+      SplitRxHandler *handler = rxHandlers[i];
+      if (handler) {
+        handler->OnConnectionReset();
+      }
+    }
   }
   OnReceiveFailed();
 }
 
-void SplitTxRx::SplitTxRxData::ProcessReceive() {
+bool SplitTxRx::SplitTxRxData::ProcessReceive() {
   size_t dma3Count = dma3->count;
   if (dma3Count > BUFFER_SIZE) {
     // Header has not been received.
     receiveStatusReason[1]++;
-    return;
+    return false;
   }
 
-  if (rxBuffer.header.magic != MAGIC) {
-    // if (time_us_32() > 3000000) {
-    //   Console::Printf("Bad magic: %08x, crc: %08x\n\n",
-    //   rxBuffer.header.magic,
-    //                   rxBuffer.header.crc);
-    // }
+  if (rxBuffer.header.magic != TxRxHeader::MAGIC) {
     receiveStatusReason[2]++;
-    //    OnReceiveFailed();
-    OnReceiveEnd();
-    return;
+    OnReceiveFailed();
+    return false;
   }
 
   size_t bufferCount = BUFFER_SIZE - dma3Count;
-  if (bufferCount < rxBuffer.header.count) {
+  if (bufferCount < rxBuffer.header.wordCount) {
     receiveStatusReason[3]++;
-    return;
+    return false;
   }
 
-  if (rxBuffer.header.count != bufferCount) {
-    // if (time_us_32() > 3000000) {
-    //   Console::Printf("Extra data: %zu vs %u\n\n", bufferCount,
-    //                   rxBuffer.header.count);
-    // }
+  if (rxBuffer.header.wordCount != bufferCount) {
     receiveStatusReason[4]++;
   }
 
   uint32_t expectedCrc =
-      Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.count);
+      Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.wordCount);
   if (rxBuffer.header.crc != expectedCrc) {
-    // if (time_us_32() > 3000000) {
-    //   Console::Printf("Bad CRC: %08x vs %08x, %u\n", rxBuffer.header.crc,
-    //                   expectedCrc, rxBuffer.header.count);
-    //   for (int i = 0; i < rxBuffer.header.count; ++i) {
-    //     Console::Printf(" %08x", rxBuffer.buffer[i]);
-    //   }
-    //   Console::Printf("\n\n");
-    // }
     receiveStatusReason[5]++;
-    //    OnReceiveFailed();
-    OnReceiveEnd();
-    return;
+    OnReceiveFailed();
+    return false;
   }
 
   ++rxPacketCount;
   ProcessReceiveBuffer();
-  OnReceiveEnd();
+
+  // After receiving data, immediately start sending the data here.
+  SendData();
+
+  return true;
 }
 
 void SplitTxRx::SplitTxRxData::SendData() {
@@ -302,21 +286,21 @@ void SplitTxRx::SplitTxRxData::Update() {
     break;
 
   case State::SENDING:
-    // Do nothing, wait until TxIRQ happens.
+    // Do nothing, wait until TxIrqHandler happens.
     break;
 
   case State::RECEIVING:
-    uint32_t now = time_us_32();
-    uint32_t timeSinceLastUpdate = now - receiveStartTime;
-    uint32_t receiveTimeout =
-        IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
-    if (timeSinceLastUpdate > receiveTimeout) {
-      receiveStatusReason[0]++;
-      OnReceiveTimeout();
-      return;
+    if (!ProcessReceive()) {
+      uint32_t now = time_us_32();
+      uint32_t timeSinceLastUpdate = now - receiveStartTime;
+      uint32_t receiveTimeout =
+          IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
+      if (timeSinceLastUpdate > receiveTimeout) {
+        receiveStatusReason[0]++;
+        OnReceiveTimeout();
+      }
     }
-
-    ProcessReceive();
+    break;
   }
 }
 

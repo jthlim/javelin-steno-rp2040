@@ -17,6 +17,8 @@ public:
   void Flush();
   void SendNextReport() { reportBuffer.SendNextReport(); }
 
+  void Reset() { reportBuffer.Reset(); }
+
   void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
 
   void PrintInfo() const;

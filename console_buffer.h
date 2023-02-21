@@ -13,6 +13,7 @@ public:
   void Flush();
 
   void SendNextReport() { reportBuffer.SendNextReport(); }
+  void Reset() { reportBuffer.Reset(); }
 
   static ConsoleBuffer instance;
 
