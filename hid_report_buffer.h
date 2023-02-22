@@ -24,6 +24,13 @@ public:
     endIndex = 0;
   }
 
+  bool IsEmpty() const { return startIndex == endIndex; }
+  bool IsFull() const { return endIndex - startIndex >= NUMBER_OF_ENTRIES; }
+  size_t GetAvailableBufferCount() const {
+    size_t used = endIndex - startIndex;
+    return NUMBER_OF_ENTRIES - used;
+  }
+
   static void PrintInfo();
 
   static uint32_t reportsSentCount[];

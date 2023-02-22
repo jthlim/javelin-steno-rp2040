@@ -15,10 +15,10 @@
 
 //---------------------------------------------------------------------------
 
-void TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
+bool TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
   uint32_t wordLength = (length + 3) >> 2;
   if (header.wordCount + 1 + wordLength > BUFFER_SIZE) {
-    return;
+    return false;
   }
 
   uint32_t blockHeader = (id << 16) | length;
@@ -26,6 +26,8 @@ void TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
 
   memcpy(&buffer[header.wordCount], data, length);
   header.wordCount += wordLength;
+
+  return true;
 }
 
 //---------------------------------------------------------------------------
@@ -212,19 +214,29 @@ void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
 }
 
 void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
-  if (IsMaster()) {
-    for (size_t i = 0; i < txHandlerCount; ++i) {
-      txHandlers[i]->OnConnectionReset();
-    }
+  for (size_t i = 0; i < txHandlerCount; ++i) {
+    txHandlers[i]->OnConnectionReset();
+  }
 
-    for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
-      SplitRxHandler *handler = rxHandlers[i];
-      if (handler) {
-        handler->OnConnectionReset();
-      }
+  for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
+    SplitRxHandler *handler = rxHandlers[i];
+    if (handler) {
+      handler->OnConnectionReset();
     }
   }
+
   OnReceiveFailed();
+}
+
+void SplitTxRx::SplitTxRxData::OnReceiveSucceeded() {
+  // Receiving succeeded without timeout means the previous transmit was
+  // successful.
+  for (size_t i = 0; i < txHandlerCount; ++i) {
+    txHandlers[i]->OnTransmitSucceeded();
+  }
+
+  // After receiving data, immediately start sending the data here.
+  SendData();
 }
 
 bool SplitTxRx::SplitTxRxData::ProcessReceive() {
@@ -262,8 +274,7 @@ bool SplitTxRx::SplitTxRxData::ProcessReceive() {
   ++rxPacketCount;
   ProcessReceiveBuffer();
 
-  // After receiving data, immediately start sending the data here.
-  SendData();
+  OnReceiveSucceeded();
 
   return true;
 }

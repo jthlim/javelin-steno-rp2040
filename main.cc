@@ -2,6 +2,7 @@
 
 #include JAVELIN_BOARD_CONFIG
 
+#include "bootrom.h"
 #include "console_buffer.h"
 #include "console_input_buffer.h"
 #include "hid_keyboard_report_builder.h"
@@ -11,11 +12,14 @@
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_crc32.h"
+#include "split_hid_report_buffer.h"
+#include "split_led_status.h"
+#include "split_serial_buffer.h"
 #include "split_tx_rx.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
 
-#include <stdlib.h>
+#include <pico/time.h>
 #include <tusb.h>
 
 //---------------------------------------------------------------------------
@@ -72,7 +76,6 @@ public:
   void Update();
 
 private:
-  bool isReady = false;
 #if JAVELIN_SPLIT
   bool isSplitUpdated = false;
   ButtonState splitState;
@@ -120,12 +123,9 @@ void HidTask::Update() {
       // and REMOTE_WAKEUP feature is enabled by host
       tud_remote_wakeup();
     }
-  } else if (isReady) {
-    buttonManager.Update(newKeyState);
-  } else if (tud_hid_n_ready(ITF_NUM_KEYBOARD)) {
-    isReady = true;
-    buttonManager.Update(newKeyState);
   }
+
+  buttonManager.Update(newKeyState);
 }
 
 class SlaveHidTask final : public SplitTxHandler {
@@ -201,6 +201,7 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
       return;
     }
     Key::SetKeyboardLedStatus(*(KeyboardLedStatus *)buffer);
+    SplitLedStatus::Set(buffer[0]);
     break;
 
   case ITF_NUM_CONSOLE:
@@ -250,6 +251,7 @@ void DoSlaveRunLoop() {
     slaveHidTaskContainer->Update();
     cdc_task();
 
+    SplitHidReportBuffer::Update();
     HidKeyboardReportBuilder::instance.FlushIfRequired();
     ConsoleBuffer::instance.Flush();
     ConsoleInputBuffer::Process();
@@ -275,7 +277,12 @@ int main(void) {
   if (SplitTxRx::IsMaster()) {
     SplitTxRx::RegisterRxHandler(SplitHandlerId::KEY_STATE,
                                  &hidTaskContainer.value);
+    ConsoleInputBuffer::RegisterRxHandler();
+    SplitLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
+    SplitHidReportBuffer::RegisterTxHandler();
+    Bootrom::RegisterTxHandler();
+    SplitSerialBuffer::RegisterTxHandler();
 
     InitJavelinSteno();
     tusb_init();
@@ -285,7 +292,12 @@ int main(void) {
     new (slaveHidTaskContainer) SlaveHidTask;
 
     SplitTxRx::RegisterTxHandler(&slaveHidTaskContainer.value);
+    ConsoleInputBuffer::RegisterTxHandler();
+    SplitLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
+    SplitHidReportBuffer::RegisterRxHandler();
+    Bootrom::RegisterRxHandler();
+    SplitSerialBuffer::RegisterRxHandler();
 
     InitSlave();
     tusb_init();

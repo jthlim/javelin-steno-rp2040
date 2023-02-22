@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------
 
+#include "bootrom.h"
 #include "console_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
@@ -42,6 +43,8 @@
 #include "javelin/word_list.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
+#include "split_hid_report_buffer.h"
+#include "split_serial_buffer.h"
 #include "split_tx_rx.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
@@ -158,12 +161,11 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 }
 
 static void LaunchBootrom(void *const, const char *commandLine) {
-  const uint16_t *const functionTableAddress = (const uint16_t *)0x14;
-  size_t (*LookupMethod)(uint32_t table, uint32_t key) =
-      (size_t(*)(uint32_t, uint32_t))(size_t)functionTableAddress[2];
-  void (*UsbBoot)(int, int) = (void (*)(int, int))LookupMethod(
-      functionTableAddress[0], 'U' + 'B' * 256);
-  (*UsbBoot)(0, 0);
+  Bootrom::Launch();
+}
+
+static void LaunchSlaveBootrom(void *const, const char *commandLine) {
+  Bootrom::LaunchSlave();
 }
 
 void SetUnicodeMode(void *context, const char *commandLine) {
@@ -239,7 +241,7 @@ struct WordListData {
 
 void InitSlave() {
   Console &console = Console::instance;
-  console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
+  console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
@@ -338,6 +340,11 @@ void InitJavelinSteno() {
                           nullptr);
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
+#if JAVELIN_SPLIT
+  console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
+                          LaunchSlaveBootrom, nullptr);
+#endif
+
   console.RegisterCommand(
       "set_steno_mode",
       "Sets the current steno mode [\"embedded\", \"gemini\", \"plover_hid\"]",
@@ -484,8 +491,16 @@ void Key::ReleaseRaw(uint8_t key) {
 void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }
 
 void SerialPort::SendData(const uint8_t *data, size_t length) {
-  tud_cdc_write(data, length);
-  tud_cdc_write_flush();
+  if (tud_cdc_connected()) {
+    tud_cdc_write(data, length);
+    tud_cdc_write_flush();
+  } else {
+#if JAVELIN_SPLIT
+    if (SplitTxRx::IsMaster()) {
+      SplitSerialBuffer::Add(data, length);
+    }
+#endif
+  }
 }
 
 uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }

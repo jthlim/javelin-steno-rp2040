@@ -41,19 +41,23 @@ pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
-  usb_descriptors.cc
-  flash.cc
-  key_state.cc
+  bootrom.cc
   console_buffer.cc
   console_input_buffer.cc
+  flash.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
+  key_state.cc
   libc_stubs.cc
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
   rp2040_crc32.cc
+  split_hid_report_buffer.cc
+  split_led_status.cc
+  split_serial_buffer.cc
   split_tx_rx.cc
+  usb_descriptors.cc
   ws2812.cc
 
   javelin/bit.cc

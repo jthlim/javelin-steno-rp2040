@@ -14,6 +14,9 @@ public:
 
   void SendNextReport() { reportBuffer.SendNextReport(); }
   void Reset() { reportBuffer.Reset(); }
+  size_t GetAvailableBufferCount() const {
+    return reportBuffer.GetAvailableBufferCount();
+  }
 
   static ConsoleBuffer instance;
 
@@ -26,6 +29,8 @@ private:
   uint8_t buffer[MAX_BUFFER_SIZE];
 
   HidReportBuffer<64> reportBuffer;
+
+  friend class SplitHidReportBuffer;
 };
 
 //---------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include "hid_report_buffer.h"
 #include "javelin/console.h"
+#include "split_hid_report_buffer.h"
 #include "usb_descriptors.h"
 
 #include <string.h>
@@ -18,11 +19,16 @@ void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
   assert(length == dataSize);
   do {
     tud_task();
-  } while (endIndex - startIndex >= NUMBER_OF_ENTRIES);
+  } while (IsFull());
 
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
     if (!tud_hid_n_ready(instance)) {
+#if JAVELIN_SPLIT
+      if (SplitTxRx::IsMaster()) {
+        SplitHidReportBuffer::Add(instance, reportId, data, length);
+      }
+#endif
       return;
     }
 

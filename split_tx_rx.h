@@ -11,6 +11,14 @@
 enum SplitHandlerId {
   KEY_STATE,
   RGB,
+  HID_REPORT,
+  CONSOLE,
+  BOOTROM,
+  LED_STATUS,
+  SERIAL,
+  HID_BUFFER_SIZE,
+
+  COUNT,
 };
 
 struct TxRxHeader {
@@ -26,7 +34,7 @@ public:
   TxBuffer() { header.magic = TxRxHeader::MAGIC; }
 
   void Reset() { header.wordCount = 0; }
-  void Add(SplitHandlerId id, const void *data, size_t length);
+  bool Add(SplitHandlerId id, const void *data, size_t length);
 
   static const size_t BUFFER_SIZE = 2048;
 
@@ -44,6 +52,7 @@ struct RxBuffer {
 class SplitTxHandler {
 public:
   virtual void OnConnectionReset() {}
+  virtual void OnTransmitSucceeded() {}
   virtual void UpdateBuffer(TxBuffer &buffer);
 };
 
@@ -59,6 +68,7 @@ class SplitTxRx {
 public:
   static void Initialize() { instance.Initialize(); }
   static bool IsMaster();
+  static bool IsSlave() { return !IsMaster(); }
 
   static void Update() { instance.Update(); }
 
@@ -92,8 +102,8 @@ private:
     size_t receiveStatusReason[6];
 
     size_t txHandlerCount = 0;
-    SplitTxHandler *txHandlers[8];
-    SplitRxHandler *rxHandlers[8];
+    SplitTxHandler *txHandlers[SplitHandlerId::COUNT];
+    SplitRxHandler *rxHandlers[SplitHandlerId::COUNT];
 
     TxBuffer txBuffer;
     RxBuffer rxBuffer;
@@ -112,6 +122,7 @@ private:
     void ResetRxDma();
     void OnReceiveFailed();
     void OnReceiveTimeout();
+    void OnReceiveSucceeded();
     void ProcessReceiveBuffer();
 
     bool ProcessReceive();

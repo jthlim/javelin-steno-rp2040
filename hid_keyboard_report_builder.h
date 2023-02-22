@@ -18,6 +18,9 @@ public:
   void SendNextReport() { reportBuffer.SendNextReport(); }
 
   void Reset() { reportBuffer.Reset(); }
+  size_t GetAvailableBufferCount() const {
+    return reportBuffer.GetAvailableBufferCount();
+  }
 
   void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
 
@@ -48,6 +51,8 @@ private:
   HidReportBuffer<32> reportBuffer;
 
   bool HasData() const;
+
+  friend class SplitHidReportBuffer;
 };
 
 //---------------------------------------------------------------------------
