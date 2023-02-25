@@ -67,8 +67,8 @@ private:
 
 #if JAVELIN_SPLIT
     virtual void UpdateBuffer(TxBuffer &buffer);
+    virtual void OnTransmitConnectionReset() { slaveDirty = true; }
     virtual void OnDataReceived(const void *data, size_t length);
-    virtual void OnConnectionReset();
 #endif
   };
 

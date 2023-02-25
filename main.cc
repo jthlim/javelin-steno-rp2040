@@ -16,9 +16,11 @@
 #include "split_led_status.h"
 #include "split_serial_buffer.h"
 #include "split_tx_rx.h"
+#include "ssd1306.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
 
+#include <hardware/watchdog.h>
 #include <pico/time.h>
 #include <tusb.h>
 
@@ -33,6 +35,10 @@ void InitMulticore();
 
 const uint64_t DEBOUNCE_TIME_US = 5000;
 int resumeCount = 0;
+
+#if JAVELIN_USE_WATCHDOG
+extern uint32_t watchdogData[8];
+#endif
 
 //---------------------------------------------------------------------------
 // Device callbacks
@@ -84,7 +90,7 @@ private:
   ButtonManager buttonManager;
 
 #if JAVELIN_SPLIT
-  virtual void OnConnectionReset() {
+  virtual void OnReceiveConnectionReset() {
     splitState.ClearAll();
     isSplitUpdated = true;
   }
@@ -230,6 +236,10 @@ JavelinStaticAllocate<HidTask> hidTaskContainer;
 JavelinStaticAllocate<SlaveHidTask> slaveHidTaskContainer;
 
 void DoMasterRunLoop() {
+#if JAVELIN_USE_WATCHDOG
+  watchdog_enable(1000, true);
+#endif
+
   while (1) {
     tud_task(); // tinyusb device task
     SplitTxRx::Update();
@@ -239,12 +249,20 @@ void DoMasterRunLoop() {
     ProcessStenoTick();
     ConsoleInputBuffer::Process();
     Ws2812::Update();
+    Ssd1306::Update();
 
+#if JAVELIN_USE_WATCHDOG
+    watchdog_update();
+#endif
     sleep_us(100);
   }
 }
 
 void DoSlaveRunLoop() {
+#if JAVELIN_USE_WATCHDOG
+  watchdog_enable(1000, true);
+#endif
+
   while (1) {
     tud_task(); // tinyusb device task
     SplitTxRx::Update();
@@ -256,12 +274,22 @@ void DoSlaveRunLoop() {
     ConsoleBuffer::instance.Flush();
     ConsoleInputBuffer::Process();
     Ws2812::Update();
+    Ssd1306::Update();
 
+#if JAVELIN_USE_WATCHDOG
+    watchdog_update();
+#endif
     sleep_us(100);
   }
 }
 
 int main(void) {
+#if JAVELIN_USE_WATCHDOG
+  for (int i = 0; i < 8; ++i) {
+    watchdogData[i] = watchdog_hw->scratch[i];
+  }
+#endif
+
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
@@ -269,6 +297,7 @@ int main(void) {
   Rp2040Crc32::Initialize();
   Ws2812::Initialize();
   SplitTxRx::Initialize();
+  Ssd1306::Initialize();
 
   // Trigger button init script.
   new (hidTaskContainer) HidTask;
@@ -280,9 +309,10 @@ int main(void) {
     ConsoleInputBuffer::RegisterRxHandler();
     SplitLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
-    SplitHidReportBuffer::RegisterTxHandler();
+    SplitHidReportBuffer::RegisterMasterHandlers();
     Bootrom::RegisterTxHandler();
     SplitSerialBuffer::RegisterTxHandler();
+    Ssd1306::RegisterMasterHandlers();
 
     InitJavelinSteno();
     tusb_init();
@@ -295,9 +325,10 @@ int main(void) {
     ConsoleInputBuffer::RegisterTxHandler();
     SplitLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
-    SplitHidReportBuffer::RegisterRxHandler();
+    SplitHidReportBuffer::RegisterSlaveHandlers();
     Bootrom::RegisterRxHandler();
     SplitSerialBuffer::RegisterRxHandler();
+    Ssd1306::RegisterSlaveHandlers();
 
     InitSlave();
     tusb_init();

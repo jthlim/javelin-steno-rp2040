@@ -50,8 +50,7 @@ SplitHidReportBuffer::SplitHidReportBufferData::CreateEntry(uint8_t interface,
                                                             uint8_t reportId,
                                                             const uint8_t *data,
                                                             size_t length) {
-  QueueEntry<EntryData> *entry =
-      (QueueEntry<EntryData> *)malloc(sizeof(QueueEntry<EntryData>) + length);
+  QueueEntry<EntryData> *entry = new (length) QueueEntry<EntryData>;
   entry->data.interface = interface;
   entry->data.reportId = reportId;
   entry->data.length = length;
@@ -78,17 +77,11 @@ void SplitHidReportBuffer::SplitHidReportBufferData::Add(uint8_t interface,
 
 void SplitHidReportBuffer::SplitHidReportBufferData::Update() {
   while (head) {
-    QueueEntry<EntryData> *entry = head;
-
-    if (!ProcessEntry(entry)) {
+    if (!ProcessEntry(head)) {
       return;
     }
 
-    head = entry->next;
-    if (head == nullptr) {
-      tail = &head;
-    }
-    free(entry);
+    RemoveHead();
   }
 }
 

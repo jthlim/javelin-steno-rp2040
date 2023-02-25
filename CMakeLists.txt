@@ -57,6 +57,9 @@ target_sources(${NAME} PUBLIC
   split_led_status.cc
   split_serial_buffer.cc
   split_tx_rx.cc
+  ssd1306.cc
+  ssd1306_paper_tape.cc
+  ssd1306_steno_layout.cc
   usb_descriptors.cc
   ws2812.cc
 
@@ -133,6 +136,7 @@ target_link_libraries(${NAME}
   hardware_clocks
   hardware_flash
   hardware_gpio
+  hardware_i2c
   hardware_pio
   pico_multicore
   pico_printf

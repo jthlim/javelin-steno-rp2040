@@ -257,7 +257,9 @@ extern "C" const uint16_t *tud_descriptor_string_cb(uint8_t index,
 
   case 3: {
     uint8_t id[8];
+    uint32_t interrupts = save_and_disable_interrupts();
     flash_get_unique_id(id);
+    restore_interrupts(interrupts);
     for (size_t i = 0; i < 8; ++i) {
       buffer[i * 2 + 1] = "0123456789abcdef"[id[i] >> 4];
       buffer[i * 2 + 2] = "0123456789abcdef"[id[i] & 0xf];

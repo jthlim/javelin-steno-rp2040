@@ -29,8 +29,8 @@ private:
   };
 
   struct SplitSerialBufferData : public Queue<EntryData>,
-                                 SplitTxHandler,
-                                 SplitRxHandler {
+                                 public SplitTxHandler,
+                                 public SplitRxHandler {
     void Add(const uint8_t *data, size_t length);
 
     virtual void UpdateBuffer(TxBuffer &buffer);

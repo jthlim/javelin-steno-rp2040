@@ -50,7 +50,7 @@ void Ws2812::Initialize() {
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 1,
-      .transferRequest = Rp2040DmaControl::TransferRequest::PIO0_TX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO0_TX0,
       .sniffEnable = false,
   };
   dma1->control = dmaControl;
@@ -106,16 +106,10 @@ void Ws2812::Ws28128Data::UpdateBuffer(TxBuffer &buffer) {
 }
 
 void Ws2812::Ws28128Data::OnDataReceived(const void *data, size_t length) {
-  if (memcmp(data, pixelValues + JAVELIN_RGB_MASTER_COUNT,
-             sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT) == 0) {
-    return;
-  }
   dirty = true;
   memcpy(pixelValues + JAVELIN_RGB_MASTER_COUNT, data,
          sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT);
 }
-
-void Ws2812::Ws28128Data::OnConnectionReset() { slaveDirty = true; }
 
 #endif
 

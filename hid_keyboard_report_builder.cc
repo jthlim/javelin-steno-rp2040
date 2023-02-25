@@ -20,6 +20,11 @@ HidKeyboardReportBuilder::HidKeyboardReportBuilder() {
   memset(&buffers, 0, sizeof(buffers));
 }
 
+void HidKeyboardReportBuilder::Reset() {
+  reportBuffer.Reset();
+  memset(&buffers, 0, sizeof(buffers));
+}
+
 void HidKeyboardReportBuilder::Press(uint8_t key) {
   if (key == 0) {
     return;

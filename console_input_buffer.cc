@@ -14,8 +14,7 @@ ConsoleInputBuffer::ConsoleInputBufferData ConsoleInputBuffer::instance;
 QueueEntry<ConsoleInputBuffer::EntryData> *
 ConsoleInputBuffer::ConsoleInputBufferData::CreateEntry(const void *data,
                                                         size_t length) {
-  QueueEntry<EntryData> *entry =
-      (QueueEntry<EntryData> *)malloc(sizeof(QueueEntry<EntryData>) + length);
+  QueueEntry<EntryData> *entry = new (length) QueueEntry<EntryData>;
   entry->data.length = length;
   entry->next = nullptr;
   memcpy(entry->data.data, data, length);
@@ -39,14 +38,8 @@ void ConsoleInputBuffer::ConsoleInputBufferData::Process() {
 #endif
 
   while (head) {
-    QueueEntry<EntryData> *entry = head;
-    head = entry->next;
-    if (head == nullptr) {
-      tail = &head;
-    }
-
-    Console::instance.HandleInput(entry->data.data, entry->data.length);
-    free(entry);
+    Console::instance.HandleInput(head->data.data, head->data.length);
+    RemoveHead();
   }
   ConsoleBuffer::instance.Flush();
 }
@@ -55,18 +48,12 @@ void ConsoleInputBuffer::ConsoleInputBufferData::Process() {
 void ConsoleInputBuffer::ConsoleInputBufferData::UpdateBuffer(
     TxBuffer &buffer) {
   while (head) {
-    QueueEntry<EntryData> *entry = head;
-
-    if (!buffer.Add(SplitHandlerId::CONSOLE, entry->data.data,
-                    entry->data.length)) {
+    if (!buffer.Add(SplitHandlerId::CONSOLE, head->data.data,
+                    head->data.length)) {
       return;
     }
 
-    head = entry->next;
-    if (head == nullptr) {
-      tail = &head;
-    }
-    free(entry);
+    RemoveHead();
   }
 }
 

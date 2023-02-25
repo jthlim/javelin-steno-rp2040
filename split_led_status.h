@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  struct SplitLedStatusData : public SplitTxHandler, SplitRxHandler {
+  struct SplitLedStatusData : public SplitTxHandler, public SplitRxHandler {
     bool transmitting = false;
     bool dirty = false;
     uint8_t value;
@@ -31,8 +31,8 @@ private:
     }
 
     virtual void UpdateBuffer(TxBuffer &buffer);
-    virtual void OnDataReceived(const void *data, size_t length);
     virtual void OnTransmitSucceeded();
+    virtual void OnDataReceived(const void *data, size_t length);
   };
 
   static SplitLedStatusData instance;

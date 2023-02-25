@@ -25,6 +25,15 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_SPLIT_RX_PIN 1
 #define JAVELIN_SPLIT_SIDE_PIN 9
 
+#define JAVELIN_OLED_DRIVER 1306
+#define JAVELIN_OLED_WIDTH 128
+#define JAVELIN_OLED_HEIGHT 64
+#define JAVELIN_OLED_I2C i2c1
+#define JAVELIN_OLED_SDA_PIN 2
+#define JAVELIN_OLED_SCL_PIN 3
+#define JAVELIN_OLED_I2C_ADDRESS 0x3c
+#define JAVELIN_OLED_ROTATION 180
+
 constexpr uint8_t MASTER_COLUMN_PINS[] = {8, 27, 26, 22, 20, 23, 21};
 constexpr uint32_t MASTER_COLUMN_PIN_MASK = 0x0cf00100;
 constexpr uint8_t MASTER_ROW_PINS[] = {4, 5, 6, 7};

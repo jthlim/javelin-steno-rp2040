@@ -17,7 +17,7 @@ public:
   void Flush();
   void SendNextReport() { reportBuffer.SendNextReport(); }
 
-  void Reset() { reportBuffer.Reset(); }
+  void Reset();
   size_t GetAvailableBufferCount() const {
     return reportBuffer.GetAvailableBufferCount();
   }

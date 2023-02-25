@@ -13,7 +13,10 @@ public:
   void Flush();
 
   void SendNextReport() { reportBuffer.SendNextReport(); }
-  void Reset() { reportBuffer.Reset(); }
+  void Reset() {
+    bufferSize = 0;
+    reportBuffer.Reset();
+  }
   size_t GetAvailableBufferCount() const {
     return reportBuffer.GetAvailableBufferCount();
   }

@@ -23,6 +23,7 @@
 #include "javelin/dictionary/reverse_map_dictionary.h"
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
+#include "javelin/display.h"
 #include "javelin/engine.h"
 #include "javelin/gpio.h"
 #include "javelin/key.h"
@@ -46,12 +47,14 @@
 #include "split_hid_report_buffer.h"
 #include "split_serial_buffer.h"
 #include "split_tx_rx.h"
+#include "ssd1306.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
 #include <hardware/timer.h>
+#include <hardware/watchdog.h>
 #include <malloc.h>
 #include <tusb.h>
 
@@ -63,6 +66,123 @@
 #define ENABLE_DEBUG_COMMAND 0
 
 //---------------------------------------------------------------------------
+
+#if JAVELIN_OLED_DRIVER
+
+enum class AutoDraw : uint8_t {
+  NONE,
+  PAPER_TAPE,
+  STENO_LAYOUT,
+};
+
+class StenoStrokeCapture : public StenoPassthrough {
+public:
+  StenoStrokeCapture(StenoProcessorElement *next) : StenoPassthrough(next) {}
+
+  void Process(const StenoKeyState &value, StenoAction action) {
+    if (action == StenoAction::TRIGGER) {
+      if (strokeCount < MAXIMUM_STROKE_COUNT) {
+        strokes[strokeCount++] = value.ToStroke();
+      } else {
+        memmove(&strokes[0], &strokes[1],
+                sizeof(StenoStroke) * (MAXIMUM_STROKE_COUNT - 1));
+        strokes[MAXIMUM_STROKE_COUNT - 1] = value.ToStroke();
+      }
+      Update();
+    }
+    StenoPassthrough::Process(value, action);
+  }
+
+  void Update() {
+#if JAVELIN_SPLIT
+    for (int displayId = 0; displayId < 2; ++displayId) {
+#else
+    const int displayId = 0;
+    {
+#endif
+      switch (autoDraw[displayId]) {
+      case AutoDraw::NONE:
+        // Do nothing
+        break;
+      case AutoDraw::PAPER_TAPE:
+        Ssd1306::DrawPaperTape(displayId, strokes, strokeCount);
+        break;
+      case AutoDraw::STENO_LAYOUT:
+        Ssd1306::DrawStenoLayout(displayId, strokeCount != 0
+                                                ? strokes[strokeCount - 1]
+                                                : StenoStroke(0));
+        break;
+      }
+    }
+  }
+
+  static void SetAutoDraw_Binding(void *context, const char *commandLine);
+  void SetAutoDraw(int displayId, AutoDraw autoDrawId) {
+#if JAVELIN_SPLIT
+    if (displayId < 0 || displayId >= 2) {
+      return;
+    }
+#else
+    displayId = 0;
+#endif
+    autoDraw[displayId] = autoDrawId;
+    Update();
+  }
+
+private:
+  static const size_t MAXIMUM_STROKE_COUNT = 16;
+  uint8_t strokeCount = 0;
+#if JAVELIN_SPLIT
+  AutoDraw autoDraw[2];
+#else
+  AutoDraw autoDraw[1];
+#endif
+  StenoStroke strokes[MAXIMUM_STROKE_COUNT];
+};
+
+void StenoStrokeCapture::SetAutoDraw_Binding(void *context,
+                                             const char *commandLine) {
+  StenoStrokeCapture *capture = (StenoStrokeCapture *)context;
+  const char *p = strchr(commandLine, ' ');
+  if (!p) {
+    Console::Printf("ERR No parameters specified\n\n");
+    return;
+  }
+  int displayId = 0;
+  ++p;
+#if !JAVELIN_SPLIT
+  if ('a' <= *p && *p <= 'z')
+    goto skipDisplayId;
+#endif
+  if (*p < '0' && *p >= '9') {
+    Console::Printf("ERR displayId parameter missing\n\n");
+    return;
+  }
+  while ('0' <= *p && *p <= '9') {
+    displayId = 10 * displayId + *p - '0';
+    ++p;
+  }
+  if (*p != ' ') {
+    Console::Printf("ERR displayId parameter missing\n\n");
+    return;
+  }
+  ++p;
+
+skipDisplayId:
+  if (Str::Eq(p, "none")) {
+    capture->SetAutoDraw(displayId, AutoDraw::NONE);
+  } else if (Str::Eq(p, "paper_tape")) {
+    capture->SetAutoDraw(displayId, AutoDraw::PAPER_TAPE);
+  } else if (Str::Eq(p, "steno_layout")) {
+    capture->SetAutoDraw(displayId, AutoDraw::STENO_LAYOUT);
+  } else {
+    Console::Printf("ERR Unable to set auto draw: \"%s\"\n\n", p);
+    return;
+  }
+  Console::SendOk();
+}
+
+#endif
 
 #if USE_USER_DICTIONARY
 StenoUserDictionaryData
@@ -76,7 +196,11 @@ static StenoPloverHid ploverHid;
 
 static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
 static JavelinStaticAllocate<StenoEngine> engineContainer;
+#if JAVELIN_OLED_DRIVER
+static JavelinStaticAllocate<StenoStrokeCapture> passthroughContainer;
+#else
 static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
+#endif
 static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
 static JavelinStaticAllocate<StenoAllUp> allUpContainer;
 static JavelinStaticAllocate<StenoRepeat> repeatContainer;
@@ -125,7 +249,11 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Console::Printf("Serial number: ");
   uint8_t serialId[8];
+
+  uint32_t interrupts = save_and_disable_interrupts();
   flash_get_unique_id(serialId);
+  restore_interrupts(interrupts);
+
   for (size_t i = 0; i < 8; ++i) {
     Console::Printf("%02x", serialId[i]);
   }
@@ -153,12 +281,19 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
   SplitTxRx::PrintInfo();
+  Ssd1306::PrintInfo();
   Console::Printf("Processing chain\n");
   processors->PrintInfo();
   Console::Printf("Text block: %zu bytes\n",
                   STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
   Console::Write("\n", 1);
 }
+
+#if JAVELIN_OLED_DRIVER
+void Display::SetAutoDraw(int displayId, int autoDrawId) {
+  passthroughContainer->SetAutoDraw(displayId, (AutoDraw)autoDrawId);
+}
+#endif
 
 static void LaunchBootrom(void *const, const char *commandLine) {
   Bootrom::Launch();
@@ -234,6 +369,17 @@ void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
 void Debug_Binding(void *context, const char *commandLine) {}
 #endif
 
+#if JAVELIN_USE_WATCHDOG
+uint32_t watchdogData[8];
+void Watchdog_Binding(void *context, const char *commandLine) {
+  Console::Printf("Watchdog scratch\n");
+  for (int i = 0; i < 8; ++i) {
+    Console::Printf("  %d: %08x\n", i, watchdogData[i]);
+  }
+  Console::Printf("\n");
+}
+#endif
+
 struct WordListData {
   uint32_t length;
   uint8_t data[1];
@@ -243,6 +389,10 @@ void InitSlave() {
   Console &console = Console::instance;
   console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
                           LaunchBootrom, nullptr);
+#if JAVELIN_USE_WATCHDOG
+  console.RegisterCommand("watchdog", "Show watchdog scratch registers",
+                          Watchdog_Binding, nullptr);
+#endif
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
 #endif
@@ -344,11 +494,15 @@ void InitJavelinSteno() {
   console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
                           LaunchSlaveBootrom, nullptr);
 #endif
+#if JAVELIN_USE_WATCHDOG
+  console.RegisterCommand("watchdog", "Show watchdog scratch registers",
+                          Watchdog_Binding, nullptr);
+#endif
 
-  console.RegisterCommand(
-      "set_steno_mode",
-      "Sets the current steno mode [\"embedded\", \"gemini\", \"plover_hid\"]",
-      SetStenoMode, nullptr);
+  console.RegisterCommand("set_steno_mode",
+                          "Sets the current steno mode [\"embedded\", "
+                          "\"gemini\", \"plover_hid\"]",
+                          SetStenoMode, nullptr);
   console.RegisterCommand(
       "set_keyboard_protocol",
       "Sets the current keyboard protocol [\"default\", \"compatibility\"]",
@@ -403,6 +557,14 @@ void InitJavelinSteno() {
                             Pixel::SetPixel_Binding, nullptr);
   }
 
+#if JAVELIN_OLED_DRIVER
+  console.RegisterCommand("set_auto_draw",
+                          "Set a display auto-draw mode [\"none\", "
+                          "\"paper_tape\", \"steno_layout\"]",
+                          StenoStrokeCapture::SetAutoDraw_Binding,
+                          &passthroughContainer.value);
+#endif
+
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
 #endif
@@ -422,8 +584,13 @@ void InitJavelinSteno() {
 #endif
 
   StenoProcessorElement *processorElement = engine;
+#if JAVELIN_OLED_DRIVER
+  processorElement =
+      new (passthroughContainer) StenoStrokeCapture(processorElement);
+#else
   processorElement =
       new (passthroughContainer) StenoPassthrough(processorElement);
+#endif
 
   if (config->useJeffModifiers) {
     processorElement =

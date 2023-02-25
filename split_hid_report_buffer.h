@@ -19,13 +19,13 @@ public:
 
   static void Update() { instance.Update(); }
 
-  static void RegisterTxHandler() {
+  static void RegisterMasterHandlers() {
     SplitTxRx::RegisterTxHandler(&instance);
     SplitTxRx::RegisterRxHandler(SplitHandlerId::HID_BUFFER_SIZE,
                                  &instance.bufferSize);
   }
 
-  static void RegisterRxHandler() {
+  static void RegisterSlaveHandlers() {
     SplitTxRx::RegisterRxHandler(SplitHandlerId::HID_REPORT, &instance);
     SplitTxRx::RegisterTxHandler(&instance.bufferSize);
   }
@@ -43,8 +43,8 @@ private:
     HidBufferSize bufferSize;
 
     virtual void UpdateBuffer(TxBuffer &buffer);
+    virtual void OnTransmitConnectionReset() { dirty = true; }
     virtual void OnDataReceived(const void *data, size_t length);
-    virtual void OnConnectionReset() { dirty = true; }
   };
 
   struct EntryData {
@@ -54,9 +54,9 @@ private:
     uint8_t data[0];
   };
 
-  struct SplitHidReportBufferData : public Queue<EntryData>,
-                                    SplitTxHandler,
-                                    SplitRxHandler {
+  struct SplitHidReportBufferData final : public Queue<EntryData>,
+                                          public SplitTxHandler,
+                                          public SplitRxHandler {
     SplitHidReportBufferSize bufferSize;
 
     void Add(uint8_t interface, uint8_t reportId, const uint8_t *data,
@@ -84,8 +84,8 @@ public:
   static void Add(const uint8_t *data) {}
   static void Update() {}
 
-  static void RegisterTxHandler() {}
-  static void RegisterRxHandler() {}
+  static void RegisterMasterHandlers() {}
+  static void RegisterSlaveHandlers() {}
 };
 
 #endif // JAVELIN_SPLIT

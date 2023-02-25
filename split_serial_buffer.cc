@@ -17,8 +17,7 @@ SplitSerialBuffer::SplitSerialBufferData SplitSerialBuffer::instance;
 QueueEntry<SplitSerialBuffer::EntryData> *
 SplitSerialBuffer::SplitSerialBufferData::CreateEntry(const uint8_t *data,
                                                       size_t length) {
-  QueueEntry<EntryData> *entry =
-      (QueueEntry<EntryData> *)malloc(sizeof(QueueEntry<EntryData>) + length);
+  QueueEntry<EntryData> *entry = new (length) QueueEntry<EntryData>;
   entry->data.length = length;
   entry->next = nullptr;
   memcpy(entry->data.data, data, length);
@@ -37,18 +36,12 @@ void SplitSerialBuffer::SplitSerialBufferData::Add(const uint8_t *data,
 
 void SplitSerialBuffer::SplitSerialBufferData::UpdateBuffer(TxBuffer &buffer) {
   while (head) {
-    QueueEntry<EntryData> *entry = head;
-
-    if (!buffer.Add(SplitHandlerId::SERIAL, &entry->data.data,
-                    entry->data.length)) {
+    if (!buffer.Add(SplitHandlerId::SERIAL, &head->data.data,
+                    head->data.length)) {
       return;
     }
 
-    head = entry->next;
-    if (head == nullptr) {
-      tail = &head;
-    }
-    free(entry);
+    RemoveHead();
   }
 }
 

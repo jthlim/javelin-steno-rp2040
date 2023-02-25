@@ -109,7 +109,7 @@ void SplitTxRx::SplitTxRxData::ResetRxDma() {
       .incrementRead = false,
       .incrementWrite = true,
       .chainToDma = 3,
-      .transferRequest = Rp2040DmaControl::TransferRequest::PIO1_RX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO1_RX0,
       .sniffEnable = false,
   };
   dma3->controlTrigger = receiveControl;
@@ -180,7 +180,7 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 2,
-      .transferRequest = Rp2040DmaControl::TransferRequest::PIO1_TX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO1_TX0,
       .sniffEnable = false,
   };
   dma2->controlTrigger = sendControl;
@@ -193,7 +193,7 @@ void SplitTxRx::SplitTxRxData::ProcessReceiveBuffer() {
     int type = blockHeader >> 16;
     size_t length = blockHeader & 0xffff;
 
-    if (type < 8) {
+    if (type < SplitHandlerId::COUNT) {
       SplitRxHandler *handler = rxHandlers[type];
       if (handler != nullptr) {
         handler->OnDataReceived(&rxBuffer.buffer[offset], length);
@@ -215,13 +215,13 @@ void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
 
 void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
   for (size_t i = 0; i < txHandlerCount; ++i) {
-    txHandlers[i]->OnConnectionReset();
+    txHandlers[i]->OnTransmitConnectionReset();
   }
 
   for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
     SplitRxHandler *handler = rxHandlers[i];
     if (handler) {
-      handler->OnConnectionReset();
+      handler->OnReceiveConnectionReset();
     }
   }
 

@@ -40,7 +40,7 @@ uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
         .incrementRead = true,
         .incrementWrite = false,
         .chainToDma = 0,
-        .transferRequest = Rp2040DmaControl::TransferRequest::PERMANENT,
+        .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
         .sniffEnable = true,
     };
     control = dmaControl32BitTransfer;
@@ -51,7 +51,7 @@ uint32_t Rp2040Crc32::Crc32(const void *data, size_t length) {
         .incrementRead = true,
         .incrementWrite = false,
         .chainToDma = 0,
-        .transferRequest = Rp2040DmaControl::TransferRequest::PERMANENT,
+        .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
         .sniffEnable = true,
     };
 

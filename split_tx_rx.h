@@ -17,6 +17,8 @@ enum SplitHandlerId {
   LED_STATUS,
   SERIAL,
   HID_BUFFER_SIZE,
+  OLED_DATA,
+  OLED_AVAILABLE,
 
   COUNT,
 };
@@ -51,14 +53,14 @@ struct RxBuffer {
 
 class SplitTxHandler {
 public:
-  virtual void OnConnectionReset() {}
+  virtual void OnTransmitConnectionReset() {}
   virtual void OnTransmitSucceeded() {}
   virtual void UpdateBuffer(TxBuffer &buffer);
 };
 
 class SplitRxHandler {
 public:
-  virtual void OnConnectionReset() {}
+  virtual void OnReceiveConnectionReset() {}
   virtual void OnDataReceived(const void *data, size_t length);
 };
 
