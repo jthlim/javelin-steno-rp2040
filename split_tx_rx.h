@@ -19,6 +19,7 @@ enum SplitHandlerId {
   HID_BUFFER_SIZE,
   OLED_DATA,
   OLED_AVAILABLE,
+  OLED_CONTROL,
 
   COUNT,
 };

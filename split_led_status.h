@@ -21,7 +21,6 @@ public:
 
 private:
   struct SplitLedStatusData : public SplitTxHandler, public SplitRxHandler {
-    bool transmitting = false;
     bool dirty = false;
     uint8_t value;
 
@@ -31,7 +30,7 @@ private:
     }
 
     virtual void UpdateBuffer(TxBuffer &buffer);
-    virtual void OnTransmitSucceeded();
+    virtual void OnTransmitConnectionReset() { dirty = true; }
     virtual void OnDataReceived(const void *data, size_t length);
   };
 

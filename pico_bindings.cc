@@ -2,6 +2,7 @@
 
 #include "bootrom.h"
 #include "console_buffer.h"
+#include "font.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/button_manager.h"
@@ -28,7 +29,6 @@
 #include "javelin/gpio.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
-#include "javelin/pixel.h"
 #include "javelin/processor/all_up.h"
 #include "javelin/processor/first_up.h"
 #include "javelin/processor/gemini.h"
@@ -37,11 +37,13 @@
 #include "javelin/processor/plover_hid.h"
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
+#include "javelin/rgb.h"
 #include "javelin/serial_port.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
+#include "javelin/wpm_tracker.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
 #include "split_hid_report_buffer.h"
@@ -73,6 +75,7 @@ enum class AutoDraw : uint8_t {
   NONE,
   PAPER_TAPE,
   STENO_LAYOUT,
+  WPM,
 };
 
 class StenoStrokeCapture : public StenoPassthrough {
@@ -88,12 +91,12 @@ public:
                 sizeof(StenoStroke) * (MAXIMUM_STROKE_COUNT - 1));
         strokes[MAXIMUM_STROKE_COUNT - 1] = value.ToStroke();
       }
-      Update();
+      Update(true);
     }
     StenoPassthrough::Process(value, action);
   }
 
-  void Update() {
+  void Update(bool onStrokeInput) {
 #if JAVELIN_SPLIT
     for (int displayId = 0; displayId < 2; ++displayId) {
 #else
@@ -112,6 +115,11 @@ public:
                                                 ? strokes[strokeCount - 1]
                                                 : StenoStroke(0));
         break;
+      case AutoDraw::WPM:
+        if (!onStrokeInput) {
+          DrawWpm(displayId);
+        }
+        break;
       }
     }
   }
@@ -126,18 +134,66 @@ public:
     displayId = 0;
 #endif
     autoDraw[displayId] = autoDrawId;
-    Update();
+    Update(false);
+  }
+
+  virtual void Tick() {
+    StenoPassthrough::Tick();
+
+    uint32_t now = time_us_32();
+    if (now - lastUpdateTime < 1000) {
+      return;
+    }
+    lastUpdateTime = now;
+
+#if JAVELIN_SPLIT
+    for (int displayId = 0; displayId < 2; ++displayId) {
+#else
+    const int displayId = 0;
+    {
+#endif
+      switch (autoDraw[displayId]) {
+      case AutoDraw::NONE:
+      case AutoDraw::PAPER_TAPE:
+      case AutoDraw::STENO_LAYOUT:
+        break;
+
+      case AutoDraw::WPM:
+        DrawWpm(displayId);
+        break;
+      }
+    }
   }
 
 private:
   static const size_t MAXIMUM_STROKE_COUNT = 16;
   uint8_t strokeCount = 0;
+  uint32_t lastUpdateTime = 0;
 #if JAVELIN_SPLIT
   AutoDraw autoDraw[2];
 #else
   AutoDraw autoDraw[1];
 #endif
   StenoStroke strokes[MAXIMUM_STROKE_COUNT];
+
+  static void DrawWpm(int displayId) {
+    Display::Clear(displayId);
+
+    char buffer[16];
+    itoa(WpmTracker::instance.Get5sWpm(), buffer, 10);
+    const Font *font = &Font::LARGE_DIGITS;
+    int textWidth = font->GetStringWidth(buffer);
+    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2 - textWidth / 2,
+                      JAVELIN_OLED_HEIGHT / 2 - font->height / 2 +
+                          font->baseline / 2,
+                      font, buffer);
+
+    font = &Font::DEFAULT;
+    textWidth = font->GetStringWidth("wpm");
+    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2 - textWidth / 2,
+                      JAVELIN_OLED_HEIGHT * 3 / 4 + font->baseline / 2, font,
+                      "wpm");
+  }
 };
 
 void StenoStrokeCapture::SetAutoDraw_Binding(void *context,
@@ -175,6 +231,8 @@ skipDisplayId:
     capture->SetAutoDraw(displayId, AutoDraw::PAPER_TAPE);
   } else if (Str::Eq(p, "steno_layout")) {
     capture->SetAutoDraw(displayId, AutoDraw::STENO_LAYOUT);
+  } else if (Str::Eq(p, "wpm")) {
+    capture->SetAutoDraw(displayId, AutoDraw::WPM);
   } else {
     Console::Printf("ERR Unable to set auto draw: \"%s\"\n\n", p);
     return;
@@ -182,20 +240,52 @@ skipDisplayId:
   Console::SendOk();
 }
 
+void MeasureText_Binding(void *context, const char *commandLine) {
+  const char *p = strchr(commandLine, ' ');
+
+  if (!p) {
+    Console::Printf("ERR No parameters specified\n\n");
+    return;
+  }
+  int fontId = 0;
+  ++p;
+  if (*p < '0' && *p >= '9') {
+    Console::Printf("ERR fontId parameter missing\n\n");
+    return;
+  }
+  while ('0' <= *p && *p <= '9') {
+    fontId = 10 * fontId + *p - '0';
+    ++p;
+  }
+  if (*p != ' ') {
+    Console::Printf("ERR fontId parameter missing\n\n");
+    return;
+  }
+  ++p;
+
+  // TODO: Use fontId.
+  uint32_t width = Font::DEFAULT.GetStringWidth(p);
+  Console::Printf("Width: %u\n\n", width);
+}
+
 #endif
 
-#if USE_USER_DICTIONARY
+#if JAVELIN_USE_EMBEDDED_STENO
+#if JAVELIN_USE_USER_DICTIONARY
 StenoUserDictionaryData
     userDictionaryLayout((const uint8_t *)STENO_USER_DICTIONARY_ADDRESS,
                          STENO_USER_DICTIONARY_SIZE);
 static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
+#endif
 #endif
 
 static StenoGemini gemini;
 static StenoPloverHid ploverHid;
 
 static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
+#if JAVELIN_USE_EMBEDDED_STENO
 static JavelinStaticAllocate<StenoEngine> engineContainer;
+#endif
 #if JAVELIN_OLED_DRIVER
 static JavelinStaticAllocate<StenoStrokeCapture> passthroughContainer;
 #else
@@ -222,6 +312,7 @@ extern int resumeCount;
 extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
 
+#if JAVELIN_USE_EMBEDDED_STENO
 static void PrintInfo_Binding(void *context, const char *commandLine) {
   StenoEngine *engine = (StenoEngine *)context;
   const StenoConfigBlock *config =
@@ -288,6 +379,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
                   STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
   Console::Write("\n", 1);
 }
+#endif
 
 #if JAVELIN_OLED_DRIVER
 void Display::SetAutoDraw(int displayId, int autoDrawId) {
@@ -326,9 +418,12 @@ void SetStenoMode(void *context, const char *commandLine) {
   }
 
   ++stenoMode;
+#if JAVELIN_USE_EMBEDDED_STENO
   if (Str::Eq(stenoMode, "embedded")) {
     passthroughContainer->SetNext(&engineContainer.value);
-  } else if (Str::Eq(stenoMode, "gemini")) {
+  } else
+#endif
+      if (Str::Eq(stenoMode, "gemini")) {
     passthroughContainer->SetNext(&gemini);
   } else if (Str::Eq(stenoMode, "plover_hid")) {
     passthroughContainer->SetNext(&ploverHid);
@@ -361,9 +456,11 @@ void SetKeyboardProtocol(void *context, const char *commandLine) {
   Console::SendOk();
 }
 
+#if JAVELIN_USE_EMBEDDED_STENO
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
 }
+#endif
 
 #if ENABLE_DEBUG_COMMAND
 void Debug_Binding(void *context, const char *commandLine) {}
@@ -406,6 +503,7 @@ void InitJavelinSteno() {
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   KeyboardLayout::SetActiveLayout(config->keyboardLayout);
 
+#if JAVELIN_USE_EMBEDDED_STENO
   const WordListData *const wordListData =
       (const WordListData *)STENO_WORD_LIST_ADDRESS;
   WordList::SetData(wordListData->data, wordListData->length);
@@ -417,7 +515,7 @@ void InitJavelinSteno() {
   // dictionaries.Add(
   //     StenoDictionaryListEntry(&StenoDebugDictionary::instance, true));
 
-#if USE_USER_DICTIONARY
+#if JAVELIN_USE_USER_DICTIONARY
   StenoUserDictionary *userDictionary =
       new (userDictionaryContainer) StenoUserDictionary(userDictionaryLayout);
   dictionaries.Add(StenoDictionaryListEntry(userDictionary, true));
@@ -476,7 +574,7 @@ void InitJavelinSteno() {
   // Set up processors.
   StenoEngine *engine = new (engineContainer)
       StenoEngine(*dictionary, compiledOrthographyContainer,
-#if USE_USER_DICTIONARY
+#if JAVELIN_USE_USER_DICTIONARY
                   userDictionary
 #else
                   nullptr
@@ -484,10 +582,13 @@ void InitJavelinSteno() {
       );
 
   engine->SetSpaceAfter(config->useSpaceAfter);
+#endif
 
   Console &console = Console::instance;
+#if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
+#endif
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if JAVELIN_SPLIT
@@ -499,19 +600,22 @@ void InitJavelinSteno() {
                           Watchdog_Binding, nullptr);
 #endif
 
+#if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("set_steno_mode",
                           "Sets the current steno mode [\"embedded\", "
                           "\"gemini\", \"plover_hid\"]",
                           SetStenoMode, nullptr);
-  console.RegisterCommand(
-      "set_keyboard_protocol",
-      "Sets the current keyboard protocol [\"default\", \"compatibility\"]",
-      SetKeyboardProtocol, nullptr);
+#endif
+  console.RegisterCommand("set_keyboard_protocol",
+                          "Sets the current keyboard protocol "
+                          "[\"default\", \"compatibility\"]",
+                          SetKeyboardProtocol, nullptr);
   console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
                           SetUnicodeMode, nullptr);
   console.RegisterCommand("set_keyboard_layout",
                           "Sets the current keyboard layout",
                           &KeyboardLayout::SetKeyboardLayout_Binding, nullptr);
+#if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("set_space_position",
                           "Controls space position before or after",
                           StenoEngine::SetSpacePosition_Binding, engine);
@@ -551,25 +655,29 @@ void InitJavelinSteno() {
                           StenoEngine::Lookup_Binding, engine);
   console.RegisterCommand("lookup_stroke", "Looks up a stroke",
                           StenoEngine::LookupStroke_Binding, engine);
+#endif
 
   if (Ws2812::IsAvailable()) {
-    console.RegisterCommand("set_pixel", "Sets a pixel RGB (index, r, g, b)",
-                            Pixel::SetPixel_Binding, nullptr);
+    console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
+                            Rgb::SetRgb_Binding, nullptr);
   }
 
 #if JAVELIN_OLED_DRIVER
   console.RegisterCommand("set_auto_draw",
                           "Set a display auto-draw mode [\"none\", "
-                          "\"paper_tape\", \"steno_layout\"]",
+                          "\"paper_tape\", \"steno_layout\", \"wpm\"]",
                           StenoStrokeCapture::SetAutoDraw_Binding,
                           &passthroughContainer.value);
+  console.RegisterCommand("measure_text", "Measures the width of text",
+                          MeasureText_Binding, nullptr);
 #endif
 
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
 #endif
 
-#if USE_USER_DICTIONARY
+#if JAVELIN_USE_EMBEDDED_STENO
+#if JAVELIN_USE_USER_DICTIONARY
   console.RegisterCommand(
       "print_user_dictionary", "Prints the user dictionary in JSON format",
       StenoUserDictionary::PrintJsonDictionary_Binding, userDictionary);
@@ -584,6 +692,9 @@ void InitJavelinSteno() {
 #endif
 
   StenoProcessorElement *processorElement = engine;
+#else
+  StenoProcessorElement *processorElement = &gemini;
+#endif
 #if JAVELIN_OLED_DRIVER
   processorElement =
       new (passthroughContainer) StenoStrokeCapture(processorElement);
@@ -592,10 +703,12 @@ void InitJavelinSteno() {
       new (passthroughContainer) StenoPassthrough(processorElement);
 #endif
 
+#if JAVELIN_USE_EMBEDDED_STENO
   if (config->useJeffModifiers) {
     processorElement =
         new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
   }
+#endif
 
   if (config->useFirstUp) {
     processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
@@ -630,7 +743,9 @@ void Script::OnStenoStateCancelled() {
 }
 
 void Script::SendText(const uint8_t *text) const {
+#if JAVELIN_USE_EMBEDDED_STENO
   engineContainer->SendText(text);
+#endif
 }
 
 void ProcessStenoTick() {
@@ -648,6 +763,14 @@ void ConsoleWriter::Write(const char *data, size_t length) {
 void Console::Flush() { ConsoleBuffer::instance.Flush(); }
 
 void Key::PressRaw(uint8_t key) {
+#if JAVELIN_OLED_DRIVER
+  if (key == KeyCode::BACKSPACE) {
+    WpmTracker::instance.Tally(-1);
+  } else if (IsWritingKeyCode(key)) {
+    WpmTracker::instance.Tally(1);
+  }
+#endif
+
   HidKeyboardReportBuilder::instance.Press(key);
 }
 

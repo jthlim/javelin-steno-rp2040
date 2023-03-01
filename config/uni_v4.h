@@ -12,7 +12,8 @@ struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
-#define USE_USER_DICTIONARY 1
+#define JAVELIN_USE_EMBEDDED_STENO 1
+#define JAVELIN_USE_USER_DICTIONARY 1
 #define JAVELIN_USB_MILLIAMPS 100
 #define BOOTSEL_BUTTON_INDEX 28
 

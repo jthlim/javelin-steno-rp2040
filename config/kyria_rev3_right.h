@@ -12,8 +12,8 @@ struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
-#define JAVELIN_USE_EMBEDDED_STENO 1
-#define JAVELIN_USE_USER_DICTIONARY 1
+#define JAVELIN_USE_EMBEDDED_STENO 0
+#define JAVELIN_USE_USER_DICTIONARY 0
 #define JAVELIN_USB_MILLIAMPS 500
 
 #define JAVELIN_RGB_COUNT 62

@@ -129,18 +129,12 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
 void SplitHidReportBuffer::SplitHidReportBufferData::UpdateBuffer(
     TxBuffer &buffer) {
   while (head) {
-    QueueEntry<EntryData> *entry = head;
-
-    if (!buffer.Add(SplitHandlerId::HID_REPORT, &entry->data,
-                    entry->data.length + sizeof(EntryData))) {
+    if (!buffer.Add(SplitHandlerId::HID_REPORT, &head->data,
+                    head->data.length + sizeof(EntryData))) {
       return;
     }
 
-    head = entry->next;
-    if (head == nullptr) {
-      tail = &head;
-    }
-    free(entry);
+    RemoveHead();
   }
 }
 
@@ -152,6 +146,7 @@ void SplitHidReportBuffer::SplitHidReportBufferData::OnDataReceived(
       CreateEntry(entryData->interface, entryData->reportId, entryData->data,
                   entryData->length);
   AddEntry(entry);
+  bufferSize.dirty = true;
 }
 
 //---------------------------------------------------------------------------

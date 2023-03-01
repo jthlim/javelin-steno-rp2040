@@ -15,11 +15,11 @@ public:
   static bool IsAvailable() { return true; }
   static size_t GetCount() { return JAVELIN_RGB_COUNT; }
 
-  static void SetPixel(size_t pixelId, int r, int g, int b) {
-    instance.SetPixel(pixelId, (r << 16) | (g << 24) | (b << 8));
+  static void SetRgb(size_t pixelId, int r, int g, int b) {
+    instance.SetRgb(pixelId, (r << 16) | (g << 24) | (b << 8));
   }
-  static void SetPixel(size_t pixelId, uint32_t ws2812Color) {
-    instance.SetPixel(pixelId, ws2812Color);
+  static void SetRgb(size_t pixelId, uint32_t ws2812Color) {
+    instance.SetRgb(pixelId, ws2812Color);
   }
 
   static void RegisterTxHandler() { SplitTxRx::RegisterTxHandler(&instance); }
@@ -43,7 +43,7 @@ private:
     uint32_t pixelValues[JAVELIN_RGB_COUNT];
 
     void Update();
-    void SetPixel(size_t pixelId, uint32_t ws2812Color) {
+    void SetRgb(size_t pixelId, uint32_t ws2812Color) {
       if (pixelId >= JAVELIN_RGB_COUNT) {
         return;
       }
@@ -85,8 +85,8 @@ public:
   static bool IsAvailable() { return false; }
   static size_t GetCount() { return 0; }
 
-  static void SetPixel(size_t pixelId, int r, int g, int b) {}
-  static void SetPixel(size_t pixelId, uint32_t ws2812Color) {}
+  static void SetRgb(size_t pixelId, int r, int g, int b) {}
+  static void SetRgb(size_t pixelId, uint32_t ws2812Color) {}
 
   static void RegisterTxHandler() {}
   static void RegisterRxHandler() {}

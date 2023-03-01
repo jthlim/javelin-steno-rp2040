@@ -12,17 +12,11 @@
 SplitLedStatus::SplitLedStatusData SplitLedStatus::instance;
 
 void SplitLedStatus::SplitLedStatusData::UpdateBuffer(TxBuffer &buffer) {
-  if (!dirty && !transmitting) {
+  if (!dirty) {
     return;
   }
   dirty = false;
-  transmitting = true;
-
   buffer.Add(SplitHandlerId::LED_STATUS, &value, 1);
-}
-
-void SplitLedStatus::SplitLedStatusData::OnTransmitSucceeded() {
-  transmitting = false;
 }
 
 void SplitLedStatus::SplitLedStatusData::OnDataReceived(const void *data,

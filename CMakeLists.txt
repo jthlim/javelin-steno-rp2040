@@ -45,6 +45,9 @@ target_sources(${NAME} PUBLIC
   console_buffer.cc
   console_input_buffer.cc
   flash.cc
+  font.cc
+  font/default.cc
+  font/large_digits.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   key_state.cc
@@ -83,6 +86,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/reverse_prefix_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/dictionary/wrapped_dictionary.cc
+  javelin/display.cc
   javelin/engine_add_translation_mode.cc
   javelin/engine_binding.cc
   javelin/engine_normal_mode.cc
@@ -96,7 +100,6 @@ target_sources(${NAME} PUBLIC
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
-  javelin/pixel.cc
   javelin/pool_allocate.cc
   javelin/processor/all_up.cc
   javelin/processor/first_up.cc
@@ -107,6 +110,7 @@ target_sources(${NAME} PUBLIC
   javelin/processor/processor_list.cc
   javelin/processor/repeat.cc
   javelin/processor/switch.cc
+  javelin/rgb.cc
   javelin/script.cc
   javelin/segment.cc
   javelin/state.cc
@@ -124,6 +128,7 @@ target_sources(${NAME} PUBLIC
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc
   javelin/word_list_data.cc
+  javelin/wpm_tracker.cc
   javelin/writer.cc
 )
 

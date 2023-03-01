@@ -6,6 +6,10 @@
 
 //---------------------------------------------------------------------------
 
+struct Font;
+
+//---------------------------------------------------------------------------
+
 #if JAVELIN_OLED_DRIVER == 1306
 
 class Ssd1306 {
@@ -22,16 +26,23 @@ public:
   static void DrawStenoLayout(int displayId, StenoStroke stroke) {
     instances[displayId].DrawStenoLayout(stroke);
   }
+  static void DrawText(int displayId, int x, int y, const Font *font,
+                       const char *text) {
+    instances[displayId].DrawText(x, y, font, text);
+  }
 
 #if JAVELIN_SPLIT
   static void RegisterMasterHandlers() {
     SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_AVAILABLE,
                                  &instances[1].available);
     SplitTxRx::RegisterTxHandler(&instances[1]);
+    SplitTxRx::RegisterTxHandler(&instances[1].control);
   }
   static void RegisterSlaveHandlers() {
     SplitTxRx::RegisterTxHandler(&instances[1].available);
     SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_DATA, &instances[1]);
+    SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_CONTROL,
+                                 &instances[1].control);
   }
 #else
   static void RegisterMasterHandlers() {}
@@ -59,19 +70,54 @@ private:
     virtual void OnTransmitConnectionReset() { dirty = true; }
   };
 
+  class Ssd1306Control : public SplitTxHandler, public SplitRxHandler {
+  public:
+    void Update();
+    void SetScreenOn(bool on) {
+      if (on != data.screenOn) {
+        data.screenOn = on;
+        dirtyFlag |= DIRTY_FLAG_SCREEN_ON;
+      }
+    }
+    void SetContrast(uint8_t value) {
+      if (value != data.contrast) {
+        data.contrast = value;
+        dirtyFlag |= DIRTY_FLAG_CONTRAST;
+      }
+    }
+
+  private:
+    struct Ssd1306ControlTxRxData {
+      bool screenOn;
+      uint8_t contrast;
+    };
+
+    uint8_t dirtyFlag;
+    Ssd1306ControlTxRxData data;
+
+    static const int DIRTY_FLAG_SCREEN_ON = 1;
+    static const int DIRTY_FLAG_CONTRAST = 2;
+
+    virtual void UpdateBuffer(TxBuffer &buffer);
+    virtual void OnDataReceived(const void *data, size_t length);
+    virtual void OnTransmitConnectionReset();
+  };
+
   class Ssd1306Data : public SplitTxHandler, public SplitRxHandler {
   public:
     Ssd1306Availability available;
+    Ssd1306Control control;
     bool dirty;
+    bool drawColor = true;
 
     void Initialize();
 
     // None of these will take effect until Update() is called.
     void Clear();
-    void DrawLine(int x0, int y0, int x1, int y1, bool on);
+    void DrawLine(int x0, int y0, int x1, int y1);
     void DrawImage(int x, int y, int width, int height, const uint8_t *data);
-    void DrawText(int x, int y, int fontId, const uint8_t *text);
-    void SetPixel(uint32_t x, uint32_t y, bool on);
+    void DrawText(int x, int y, const Font *font, const char *text);
+    void SetPixel(uint32_t x, uint32_t y);
 
     void DrawPaperTape(const StenoStroke *strokes, size_t length);
     void DrawStenoLayout(StenoStroke stroke);
@@ -85,20 +131,22 @@ private:
       uint32_t buffer32[JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 32];
     };
 
-    static uint16_t dmaBuffer[JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1];
-
-    bool IsI2cTxReady() const;
-    void WaitForI2cTxReady() const;
-
     bool InitializeSsd1306();
-    bool SendCommandList(const uint8_t *commands, size_t length);
-    bool SendCommand(uint8_t command);
-    void SendData(const void *data, size_t length);
 
     virtual void UpdateBuffer(TxBuffer &buffer);
     virtual void OnTransmitConnectionReset() { dirty = true; }
     virtual void OnDataReceived(const void *data, size_t length);
   };
+
+  static uint16_t dmaBuffer[JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1];
+
+  static bool IsI2cTxReady();
+  static void WaitForI2cTxReady();
+
+  static void SendCommandListDma(const uint8_t *commands, size_t length);
+  static bool SendCommandList(const uint8_t *commands, size_t length);
+  static bool SendCommand(uint8_t command);
+  static void SendDmaBuffer(size_t count);
 
 #if JAVELIN_SPLIT
   static Ssd1306Data &GetInstance() {

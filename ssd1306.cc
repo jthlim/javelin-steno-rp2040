@@ -1,8 +1,10 @@
 //---------------------------------------------------------------------------
 
 #include "ssd1306.h"
+#include "font.h"
 #include "javelin/console.h"
 #include "javelin/display.h"
+#include "javelin/utf8_pointer.h"
 #include "rp2040_dma.h"
 #include <hardware/gpio.h>
 #include <hardware/i2c.h>
@@ -20,9 +22,7 @@ Ssd1306::Ssd1306Data Ssd1306::instances[2];
 Ssd1306::Ssd1306Data Ssd1306::instances[1];
 #endif
 
-uint16_t Ssd1306::Ssd1306Data::dmaBuffer[JAVELIN_OLED_WIDTH *
-                                             JAVELIN_OLED_HEIGHT / 8 +
-                                         1];
+uint16_t Ssd1306::dmaBuffer[JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1];
 
 //---------------------------------------------------------------------------
 
@@ -85,14 +85,13 @@ struct Ssd1306MemoryAddressingMode {
 
 //---------------------------------------------------------------------------
 
-bool Ssd1306::Ssd1306Data::SendCommand(uint8_t command) {
+bool Ssd1306::SendCommand(uint8_t command) {
   uint8_t buffer[2] = {0x80, command};
   return i2c_write_blocking(JAVELIN_OLED_I2C, JAVELIN_OLED_I2C_ADDRESS, buffer,
                             2, false) == 2;
 }
 
-bool Ssd1306::Ssd1306Data::SendCommandList(const uint8_t *commands,
-                                           size_t length) {
+bool Ssd1306::SendCommandList(const uint8_t *commands, size_t length) {
   for (size_t i = 0; i < length; ++i) {
     if (!SendCommand(commands[i])) {
       return false;
@@ -101,25 +100,70 @@ bool Ssd1306::Ssd1306Data::SendCommandList(const uint8_t *commands,
   return true;
 }
 
-bool Ssd1306::Ssd1306Data::IsI2cTxReady() const {
+void Ssd1306::SendCommandListDma(const uint8_t *commands, size_t length) {
+  JAVELIN_OLED_I2C->hw->enable = 0;
+  JAVELIN_OLED_I2C->hw->tar = JAVELIN_OLED_I2C_ADDRESS;
+  JAVELIN_OLED_I2C->hw->enable = 1;
+
+  // Start of data.
+  uint16_t *d = dmaBuffer;
+  for (size_t i = 0; i < length; ++i) {
+    *d++ = 0x80;
+    *d++ = commands[i] | 0x200;
+  }
+
+  SendDmaBuffer(length * 2);
+}
+
+bool Ssd1306::IsI2cTxReady() {
   return (JAVELIN_OLED_I2C->hw->raw_intr_stat &
           I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS) != 0;
 }
 
-void Ssd1306::Ssd1306Data::WaitForI2cTxReady() const {
+void Ssd1306::WaitForI2cTxReady() {
   while (!IsI2cTxReady()) {
     // Do nothing.
   }
 }
 
-void Ssd1306::Ssd1306Data::SetPixel(uint32_t x, uint32_t y, bool on) {
+void Ssd1306::SendDmaBuffer(size_t count) {
+  dma4->count = count;
+  dma4->source = dmaBuffer;
+  dma4->destination = &JAVELIN_OLED_I2C->hw->data_cmd;
+
+  Rp2040DmaControl dmaControl = {
+      .enable = true,
+      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
+      .incrementRead = true,
+      .incrementWrite = false,
+      .chainToDma = 4,
+      .transferRequest = Rp2040DmaTransferRequest::I2C1_TX,
+      .sniffEnable = false,
+  };
+  dma4->controlTrigger = dmaControl;
+}
+
+void Ssd1306::PrintInfo() {
+#if JAVELIN_SPLIT
+  Console::Printf("Screen: %s, %s\n",
+                  instances[0].available ? "present" : "not present",
+                  instances[1].available ? "present" : "not present");
+#else
+  Console::Printf("Screen: %s\n",
+                  instances[0].available ? "present" : "not present");
+#endif
+}
+
+//---------------------------------------------------------------------------
+
+void Ssd1306::Ssd1306Data::SetPixel(uint32_t x, uint32_t y) {
   if (x >= JAVELIN_OLED_WIDTH || y >= JAVELIN_OLED_HEIGHT) {
     return;
   }
 
   size_t bitIndex = x * JAVELIN_OLED_HEIGHT + y;
   uint8_t *p = &buffer8[bitIndex / 8];
-  if (on) {
+  if (drawColor) {
     *p |= 1 << (bitIndex & 7);
   } else {
     *p &= ~(1 << (bitIndex & 7));
@@ -134,7 +178,7 @@ void Ssd1306::Ssd1306Data::Clear() {
   memset(buffer8, 0, sizeof(buffer8));
 }
 
-void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1, bool on) {
+void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1) {
   if (!available) {
     return;
   }
@@ -149,7 +193,7 @@ void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1, bool on) {
   int error = dx + dy;
 
   while (true) {
-    SetPixel(x0, y0, on);
+    SetPixel(x0, y0);
     if (x0 == x1 && y0 == y1) {
       return;
     }
@@ -168,24 +212,114 @@ void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1, bool on) {
 
 void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
                                      const uint8_t *data) {
-  // TODO
+  if (!available) {
+    return;
+  }
+  dirty = true;
+
+  // It's all off the screen.
+  if (x >= JAVELIN_OLED_WIDTH || y >= JAVELIN_OLED_HEIGHT) {
+    return;
+  }
+
+  if (y + height <= 0) {
+    return;
+  }
+
+  size_t bytesPerColumn = (height + 7) >> 3;
+
+  if (x < 0) {
+    width += x;
+    if (width <= 0) {
+      return;
+    }
+    data -= bytesPerColumn * x;
+    x = 0;
+  }
+
+  int startY = y >> 3;
+  int yShift = y & 7;
+  int endY = (y + height + 7) >> 3;
+
+  uint8_t *p = &buffer8[x * (JAVELIN_OLED_HEIGHT / 8)];
+
+  int endX = x + width;
+  if (endX > JAVELIN_OLED_WIDTH) {
+    width = JAVELIN_OLED_WIDTH - x;
+  }
+
+  while (width > 0) {
+    const uint8_t *column = data;
+    data += bytesPerColumn;
+
+    if (startY >= 0) {
+      p[startY] |= column[0] << yShift;
+    }
+
+    for (int yy = startY + 1; yy < endY; ++yy) {
+      ++column;
+      if (yy >= JAVELIN_OLED_HEIGHT / 8) {
+        break;
+      }
+      if (yy < 0) {
+        continue;
+      }
+
+      int pixels = p[yy];
+      pixels |= (column[-1] >> (8 - yShift));
+      if (column < data) {
+        pixels |= column[0] << yShift;
+      }
+      p[yy] = pixels;
+    }
+
+    p += JAVELIN_OLED_HEIGHT / 8;
+    --width;
+  }
 }
 
-void Ssd1306::Ssd1306Data::DrawText(int x, int y, int fontId,
-                                    const uint8_t *text) {
-  // TODO
+void Ssd1306::Ssd1306Data::DrawText(int x, int y, const Font *font,
+                                    const char *text) {
+  if (!available) {
+    return;
+  }
+
+  Utf8Pointer utf8p(text);
+  y -= font->baseline;
+
+  for (;;) {
+    uint32_t c = *utf8p;
+    ++utf8p;
+
+    if (c == 0) {
+      return;
+    }
+
+    const uint8_t *data = font->GetCharacterData(c);
+    if (data) {
+      uint32_t width = font->GetCharacterWidth(c);
+      DrawImage(x, y, width, font->height, data);
+      x += width;
+    }
+    x += font->spacing;
+  }
 }
 
 void Ssd1306::Ssd1306Data::Update() {
-  if (!available || !dirty || dma4->IsBusy() || !IsI2cTxReady()) {
+  if (!available) {
     return;
   }
+
+  control.Update();
+
+  if (!dirty || dma4->IsBusy() || !IsI2cTxReady()) {
+    return;
+  }
+  dirty = false;
 
   JAVELIN_OLED_I2C->hw->enable = 0;
   JAVELIN_OLED_I2C->hw->tar = JAVELIN_OLED_I2C_ADDRESS;
   JAVELIN_OLED_I2C->hw->enable = 1;
-
-  uint32_t startTime = time_us_32();
 
   // Start of data.
   uint16_t *d = dmaBuffer;
@@ -202,22 +336,7 @@ void Ssd1306::Ssd1306Data::Update() {
   }
   d[-1] |= 0x200;
 
-  dirty = false;
-
-  dma4->source = dmaBuffer;
-  dma4->destination = &JAVELIN_OLED_I2C->hw->data_cmd;
-  dma4->count = JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1;
-
-  Rp2040DmaControl dmaControl = {
-      .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
-      .incrementRead = true,
-      .incrementWrite = false,
-      .chainToDma = 4,
-      .transferRequest = Rp2040DmaTransferRequest::I2C1_TX,
-      .sniffEnable = false,
-  };
-  dma4->controlTrigger = dmaControl;
+  SendDmaBuffer(JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1);
 }
 
 bool Ssd1306::Ssd1306Data::InitializeSsd1306() {
@@ -297,15 +416,25 @@ void Ssd1306::Ssd1306Data::Initialize() {
   Update();
 }
 
-void Ssd1306::PrintInfo() {
-#if JAVELIN_SPLIT
-  Console::Printf("OLED: %s, %s\n",
-                  instances[0].available ? "present" : "not present",
-                  instances[1].available ? "present" : "not present");
-#else
-  Console::Printf("OLED: %s\n",
-                  instances[0].available ? "present" : "not present");
-#endif
+//---------------------------------------------------------------------------
+
+void Ssd1306::Ssd1306Control::Update() {
+  if (dirtyFlag == 0 || dma4->IsBusy() || !IsI2cTxReady()) {
+    return;
+  }
+
+  uint8_t commands[4];
+  uint8_t *p = commands;
+  if (dirtyFlag & DIRTY_FLAG_SCREEN_ON) {
+    *p++ = Ssd1306Command::EnableDisplay(data.screenOn);
+  }
+  if (dirtyFlag & DIRTY_FLAG_CONTRAST) {
+    *p++ = Ssd1306Command::SET_CONTRAST;
+    *p++ = data.contrast;
+  }
+  dirtyFlag = 0;
+
+  SendCommandListDma(commands, p - commands);
 }
 
 //---------------------------------------------------------------------------
@@ -321,6 +450,33 @@ void Ssd1306::Ssd1306Availability::UpdateBuffer(TxBuffer &buffer) {
 void Ssd1306::Ssd1306Availability::OnDataReceived(const void *data,
                                                   size_t length) {
   available = *(bool *)data;
+}
+
+void Ssd1306::Ssd1306Control::UpdateBuffer(TxBuffer &buffer) {
+  if (dirtyFlag == 0) {
+    return;
+  }
+  dirtyFlag = 0;
+  buffer.Add(SplitHandlerId::OLED_CONTROL, &data, sizeof(data));
+}
+
+void Ssd1306::Ssd1306Control::OnDataReceived(const void *data, size_t length) {
+  const Ssd1306ControlTxRxData *controlData =
+      (const Ssd1306ControlTxRxData *)data;
+
+  if (this->data.screenOn != controlData->screenOn) {
+    this->data.screenOn = controlData->screenOn;
+    dirtyFlag |= DIRTY_FLAG_SCREEN_ON;
+  }
+
+  if (this->data.contrast != controlData->contrast) {
+    this->data.contrast = controlData->contrast;
+    dirtyFlag |= DIRTY_FLAG_CONTRAST;
+  }
+}
+
+void Ssd1306::Ssd1306Control::OnTransmitConnectionReset() {
+  dirtyFlag = DIRTY_FLAG_SCREEN_ON | DIRTY_FLAG_CONTRAST;
 }
 
 void Ssd1306::Ssd1306Data::UpdateBuffer(TxBuffer &buffer) {
@@ -349,14 +505,30 @@ void Display::Clear(int displayId) {
   Ssd1306::instances[displayId].Clear();
 }
 
-void Display::TurnOn(int displayId) {
-  // TODO.
-}
-void Display::TurnOff(int displayId) {
-  // TODO.
+void Display::SetScreenOn(int displayId, bool on) {
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+  Ssd1306::instances[displayId].control.SetScreenOn(on);
 }
 
-void Display::DrawPixel(int displayId, int x, int y, bool on) {
+void Display::SetContrast(int displayId, int contrast) {
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+  Ssd1306::instances[displayId].control.SetContrast(contrast > 255 ? 255
+                                                                   : contrast);
+}
+
+void Display::DrawPixel(int displayId, int x, int y) {
 #if JAVELIN_SPLIT
   if (displayId < 0 || displayId >= 2) {
     return;
@@ -366,10 +538,10 @@ void Display::DrawPixel(int displayId, int x, int y, bool on) {
 #endif
 
   Ssd1306::instances[displayId].dirty = true;
-  Ssd1306::instances[displayId].SetPixel(x, y, on);
+  Ssd1306::instances[displayId].SetPixel(x, y);
 }
 
-void Display::DrawLine(int displayId, int x1, int y1, int x2, int y2, bool on) {
+void Display::DrawLine(int displayId, int x1, int y1, int x2, int y2) {
 #if JAVELIN_SPLIT
   if (displayId < 0 || displayId >= 2) {
     return;
@@ -378,7 +550,7 @@ void Display::DrawLine(int displayId, int x1, int y1, int x2, int y2, bool on) {
   displayId = 0;
 #endif
 
-  Ssd1306::instances[displayId].DrawLine(x1, y1, x2, y2, on);
+  Ssd1306::instances[displayId].DrawLine(x1, y1, x2, y2);
 }
 
 void Display::DrawImage(int displayId, int x, int y, int width, int height,
@@ -395,7 +567,7 @@ void Display::DrawImage(int displayId, int x, int y, int width, int height,
 }
 
 void Display::DrawText(int displayId, int x, int y, int fontId,
-                       const uint8_t *text) {
+                       const char *text) {
 #if JAVELIN_SPLIT
   if (displayId < 0 || displayId >= 2) {
     return;
@@ -404,7 +576,24 @@ void Display::DrawText(int displayId, int x, int y, int fontId,
   displayId = 0;
 #endif
 
-  Ssd1306::instances[displayId].DrawText(x, y, fontId, text);
+  // TODO: FontId -> Font*
+  Ssd1306::instances[displayId].DrawText(x, y, &Font::DEFAULT, text);
+}
+
+void Display::DrawRect(int displayId, int left, int top, int right,
+                       int bottom) {
+  // TODO: Implement.
+}
+
+void Display::SetDrawColor(int displayId, int color) {
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+  Ssd1306::instances[displayId].drawColor = color != 0;
 }
 
 #endif // JAVELIN_OLED_DRIVER == 1306

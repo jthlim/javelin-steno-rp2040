@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------
 
+#include "font.h"
 #include "ssd1306.h"
 
 //---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ const uint8_t PAPER_TAPE_FONT_DATA[] = {
     4, 0x7e, 0x12, 0x12, 0x6c,       // R
     4, 0x7c, 0x12, 0x12, 0x7c,       // A
     4, 0x3c, 0x42, 0x42, 0x3c,       // O
-    4, 0x24, 0x18, 0x18, 0x24,       // *
+    5, 0x24, 0x18, 0x7e, 0x18, 0x24, // *
     4, 0x7e, 0x52, 0x52, 0x42,       // E
     4, 0x3e, 0x40, 0x40, 0x3e,       // U
     4, 0x7e, 0x12, 0x12, 0x02,       // F
@@ -48,6 +49,11 @@ void Ssd1306::Ssd1306Data::DrawPaperTape(const StenoStroke *strokes,
   size_t startingStroke =
       length > MAXIMUM_STROKES ? length - MAXIMUM_STROKES : 0;
   size_t lineOffset = length < MAXIMUM_STROKES ? MAXIMUM_STROKES - length : 0;
+
+  if (lineOffset >= 2) {
+    DrawText(0, 12, &Font::DEFAULT, "Paper Tape");
+    DrawLine(0, 14, 66, 14);
+  }
 
   for (size_t i = startingStroke; i < length; ++i) {
     uint32_t stroke = strokes[i].GetKeyState();

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "ws2812.h"
-#include "javelin/pixel.h"
+#include "javelin/rgb.h"
 #include "rp2040_dma.h"
 #include "ws2812.pio.h"
 #include <hardware/clocks.h>
@@ -115,11 +115,11 @@ void Ws2812::Ws28128Data::OnDataReceived(const void *data, size_t length) {
 
 //---------------------------------------------------------------------------
 
-void Pixel::SetPixel(size_t id, int r, int g, int b) {
-  Ws2812::SetPixel(id, r, g, b);
+void Rgb::SetRgb(size_t id, int r, int g, int b) {
+  Ws2812::SetRgb(id, r, g, b);
 }
 
-size_t Pixel::GetCount() { return JAVELIN_RGB_COUNT; }
+size_t Rgb::GetCount() { return JAVELIN_RGB_COUNT; }
 
 //---------------------------------------------------------------------------
 
