@@ -210,12 +210,65 @@ void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1) {
   }
 }
 
+void Ssd1306::Ssd1306Data::DrawRect(int left, int top, int right, int bottom) {
+  if (!available) {
+    return;
+  }
+
+  if (right < 0 || bottom < 0 || left >= JAVELIN_OLED_WIDTH ||
+      top >= JAVELIN_OLED_HEIGHT) {
+    return;
+  }
+  if (left < 0) {
+    left = 0;
+  }
+  if (right >= JAVELIN_OLED_WIDTH) {
+    right = JAVELIN_OLED_WIDTH;
+  }
+  int width = right - left;
+
+  if (top < 0) {
+    top = 0;
+  }
+  if (bottom >= JAVELIN_OLED_HEIGHT) {
+    bottom = JAVELIN_OLED_HEIGHT;
+  }
+
+  dirty = true;
+
+  uint8_t *p = &buffer8[left * (JAVELIN_OLED_HEIGHT / 8) + (top >> 3)];
+
+  int startY = top & -8;
+  int endY = (bottom + 7) & -8;
+
+  for (int y = startY; y < endY; y += 8) {
+    int mask = 0xff;
+    if (y < top) {
+      mask &= mask << (top - y);
+    }
+    if (y + 8 > bottom) {
+      mask &= mask >> (y + 8 - bottom);
+    }
+    uint8_t *row = p;
+    for (int x = 0; x < width; ++x) {
+      int pixels = *row;
+      if (drawColor) {
+        pixels |= mask;
+      } else {
+        pixels &= ~mask;
+      }
+      *row = pixels;
+      row += JAVELIN_OLED_HEIGHT / 8;
+    }
+    p++;
+  }
+}
+
 void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
                                      const uint8_t *data) {
   if (!available) {
     return;
   }
-  dirty = true;
 
   // It's all off the screen.
   if (x >= JAVELIN_OLED_WIDTH || y >= JAVELIN_OLED_HEIGHT) {
@@ -225,6 +278,7 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
   if (y + height <= 0) {
     return;
   }
+  dirty = true;
 
   size_t bytesPerColumn = (height + 7) >> 3;
 
@@ -253,7 +307,14 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
     data += bytesPerColumn;
 
     if (startY >= 0) {
-      p[startY] |= column[0] << yShift;
+      int bits = column[0] << yShift;
+      int pixels = p[startY];
+      if (drawColor) {
+        pixels |= bits;
+      } else {
+        pixels &= ~bits;
+      }
+      p[startY] = pixels;
     }
 
     for (int yy = startY + 1; yy < endY; ++yy) {
@@ -265,10 +326,15 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
         continue;
       }
 
-      int pixels = p[yy];
-      pixels |= (column[-1] >> (8 - yShift));
+      int bits = (column[-1] >> (8 - yShift));
       if (column < data) {
-        pixels |= column[0] << yShift;
+        bits |= column[0] << yShift;
+      }
+      int pixels = p[yy];
+      if (drawColor) {
+        pixels |= bits;
+      } else {
+        pixels &= ~bits;
       }
       p[yy] = pixels;
     }
@@ -279,13 +345,24 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
 }
 
 void Ssd1306::Ssd1306Data::DrawText(int x, int y, const Font *font,
-                                    const char *text) {
+                                    TextAlignment alignment, const char *text) {
   if (!available) {
     return;
   }
 
   Utf8Pointer utf8p(text);
   y -= font->baseline;
+
+  switch (alignment) {
+  case TextAlignment::LEFT:
+    break;
+  case TextAlignment::MIDDLE:
+    x -= font->GetStringWidth(text) >> 1;
+    break;
+  case TextAlignment::RIGHT:
+    x -= font->GetStringWidth(text);
+    break;
+  }
 
   for (;;) {
     uint32_t c = *utf8p;
@@ -566,8 +643,8 @@ void Display::DrawImage(int displayId, int x, int y, int width, int height,
   Ssd1306::instances[displayId].DrawImage(x, y, width, height, data);
 }
 
-void Display::DrawText(int displayId, int x, int y, int fontId,
-                       const char *text) {
+void Display::DrawText(int displayId, int x, int y, FontId fontId,
+                       TextAlignment alignment, const char *text) {
 #if JAVELIN_SPLIT
   if (displayId < 0 || displayId >= 2) {
     return;
@@ -577,12 +654,19 @@ void Display::DrawText(int displayId, int x, int y, int fontId,
 #endif
 
   // TODO: FontId -> Font*
-  Ssd1306::instances[displayId].DrawText(x, y, &Font::DEFAULT, text);
+  Ssd1306::instances[displayId].DrawText(x, y, &Font::DEFAULT, alignment, text);
 }
 
 void Display::DrawRect(int displayId, int left, int top, int right,
                        int bottom) {
-  // TODO: Implement.
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+  Ssd1306::instances[displayId].DrawRect(left, top, right, bottom);
 }
 
 void Display::SetDrawColor(int displayId, int color) {

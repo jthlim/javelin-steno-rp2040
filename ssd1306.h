@@ -2,11 +2,13 @@
 
 #pragma once
 #include "javelin/stroke.h"
+#include "javelin/text_alignment.h"
 #include "split_tx_rx.h"
 
 //---------------------------------------------------------------------------
 
 struct Font;
+enum FontId : int;
 
 //---------------------------------------------------------------------------
 
@@ -27,8 +29,8 @@ public:
     instances[displayId].DrawStenoLayout(stroke);
   }
   static void DrawText(int displayId, int x, int y, const Font *font,
-                       const char *text) {
-    instances[displayId].DrawText(x, y, font, text);
+                       TextAlignment alignment, const char *text) {
+    instances[displayId].DrawText(x, y, font, alignment, text);
   }
 
 #if JAVELIN_SPLIT
@@ -115,8 +117,10 @@ private:
     // None of these will take effect until Update() is called.
     void Clear();
     void DrawLine(int x0, int y0, int x1, int y1);
+    void DrawRect(int left, int top, int right, int bottom);
     void DrawImage(int x, int y, int width, int height, const uint8_t *data);
-    void DrawText(int x, int y, const Font *font, const char *text);
+    void DrawText(int x, int y, const Font *font, TextAlignment alignment,
+                  const char *text);
     void SetPixel(uint32_t x, uint32_t y);
 
     void DrawPaperTape(const StenoStroke *strokes, size_t length);

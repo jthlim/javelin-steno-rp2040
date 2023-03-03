@@ -180,19 +180,17 @@ private:
     Display::Clear(displayId);
 
     char buffer[16];
-    itoa(WpmTracker::instance.Get5sWpm(), buffer, 10);
+    sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
     const Font *font = &Font::LARGE_DIGITS;
-    int textWidth = font->GetStringWidth(buffer);
-    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2 - textWidth / 2,
+    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2,
                       JAVELIN_OLED_HEIGHT / 2 - font->height / 2 +
                           font->baseline / 2,
-                      font, buffer);
+                      font, TextAlignment::MIDDLE, buffer);
 
     font = &Font::DEFAULT;
-    textWidth = font->GetStringWidth("wpm");
-    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2 - textWidth / 2,
+    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2,
                       JAVELIN_OLED_HEIGHT * 3 / 4 + font->baseline / 2, font,
-                      "wpm");
+                      TextAlignment::MIDDLE, "wpm");
   }
 };
 

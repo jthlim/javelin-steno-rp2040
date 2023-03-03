@@ -51,8 +51,12 @@ void Ssd1306::Ssd1306Data::DrawPaperTape(const StenoStroke *strokes,
   size_t lineOffset = length < MAXIMUM_STROKES ? MAXIMUM_STROKES - length : 0;
 
   if (lineOffset >= 2) {
-    DrawText(0, 12, &Font::DEFAULT, "Paper Tape");
-    DrawLine(0, 14, 66, 14);
+    DrawLine(0, 0, JAVELIN_OLED_WIDTH, 0);
+    DrawLine(JAVELIN_OLED_WIDTH - 1, 0, JAVELIN_OLED_WIDTH - 1, 15);
+    DrawLine(0, 15, JAVELIN_OLED_WIDTH, 15);
+    DrawLine(0, 0, 0, 15);
+    DrawText(JAVELIN_OLED_WIDTH / 2, 12, &Font::DEFAULT, TextAlignment::MIDDLE,
+             "Paper Tape");
   }
 
   for (size_t i = startingStroke; i < length; ++i) {
