@@ -15,7 +15,7 @@
 //---------------------------------------------------------------------------
 
 const PIO PIO_INSTANCE = pio0;
-const int STATE_MACHINE_INDEX = 0;
+const int STATE_MACHINE_INDEX = 2;
 
 //---------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ void Ws2812::Initialize() {
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 1,
-      .transferRequest = Rp2040DmaTransferRequest::PIO0_TX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO0_TX2,
       .sniffEnable = false,
   };
   dma1->control = dmaControl;

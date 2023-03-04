@@ -100,8 +100,10 @@ private:
     State state;
     uint32_t programOffset;
     uint32_t receiveStartTime;
-    size_t rxPacketCount;
-    size_t txIrqCount;
+    uint64_t rxPacketCount;
+    uint64_t txIrqCount;
+    uint64_t rxWords;
+    uint64_t txWords;
     size_t receiveStatusReason[6];
 
     size_t txHandlerCount = 0;

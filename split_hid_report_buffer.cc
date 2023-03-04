@@ -6,6 +6,7 @@
 #include "javelin/console.h"
 #include "plover_hid_report_buffer.h"
 #include "usb_descriptors.h"
+#include <hardware/watchdog.h>
 #include <pico/time.h>
 
 //---------------------------------------------------------------------------
@@ -67,6 +68,9 @@ void SplitHidReportBuffer::SplitHidReportBufferData::Add(uint8_t interface,
                                                          size_t length) {
   while (bufferSize.bufferSize.available[interface] == 0) {
     SplitTxRx::Update();
+#if JAVELIN_USE_WATCHDOG
+    watchdog_update();
+#endif
     sleep_us(100);
   }
   bufferSize.bufferSize.available[interface]--;

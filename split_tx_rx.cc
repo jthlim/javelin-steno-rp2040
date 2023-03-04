@@ -15,11 +15,17 @@
 
 //---------------------------------------------------------------------------
 
+size_t txPacketTypeCounts[SplitHandlerId::COUNT];
+
+//---------------------------------------------------------------------------
+
 bool TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
   uint32_t wordLength = (length + 3) >> 2;
   if (header.wordCount + 1 + wordLength > BUFFER_SIZE) {
     return false;
   }
+
+  txPacketTypeCounts[id]++;
 
   uint32_t blockHeader = (id << 16) | length;
   buffer[header.wordCount++] = blockHeader;
@@ -40,7 +46,7 @@ SplitTxRx::SplitTxRxData SplitTxRx::instance;
 
 //---------------------------------------------------------------------------
 
-const PIO PIO_INSTANCE = pio1;
+const PIO PIO_INSTANCE = pio0;
 
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 const int TX_STATE_MACHINE_INDEX = 0;
@@ -109,7 +115,7 @@ void SplitTxRx::SplitTxRxData::ResetRxDma() {
       .incrementRead = false,
       .incrementWrite = true,
       .chainToDma = 3,
-      .transferRequest = Rp2040DmaTransferRequest::PIO1_RX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO0_RX0,
       .sniffEnable = false,
   };
   dma3->controlTrigger = receiveControl;
@@ -145,8 +151,8 @@ void SplitTxRx::SplitTxRxData::Initialize() {
   sm_config_set_clkdiv(&txConfig, 1.0);
 #endif
 
-  irq_set_exclusive_handler(PIO1_IRQ_0, TxIrqHandler);
-  irq_set_enabled(PIO1_IRQ_0, true);
+  irq_set_exclusive_handler(PIO0_IRQ_0, TxIrqHandler);
+  irq_set_enabled(PIO0_IRQ_0, true);
   pio_set_irq0_source_enabled(PIO_INSTANCE, pis_interrupt0, true);
 
   gpio_pull_down(JAVELIN_SPLIT_RX_PIN);
@@ -169,6 +175,7 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
   dma2->destination = &PIO_INSTANCE->txf[TX_STATE_MACHINE_INDEX];
   size_t wordCount =
       txBuffer.header.wordCount + sizeof(TxRxHeader) / sizeof(uint32_t);
+  txWords += wordCount;
   dma2->count = wordCount;
 
   size_t bitCount = 32 * wordCount;
@@ -180,7 +187,7 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 2,
-      .transferRequest = Rp2040DmaTransferRequest::PIO1_TX0,
+      .transferRequest = Rp2040DmaTransferRequest::PIO0_TX0,
       .sniffEnable = false,
   };
   dma2->controlTrigger = sendControl;
@@ -243,35 +250,40 @@ bool SplitTxRx::SplitTxRxData::ProcessReceive() {
   size_t dma3Count = dma3->count;
   if (dma3Count > BUFFER_SIZE) {
     // Header has not been received.
-    receiveStatusReason[1]++;
+    receiveStatusReason[0]++;
     return false;
   }
 
   if (rxBuffer.header.magic != TxRxHeader::MAGIC) {
-    receiveStatusReason[2]++;
+    // Error: Magic mistmatch!
+    receiveStatusReason[3]++;
     OnReceiveFailed();
     return false;
   }
 
   size_t bufferCount = BUFFER_SIZE - dma3Count;
   if (bufferCount < rxBuffer.header.wordCount) {
-    receiveStatusReason[3]++;
+    // Data has not been fully received.
+    receiveStatusReason[1]++;
     return false;
   }
 
   if (rxBuffer.header.wordCount != bufferCount) {
-    receiveStatusReason[4]++;
+    // Excess data has been received.
+    receiveStatusReason[5]++;
   }
 
   uint32_t expectedCrc =
       Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.wordCount);
   if (rxBuffer.header.crc != expectedCrc) {
-    receiveStatusReason[5]++;
+    // Crc failure.
+    receiveStatusReason[4]++;
     OnReceiveFailed();
     return false;
   }
 
   ++rxPacketCount;
+  rxWords += rxBuffer.header.wordCount + sizeof(TxRxHeader) / sizeof(uint32_t);
   ProcessReceiveBuffer();
 
   OnReceiveSucceeded();
@@ -307,7 +319,7 @@ void SplitTxRx::SplitTxRxData::Update() {
       uint32_t receiveTimeout =
           IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
       if (timeSinceLastUpdate > receiveTimeout) {
-        receiveStatusReason[0]++;
+        receiveStatusReason[2]++;
         OnReceiveTimeout();
       }
     }
@@ -317,8 +329,15 @@ void SplitTxRx::SplitTxRxData::Update() {
 
 void SplitTxRx::SplitTxRxData::PrintInfo() {
   Console::Printf("Split data\n");
-  Console::Printf("  Transmitted packets: %zu\n", txIrqCount);
-  Console::Printf("  Received packets: %zu\n", rxPacketCount);
+  Console::Printf("  Transmitted bytes/packets: %llu/%llu\n", 4 * txWords,
+                  txIrqCount);
+  Console::Printf("  Received bytes/packets: %llu/%llu\n", 4 * rxWords,
+                  rxPacketCount);
+  Console::Printf("  Transmit types:");
+  for (size_t count : txPacketTypeCounts) {
+    Console::Printf(" %zu", count);
+  }
+  Console::Printf("\n");
   Console::Printf("  Receive status:");
   for (size_t reason : receiveStatusReason) {
     Console::Printf(" %zu", reason);

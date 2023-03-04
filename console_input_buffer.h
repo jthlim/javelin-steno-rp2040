@@ -47,7 +47,9 @@ private:
     static QueueEntry<EntryData> *CreateEntry(const void *data, size_t length);
 
 #if JAVELIN_SPLIT
-    bool isConnected = false;
+    // Start off connected so that any messages coming in immediately after
+    // boot up are queued to send to the master.
+    bool isConnected = true;
 
     virtual void UpdateBuffer(TxBuffer &buffer);
     virtual void OnDataReceived(const void *data, size_t length);

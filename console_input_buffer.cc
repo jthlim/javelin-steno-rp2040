@@ -2,6 +2,7 @@
 
 #include "console_input_buffer.h"
 #include "console_buffer.h"
+#include "javelin/clock.h"
 #include "javelin/console.h"
 #include <string.h>
 

@@ -141,7 +141,7 @@ public:
     StenoPassthrough::Tick();
 
     uint32_t now = time_us_32();
-    if (now - lastUpdateTime < 1000) {
+    if (now - lastUpdateTime < 1000000) {
       return;
     }
     lastUpdateTime = now;
