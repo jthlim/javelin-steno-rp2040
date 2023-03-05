@@ -25,7 +25,7 @@ Ws2812::Ws28128Data Ws2812::instance;
 
 void Ws2812::Initialize() {
   const int CYCLES_PER_BIT = 10;
-  const float FREQUENCY = 800000.0;
+  const int FREQUENCY = 800000;
 
   uint offset = pio_add_program(PIO_INSTANCE, &ws2812_program);
 
@@ -37,8 +37,8 @@ void Ws2812::Initialize() {
   sm_config_set_out_pins(&config, JAVELIN_RGB_PIN, 1);
   sm_config_set_out_shift(&config, false, true, 24);
   sm_config_set_fifo_join(&config, PIO_FIFO_JOIN_TX);
-  float div = clock_get_hz(clk_sys) * (1.0f / (FREQUENCY * CYCLES_PER_BIT));
-  sm_config_set_clkdiv(&config, div);
+  int div = clock_get_hz(clk_sys) / (FREQUENCY * CYCLES_PER_BIT >> 8);
+  config.clkdiv = div << 8;
   pio_sm_init(PIO_INSTANCE, STATE_MACHINE_INDEX, offset, &config);
   pio_sm_set_enabled(PIO_INSTANCE, STATE_MACHINE_INDEX, true);
 
