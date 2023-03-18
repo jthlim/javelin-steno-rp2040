@@ -23,6 +23,7 @@
 #include "javelin/dictionary/reverse_auto_suffix_dictionary.h"
 #include "javelin/dictionary/reverse_map_dictionary.h"
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
+#include "javelin/dictionary/unicode_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/display.h"
 #include "javelin/engine.h"
@@ -545,6 +546,8 @@ void InitJavelinSteno() {
           new StenoMapDictionary(*definition), definition->defaultEnabled));
     }
   }
+  dictionaries.Add(
+      StenoDictionaryListEntry(&StenoUnicodeDictionary::instance, true));
 
   new (dictionaryListContainer) StenoDictionaryList(dictionaries);
   new (compiledOrthographyContainer)
@@ -746,6 +749,20 @@ void Script::SendText(const uint8_t *text) const {
 #endif
 }
 
+bool Script::ProcessScanCode(int scanCode, ScanCodeAction action) {
+#if JAVELIN_USE_EMBEDDED_STENO
+  int modifiers = 0;
+  for (int keyCode = KeyCode::L_CTRL; keyCode <= KeyCode::R_META; ++keyCode) {
+    if (keyState.IsSet(keyCode)) {
+      modifiers |= (1 << MODIFIER_BIT_SHIFT) << (keyCode - KeyCode::L_CTRL);
+    }
+  }
+  return engineContainer->ProcessScanCode(scanCode | modifiers, action);
+#else
+  return false;
+#endif
+}
+
 void ProcessStenoTick() {
   processors->Tick();
   HidKeyboardReportBuilder::instance.FlushIfRequired();
@@ -764,7 +781,7 @@ void Key::PressRaw(uint8_t key) {
 #if JAVELIN_OLED_DRIVER
   if (key == KeyCode::BACKSPACE) {
     WpmTracker::instance.Tally(-1);
-  } else if (IsWritingKeyCode(key)) {
+  } else if (KeyCode::IsVisible(key)) {
     WpmTracker::instance.Tally(1);
   }
 #endif

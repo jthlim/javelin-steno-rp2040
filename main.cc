@@ -83,24 +83,16 @@ public:
 
 private:
 #if JAVELIN_SPLIT
-  bool isSplitUpdated = false;
   ButtonState splitState;
 #endif
   GlobalDeferredDebounce<ButtonState> debouncer;
   ButtonManager buttonManager;
 
 #if JAVELIN_SPLIT
-  virtual void OnReceiveConnectionReset() {
-    splitState.ClearAll();
-    isSplitUpdated = true;
-  }
+  virtual void OnReceiveConnectionReset() { splitState.ClearAll(); }
   virtual void OnDataReceived(const void *data, size_t length) {
     const ButtonState &newSplitState = *(const ButtonState *)data;
-    if (newSplitState == splitState) {
-      return;
-    }
     splitState = newSplitState;
-    isSplitUpdated = true;
   }
 #endif
 };
@@ -108,43 +100,12 @@ private:
 void HidTask::Update() {
   buttonManager.Tick();
 
-  Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
-
 #if JAVELIN_SPLIT
-  if (!keyState.isUpdated && !isSplitUpdated) {
-    return;
-  }
-  const ButtonState newKeyState = keyState.value | splitState;
-  isSplitUpdated = false;
+  Debounced<ButtonState> keyState =
+      debouncer.Update(KeyState::Read() | splitState);
 #else
-  if (!keyState.isUpdated) {
-    return;
-  }
-  const ButtonState &newKeyState = keyState.value;
-#endif
-
-  if (tud_suspended()) {
-    if (newKeyState.IsAnySet()) {
-      // Wake up host if we are in suspend mode
-      // and REMOTE_WAKEUP feature is enabled by host
-      tud_remote_wakeup();
-    }
-  }
-
-  buttonManager.Update(newKeyState);
-}
-
-class SlaveHidTask final : public SplitTxHandler {
-public:
-  void Update();
-  void UpdateBuffer(TxBuffer &buffer);
-
-private:
-  GlobalDeferredDebounce<ButtonState> debouncer;
-};
-
-void SlaveHidTask::Update() {
   Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
+#endif
   if (!keyState.isUpdated) {
     return;
   }
@@ -156,11 +117,45 @@ void SlaveHidTask::Update() {
       tud_remote_wakeup();
     }
   }
+
+  buttonManager.Update(keyState.value);
+}
+
+class SlaveHidTask final : public SplitTxHandler {
+public:
+  void Update();
+  void UpdateBuffer(TxBuffer &buffer);
+
+private:
+  bool needsTransmit = true;
+  ButtonState buttonState;
+
+  virtual void OnTransmitConnectionReset() { needsTransmit = true; }
+};
+
+void SlaveHidTask::Update() {
+  ButtonState newButtonState = KeyState::Read();
+  if (newButtonState == buttonState) {
+    return;
+  }
+
+  buttonState = newButtonState;
+  needsTransmit = true;
+
+  if (tud_suspended()) {
+    if (buttonState.IsAnySet()) {
+      // Wake up host if we are in suspend mode
+      // and REMOTE_WAKEUP feature is enabled by host
+      tud_remote_wakeup();
+    }
+  }
 }
 
 void SlaveHidTask::UpdateBuffer(TxBuffer &buffer) {
-  buffer.Add(SplitHandlerId::KEY_STATE, &debouncer.GetState(),
-             sizeof(ButtonState));
+  if (needsTransmit) {
+    needsTransmit = false;
+    buffer.Add(SplitHandlerId::KEY_STATE, &buttonState, sizeof(ButtonState));
+  }
 }
 
 // Invoked when received SET_PROTOCOL request
@@ -242,8 +237,8 @@ void DoMasterRunLoop() {
 
   while (1) {
     tud_task(); // tinyusb device task
-    SplitTxRx::Update();
     hidTaskContainer->Update();
+    SplitTxRx::Update();
     cdc_task();
 
     ProcessStenoTick();
@@ -265,8 +260,8 @@ void DoSlaveRunLoop() {
 
   while (1) {
     tud_task(); // tinyusb device task
-    SplitTxRx::Update();
     slaveHidTaskContainer->Update();
+    SplitTxRx::Update();
     cdc_task();
 
     SplitHidReportBuffer::Update();

@@ -83,6 +83,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
   javelin/dictionary/reverse_prefix_dictionary.cc
+  javelin/dictionary/unicode_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/dictionary/wrapped_dictionary.cc
   javelin/display.cc
@@ -92,6 +93,7 @@ target_sources(${NAME} PUBLIC
   javelin/engine.cc
   javelin/flash.cc
   javelin/key.cc
+  javelin/key_code.cc
   javelin/keyboard_layout.cc
   javelin/key_press_parser.cc
   javelin/list.cc
@@ -108,7 +110,6 @@ target_sources(${NAME} PUBLIC
   javelin/processor/processor.cc
   javelin/processor/processor_list.cc
   javelin/processor/repeat.cc
-  javelin/processor/switch.cc
   javelin/rgb.cc
   javelin/script.cc
   javelin/segment.cc
