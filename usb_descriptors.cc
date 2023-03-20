@@ -61,13 +61,27 @@ const uint8_t desc_hid_keyboard_report[] = {
     HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
     HID_USAGE(HID_USAGE_DESKTOP_KEYBOARD),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
-    // Bitmap of modifiers.
+    // Keyboard
     HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
+      // Bitmap of modifiers.
       HID_USAGE_MIN(224),
       HID_USAGE_MAX(231),
       HID_LOGICAL_MIN(0),
       HID_LOGICAL_MAX(1),
       HID_REPORT_COUNT(8),
+      HID_REPORT_SIZE(1),
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
+      // Bitmap of keys.
+      HID_USAGE_MIN(0),
+      HID_USAGE_MAX(223),
+      HID_REPORT_COUNT(224),
+      HID_REPORT_SIZE(1),
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
+      HID_USAGE_MIN(232),
+      HID_USAGE_MAX(255),
+      HID_REPORT_COUNT(24),
       HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     // LED Indicator
@@ -77,28 +91,10 @@ const uint8_t desc_hid_keyboard_report[] = {
       HID_REPORT_COUNT(5),
       HID_REPORT_SIZE(1),
       HID_OUTPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
-    // Padding
+      // Padding
       HID_REPORT_COUNT(1),
       HID_REPORT_SIZE(3),
       HID_OUTPUT(HID_CONSTANT),
-    // Bitmap of keys.
-      HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
-      HID_USAGE_MIN(0),
-      HID_USAGE_MAX(223),
-      HID_LOGICAL_MIN(0),
-      HID_LOGICAL_MAX(1),
-      HID_REPORT_COUNT(224),
-      HID_REPORT_SIZE(1),
-      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
-
-      HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
-      HID_USAGE_MIN(232),
-      HID_USAGE_MAX(255),
-      HID_LOGICAL_MIN(0),
-      HID_LOGICAL_MAX(1),
-      HID_REPORT_COUNT(24),
-      HID_REPORT_SIZE(1),
-      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     HID_COLLECTION_END,
 };
 
