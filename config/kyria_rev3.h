@@ -24,6 +24,7 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_SPLIT 1
 #define JAVELIN_SPLIT_TX_PIN 1
 #define JAVELIN_SPLIT_RX_PIN 1
+#define JAVELIN_SPLIT_IS_MASTER 1
 #define JAVELIN_SPLIT_SIDE_PIN 9
 
 #define JAVELIN_OLED_DRIVER 1306
@@ -35,15 +36,15 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_OLED_I2C_ADDRESS 0x3c
 #define JAVELIN_OLED_ROTATION 180
 
-constexpr uint8_t MASTER_COLUMN_PINS[] = {8, 27, 26, 22, 20, 23, 21};
-constexpr uint32_t MASTER_COLUMN_PIN_MASK = 0x0cf00100;
-constexpr uint8_t MASTER_ROW_PINS[] = {4, 5, 6, 7};
-constexpr uint32_t MASTER_ROW_PIN_MASK = 0x000000f0;
+constexpr uint8_t LEFT_COLUMN_PINS[] = {8, 27, 26, 22, 20, 23, 21};
+constexpr uint32_t LEFT_COLUMN_PIN_MASK = 0x0cf00100;
+constexpr uint8_t LEFT_ROW_PINS[] = {4, 5, 6, 7};
+constexpr uint32_t LEFT_ROW_PIN_MASK = 0x000000f0;
 
-constexpr uint8_t SLAVE_COLUMN_PINS[] = {23, 4, 5, 6, 7, 8, 21};
-constexpr uint32_t SLAVE_COLUMN_PIN_MASK = 0x00a001f0;
-constexpr uint8_t SLAVE_ROW_PINS[] = {27, 26, 22, 20};
-constexpr uint32_t SLAVE_ROW_PIN_MASK = 0x0c500000;
+constexpr uint8_t RIGHT_COLUMN_PINS[] = {23, 4, 5, 6, 7, 8, 21};
+constexpr uint32_t RIGHT_COLUMN_PIN_MASK = 0x00a001f0;
+constexpr uint8_t RIGHT_ROW_PINS[] = {27, 26, 22, 20};
+constexpr uint32_t RIGHT_ROW_PIN_MASK = 0x0c500000;
 
 // clang-format off
 //
@@ -72,14 +73,14 @@ constexpr uint32_t SLAVE_ROW_PIN_MASK = 0x0c500000;
 //     18  17  16  15  14  13  12  11  |  42  43  44  45  46  47  48  49
 //                 10   9   8   7   6  |  37  38  39  40  41
 
-constexpr int8_t MASTER_KEY_MAP[4][8] = {
+constexpr int8_t LEFT_KEY_MAP[4][8] = {
   {  -1,  5,  4,  3,  2,  1,  0, -1 },
   {  -1, 17, 16, 15, 14, 13, 12, -1 },
   {  31, 29, 28, 27, 26, 25, 24, -1 },
   {  44, 42, 41, 30, 40, 43, -1, -1 },
 };
 
-constexpr int8_t SLAVE_KEY_MAP[4][8] = {
+constexpr int8_t RIGHT_KEY_MAP[4][8] = {
   {  -1,  6,  7,  8,  9, 10, 11, -1 },
   {  -1, 18, 19, 20, 21, 22, 23, -1 },
   {  32, 34, 35, 36, 37, 38, 39, -1 },

@@ -70,7 +70,8 @@ public:
 class SplitTxRx {
 public:
   static void Initialize() { instance.Initialize(); }
-  static bool IsMaster();
+  static bool IsMaster() { return JAVELIN_SPLIT_IS_MASTER; }
+  static bool IsLeft();
   static bool IsSlave() { return !IsMaster(); }
 
   static void Update() { instance.Update(); }

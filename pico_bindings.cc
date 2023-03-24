@@ -483,7 +483,7 @@ struct WordListData {
 
 void InitSlave() {
   Console &console = Console::instance;
-  console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
+  console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
@@ -593,7 +593,7 @@ void InitJavelinSteno() {
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if JAVELIN_SPLIT
-  console.RegisterCommand("launch_slave_bootrom", "Launch slave rp2040 bootrom",
+  console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
                           LaunchSlaveBootrom, nullptr);
 #endif
 #if JAVELIN_USE_WATCHDOG

@@ -80,7 +80,13 @@ SplitTxRx::SplitTxRxData::SplitTxRxData() {
   state = IsMaster() ? State::READY_TO_SEND : State::RECEIVING;
 }
 
-bool SplitTxRx::IsMaster() { return gpio_get(JAVELIN_SPLIT_SIDE_PIN); }
+bool SplitTxRx::IsLeft() {
+#if defined(JAVELIN_SPLIT_SIDE_PIN)
+  return gpio_get(JAVELIN_SPLIT_SIDE_PIN);
+#else
+  return JAVELIN_SPLIT_IS_LEFT;
+#endif
+}
 
 void SplitTxRx::SplitTxRxData::StartRx() {
   const PIO pio = PIO_INSTANCE;

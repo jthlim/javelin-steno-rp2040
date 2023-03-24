@@ -13,13 +13,13 @@
 //---------------------------------------------------------------------------
 
 #if JAVELIN_SPLIT
-auto COLUMN_PINS = MASTER_COLUMN_PINS;
-auto COLUMN_PIN_MASK = MASTER_COLUMN_PIN_MASK;
-auto ROW_PINS = MASTER_ROW_PINS;
-auto ROW_PIN_MASK = MASTER_ROW_PIN_MASK;
-auto KEY_MAP = MASTER_KEY_MAP;
-const size_t COLUMN_PIN_COUNT = sizeof(MASTER_COLUMN_PINS);
-const size_t ROW_PIN_COUNT = sizeof(MASTER_ROW_PINS);
+auto COLUMN_PINS = LEFT_COLUMN_PINS;
+auto COLUMN_PIN_MASK = LEFT_COLUMN_PIN_MASK;
+auto ROW_PINS = LEFT_ROW_PINS;
+auto ROW_PIN_MASK = LEFT_ROW_PIN_MASK;
+auto KEY_MAP = LEFT_KEY_MAP;
+const size_t COLUMN_PIN_COUNT = sizeof(LEFT_COLUMN_PINS);
+const size_t ROW_PIN_COUNT = sizeof(LEFT_ROW_PINS);
 #else
 const size_t COLUMN_PIN_COUNT = sizeof(COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
@@ -29,12 +29,12 @@ const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 
 void KeyState::Initialize() {
 #if JAVELIN_SPLIT
-  if (!SplitTxRx::IsMaster()) {
-    COLUMN_PINS = SLAVE_COLUMN_PINS;
-    COLUMN_PIN_MASK = SLAVE_COLUMN_PIN_MASK;
-    ROW_PINS = SLAVE_ROW_PINS;
-    ROW_PIN_MASK = SLAVE_ROW_PIN_MASK;
-    KEY_MAP = SLAVE_KEY_MAP;
+  if (!SplitTxRx::IsLeft()) {
+    COLUMN_PINS = RIGHT_COLUMN_PINS;
+    COLUMN_PIN_MASK = RIGHT_COLUMN_PIN_MASK;
+    ROW_PINS = RIGHT_ROW_PINS;
+    ROW_PIN_MASK = RIGHT_ROW_PIN_MASK;
+    KEY_MAP = RIGHT_KEY_MAP;
   }
 #endif
 
