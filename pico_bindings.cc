@@ -751,12 +751,8 @@ void Script::SendText(const uint8_t *text) const {
 
 bool Script::ProcessScanCode(int scanCode, ScanCodeAction action) {
 #if JAVELIN_USE_EMBEDDED_STENO
-  int modifiers = 0;
-  for (int keyCode = KeyCode::L_CTRL; keyCode <= KeyCode::R_META; ++keyCode) {
-    if (keyState.IsSet(keyCode)) {
-      modifiers |= (1 << MODIFIER_BIT_SHIFT) << (keyCode - KeyCode::L_CTRL);
-    }
-  }
+  uint32_t modifiers = keyState.GetRange(KeyCode::L_CTRL, KeyCode::L_CTRL + 8)
+                       << MODIFIER_BIT_SHIFT;
   return engineContainer->ProcessScanCode(scanCode | modifiers, action);
 #else
   return false;
@@ -777,20 +773,20 @@ void ConsoleWriter::Write(const char *data, size_t length) {
 
 void Console::Flush() { ConsoleBuffer::instance.Flush(); }
 
-void Key::PressRaw(uint8_t key) {
+void Key::PressRaw(KeyCode key) {
 #if JAVELIN_OLED_DRIVER
-  if (key == KeyCode::BACKSPACE) {
+  if (key.value == KeyCode::BACKSPACE) {
     WpmTracker::instance.Tally(-1);
-  } else if (KeyCode::IsVisible(key)) {
+  } else if (key.IsVisible()) {
     WpmTracker::instance.Tally(1);
   }
 #endif
 
-  HidKeyboardReportBuilder::instance.Press(key);
+  HidKeyboardReportBuilder::instance.Press(key.value);
 }
 
-void Key::ReleaseRaw(uint8_t key) {
-  HidKeyboardReportBuilder::instance.Release(key);
+void Key::ReleaseRaw(KeyCode key) {
+  HidKeyboardReportBuilder::instance.Release(key.value);
 }
 
 void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }

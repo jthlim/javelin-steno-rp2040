@@ -8,6 +8,7 @@
 #include "usb_descriptors.h"
 #include <hardware/watchdog.h>
 #include <pico/time.h>
+#include <string.h>
 
 //---------------------------------------------------------------------------
 
