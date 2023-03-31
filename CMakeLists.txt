@@ -47,6 +47,7 @@ target_sources(${NAME} PUBLIC
   font.cc
   font/default.cc
   font/large_digits.cc
+  font/medium_digits.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   key_state.cc
@@ -65,6 +66,7 @@ target_sources(${NAME} PUBLIC
   usb_descriptors.cc
   ws2812.cc
 
+  javelin/base64.cc
   javelin/bit.cc
   javelin/button_manager.cc
   javelin/console.cc

@@ -1,8 +1,8 @@
 //---------------------------------------------------------------------------
 
 #include "javelin/flash.h"
-#include <hardware/sync.h>
 #include <hardware/flash.h>
+#include <hardware/sync.h>
 #include <string.h>
 
 //---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ void Flash::Erase(const void *target, size_t size) {
 
   size_t eraseSize = eraseEnd - eraseStart;
   if (eraseSize != 0) {
-    erasedBytes += eraseSize;
+    instance.erasedBytes += eraseSize;
 
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t + eraseStart - XIP_BASE, eraseSize);
@@ -54,7 +54,7 @@ void Flash::Write(const void *target, const void *data, size_t size) {
 
   size_t eraseSize = eraseEnd - eraseStart;
   if (eraseSize != 0) {
-    erasedBytes += eraseSize;
+    instance.erasedBytes += eraseSize;
 
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t + eraseStart - XIP_BASE, eraseSize);
@@ -76,7 +76,7 @@ void Flash::Write(const void *target, const void *data, size_t size) {
 
   size_t programSize = programEnd - programStart;
   if (programSize) {
-    programmedBytes += programSize;
+    instance.programmedBytes += programSize;
 
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_program((intptr_t)t + programStart - XIP_BASE, d + programStart,
@@ -87,9 +87,9 @@ void Flash::Write(const void *target, const void *data, size_t size) {
   // Do a check, to ensure it is programmed accurately.
   if (memcmp(target, data, size) != 0) {
     // If it didn't, then do a full erase/program cycle.
-    erasedBytes += size;
-    programmedBytes += size;
-    reprogrammedBytes += size;
+    instance.erasedBytes += size;
+    instance.programmedBytes += size;
+    instance.reprogrammedBytes += size;
 
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t - XIP_BASE, size);

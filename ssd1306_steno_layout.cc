@@ -15,7 +15,7 @@ struct StenoLayoutData {
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_WIDTH == 128 && JAVELIN_OLED_HEIGHT == 64
+#if JAVELIN_DISPLAY_WIDTH == 128 && JAVELIN_DISPLAY_HEIGHT == 64
 
 constexpr StenoLayoutData LAYOUT_DATA[] = {
     {0, 5},   // #
@@ -118,40 +118,40 @@ void Ssd1306::Ssd1306Data::DrawStenoLayout(StenoStroke stroke) {
       // On
       switch (LAYOUT_DATA[i].type) {
       case 0: {
-        uint8_t *p = &buffer8[x * (JAVELIN_OLED_HEIGHT / 8)];
+        uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
         for (int i = 0; i < 118; ++i) {
           *p = 0xfe;
-          p += (JAVELIN_OLED_HEIGHT / 8);
+          p += (JAVELIN_DISPLAY_HEIGHT / 8);
         }
         break;
       }
       case 1: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         for (uint32_t d : type1OnData) {
           *p++ |= d;
         }
         break;
       }
       case 2: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         for (int i = 0; i < 10; ++i) {
           *p |= 0x03fffc00;
-          p += (JAVELIN_OLED_HEIGHT / 32);
+          p += (JAVELIN_DISPLAY_HEIGHT / 32);
         }
         break;
       }
       case 3: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         for (uint32_t d : type3OnData) {
           *p++ |= d;
         }
         break;
       }
       case 4: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)] + 1;
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)] + 1;
         for (uint32_t d : type4OnData) {
           *p |= d;
-          p += (JAVELIN_OLED_HEIGHT / 32);
+          p += (JAVELIN_DISPLAY_HEIGHT / 32);
         }
         break;
       }
@@ -160,47 +160,47 @@ void Ssd1306::Ssd1306Data::DrawStenoLayout(StenoStroke stroke) {
       // Off
       switch (LAYOUT_DATA[i].type) {
       case 0: {
-        uint8_t *p = &buffer8[x * (JAVELIN_OLED_HEIGHT / 8)];
+        uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
         *p = 0xfe;
-        p += (JAVELIN_OLED_HEIGHT / 8);
+        p += (JAVELIN_DISPLAY_HEIGHT / 8);
         for (int i = 0; i < 116; ++i) {
           *p = 0x82;
-          p += (JAVELIN_OLED_HEIGHT / 8);
+          p += (JAVELIN_DISPLAY_HEIGHT / 8);
         }
         *p = 0xfe;
         break;
       }
       case 1: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         for (uint32_t d : type1OffData) {
           *p++ |= d;
         }
         break;
       }
       case 2: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         *p |= 0x03fffc00;
-        p += (JAVELIN_OLED_HEIGHT / 32);
+        p += (JAVELIN_DISPLAY_HEIGHT / 32);
 
         for (int i = 0; i < 8; ++i) {
           *p |= 0x002000400;
-          p += (JAVELIN_OLED_HEIGHT / 32);
+          p += (JAVELIN_DISPLAY_HEIGHT / 32);
         }
         *p |= 0x03fffc00;
         break;
       }
       case 3: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)];
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)];
         for (uint32_t d : type3OffData) {
           *p++ |= d;
         }
         break;
       }
       case 4: {
-        uint32_t *p = &buffer32[x * (JAVELIN_OLED_HEIGHT / 32)] + 1;
+        uint32_t *p = &buffer32[x * (JAVELIN_DISPLAY_HEIGHT / 32)] + 1;
         for (uint32_t d : type4OffData) {
           *p |= d;
-          p += (JAVELIN_OLED_HEIGHT / 32);
+          p += (JAVELIN_DISPLAY_HEIGHT / 32);
         }
         break;
       }

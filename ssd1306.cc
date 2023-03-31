@@ -157,11 +157,11 @@ void Ssd1306::PrintInfo() {
 //---------------------------------------------------------------------------
 
 void Ssd1306::Ssd1306Data::SetPixel(uint32_t x, uint32_t y) {
-  if (x >= JAVELIN_OLED_WIDTH || y >= JAVELIN_OLED_HEIGHT) {
+  if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
     return;
   }
 
-  size_t bitIndex = x * JAVELIN_OLED_HEIGHT + y;
+  size_t bitIndex = x * JAVELIN_DISPLAY_HEIGHT + y;
   uint8_t *p = &buffer8[bitIndex / 8];
   if (drawColor) {
     *p |= 1 << (bitIndex & 7);
@@ -215,28 +215,28 @@ void Ssd1306::Ssd1306Data::DrawRect(int left, int top, int right, int bottom) {
     return;
   }
 
-  if (right < 0 || bottom < 0 || left >= JAVELIN_OLED_WIDTH ||
-      top >= JAVELIN_OLED_HEIGHT) {
+  if (right < 0 || bottom < 0 || left >= JAVELIN_DISPLAY_WIDTH ||
+      top >= JAVELIN_DISPLAY_HEIGHT) {
     return;
   }
   if (left < 0) {
     left = 0;
   }
-  if (right >= JAVELIN_OLED_WIDTH) {
-    right = JAVELIN_OLED_WIDTH;
+  if (right >= JAVELIN_DISPLAY_WIDTH) {
+    right = JAVELIN_DISPLAY_WIDTH;
   }
   int width = right - left;
 
   if (top < 0) {
     top = 0;
   }
-  if (bottom >= JAVELIN_OLED_HEIGHT) {
-    bottom = JAVELIN_OLED_HEIGHT;
+  if (bottom >= JAVELIN_DISPLAY_HEIGHT) {
+    bottom = JAVELIN_DISPLAY_HEIGHT;
   }
 
   dirty = true;
 
-  uint8_t *p = &buffer8[left * (JAVELIN_OLED_HEIGHT / 8) + (top >> 3)];
+  uint8_t *p = &buffer8[left * (JAVELIN_DISPLAY_HEIGHT / 8) + (top >> 3)];
 
   int startY = top & -8;
   int endY = (bottom + 7) & -8;
@@ -258,7 +258,7 @@ void Ssd1306::Ssd1306Data::DrawRect(int left, int top, int right, int bottom) {
         pixels &= ~mask;
       }
       *row = pixels;
-      row += JAVELIN_OLED_HEIGHT / 8;
+      row += JAVELIN_DISPLAY_HEIGHT / 8;
     }
     p++;
   }
@@ -271,7 +271,7 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
   }
 
   // It's all off the screen.
-  if (x >= JAVELIN_OLED_WIDTH || y >= JAVELIN_OLED_HEIGHT) {
+  if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
     return;
   }
 
@@ -295,11 +295,11 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
   int yShift = y & 7;
   int endY = (y + height + 7) >> 3;
 
-  uint8_t *p = &buffer8[x * (JAVELIN_OLED_HEIGHT / 8)];
+  uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
 
   int endX = x + width;
-  if (endX > JAVELIN_OLED_WIDTH) {
-    width = JAVELIN_OLED_WIDTH - x;
+  if (endX > JAVELIN_DISPLAY_WIDTH) {
+    width = JAVELIN_DISPLAY_WIDTH - x;
   }
 
   while (width > 0) {
@@ -319,7 +319,7 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
 
     for (int yy = startY + 1; yy < endY; ++yy) {
       ++column;
-      if (yy >= JAVELIN_OLED_HEIGHT / 8) {
+      if (yy >= JAVELIN_DISPLAY_HEIGHT / 8) {
         break;
       }
       if (yy < 0) {
@@ -339,7 +339,7 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
       p[yy] = pixels;
     }
 
-    p += JAVELIN_OLED_HEIGHT / 8;
+    p += JAVELIN_DISPLAY_HEIGHT / 8;
     --width;
   }
 }
@@ -402,32 +402,51 @@ void Ssd1306::Ssd1306Data::Update() {
   uint16_t *d = dmaBuffer;
   *d++ = 0x40;
 
-  // Frame buffer is organized y/x, but ssd1306 ram is organize in 'pages'.
-  // Swizzle the data into the dma buffer
-  for (size_t page = 0; page < JAVELIN_OLED_HEIGHT / 8; page++) {
-    uint8_t *s = &buffer8[page];
-    for (size_t x = 0; x < JAVELIN_OLED_WIDTH; ++x) {
-      *d++ = *s;
-      s += JAVELIN_OLED_HEIGHT / 8;
+#if JAVELIN_OLED_ROTATION == 0 || JAVELIN_OLED_ROTATION == 180
+  const uint8_t *s = buffer8;
+  // Copy the frame buffer to DMA to the display.
+  for (size_t i = 0; i < JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8; ++i) {
+    *d++ = *s++;
+  }
+#elif JAVELIN_OLED_ROTATION == 90 || JAVELIN_OLED_ROTATION == 270
+  for (int frameBufferY = JAVELIN_DISPLAY_HEIGHT - 1; frameBufferY >= 0;
+       --frameBufferY) {
+    int shift = ~frameBufferY & 7;
+
+    const uint8_t *s = &buffer8[frameBufferY / 8];
+
+    for (size_t y = 0; y < JAVELIN_OLED_HEIGHT / 8; ++y) {
+      uint32_t pixelValue = 0;
+      for (size_t i = 0; i < 8; ++i) {
+        pixelValue = (pixelValue >> 1) | ((*s << shift) & 0x80);
+        s += JAVELIN_DISPLAY_HEIGHT / 8;
+      }
+      *d++ = pixelValue;
     }
   }
+#else
+#error Unhandled rotation
+#endif
+
+  // Mark last byte as end of data.
   d[-1] |= 0x200;
 
   SendDmaBuffer(JAVELIN_OLED_WIDTH * JAVELIN_OLED_HEIGHT / 8 + 1);
 }
 
 bool Ssd1306::Ssd1306Data::InitializeSsd1306() {
-  static constexpr uint8_t commands[] = {
+  static constexpr uint8_t COMMANDS[] = {
     Ssd1306Command::EnableDisplay(false),
 
     Ssd1306Command::SET_MEMORY_ADDRESSING_MODE,
-    Ssd1306MemoryAddressingMode::HORIZONTAL,
+    Ssd1306MemoryAddressingMode::VERTICAL,
 
     Ssd1306Command::SetDisplayStartLine(0),
-#if !defined(JAVELIN_OLED_ROTATION) || JAVELIN_OLED_ROTATION == 0
+#if !defined(JAVELIN_OLED_ROTATION) || JAVELIN_OLED_ROTATION == 0 ||           \
+    JAVELIN_OLED_ROTATION == 90
     Ssd1306Command::SET_SEGMENT_REMAP_ENABLED,
     Ssd1306Command::SET_COM_SCAN_DIRECTION_BOTTOM_UP,
-#elif JAVELIN_OLED_ROTATION == 180
+#elif JAVELIN_OLED_ROTATION == 180 || JAVELIN_OLED_ROTATION == 270
     Ssd1306Command::SET_SEGMENT_REMAP_DISABLED,
     Ssd1306Command::SET_COM_SCAN_DIRECTION_TOP_DOWN,
 #else
@@ -472,7 +491,7 @@ bool Ssd1306::Ssd1306Data::InitializeSsd1306() {
     (JAVELIN_OLED_HEIGHT - 1) / 8,
   };
 
-  return SendCommandList(commands, sizeof(commands));
+  return SendCommandList(COMMANDS, sizeof(COMMANDS));
 }
 
 void Ssd1306::Ssd1306Data::Initialize() {

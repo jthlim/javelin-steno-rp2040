@@ -24,6 +24,7 @@ struct Font {
   uint32_t GetStringWidth(const char *p) const;
 
   static const Font DEFAULT;
+  static const Font MEDIUM_DIGITS;
   static const Font LARGE_DIGITS;
 };
 

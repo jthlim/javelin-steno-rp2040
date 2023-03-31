@@ -12,8 +12,8 @@ struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
-#define JAVELIN_USE_EMBEDDED_STENO 1
-#define JAVELIN_USE_USER_DICTIONARY 1
+#define JAVELIN_USE_EMBEDDED_STENO 0
+#define JAVELIN_USE_USER_DICTIONARY 0
 #define JAVELIN_USB_MILLIAMPS 500
 
 #define JAVELIN_RGB_COUNT 54
@@ -28,14 +28,16 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_SPLIT_IS_LEFT 0
 // #define JAVELIN_SPLIT_SIDE_PIN xx
 
-// #define JAVELIN_OLED_DRIVER 1306
-// #define JAVELIN_OLED_WIDTH 128
-// #define JAVELIN_OLED_HEIGHT 64
-// #define JAVELIN_OLED_I2C i2c1
-// #define JAVELIN_OLED_SDA_PIN 2
-// #define JAVELIN_OLED_SCL_PIN 3
-// #define JAVELIN_OLED_I2C_ADDRESS 0x3c
-// #define JAVELIN_OLED_ROTATION 180
+#define JAVELIN_OLED_DRIVER 1306
+#define JAVELIN_OLED_WIDTH 128
+#define JAVELIN_OLED_HEIGHT 32
+#define JAVELIN_DISPLAY_WIDTH 32
+#define JAVELIN_DISPLAY_HEIGHT 128
+#define JAVELIN_OLED_I2C i2c1
+#define JAVELIN_OLED_SDA_PIN 2
+#define JAVELIN_OLED_SCL_PIN 3
+#define JAVELIN_OLED_I2C_ADDRESS 0x3c
+#define JAVELIN_OLED_ROTATION 90
 
 constexpr uint8_t LEFT_COLUMN_PINS[] = {29, 28, 27, 26, 22, 20};
 constexpr uint32_t LEFT_COLUMN_PIN_MASK = 0x3c500000;
@@ -78,7 +80,7 @@ constexpr int8_t LEFT_KEY_MAP[4][6] = {
 constexpr int8_t RIGHT_KEY_MAP[4][6] = {
   {   6,  7,  8,  9, 10, 11, },
   {  18, 19, 20, 21, 22, 23, },
-  {  30, 31, 32, 34, 35, 36, },
+  {  30, 31, 32, 33, 34, 35, },
   {  39, 40, 41, -1, -1, -1, },
 };
 
@@ -107,6 +109,9 @@ const StenoMapDictionaryCollection
 const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
     (const uint8_t *)0x10fc0000;
 const size_t STENO_USER_DICTIONARY_SIZE = 0x40000;
+
+const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
+const size_t BUTTON_COUNT = 42;
 
 const char *const MANUFACTURER_NAME = "foostan";
 const char *const PRODUCT_NAME = "Corne (Javelin)";

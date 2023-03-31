@@ -7,6 +7,7 @@
 #include "console_input_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
+#include "javelin/flash.h"
 #include "javelin/key.h"
 #include "javelin/static_allocate.h"
 #include "key_state.h"
@@ -98,6 +99,10 @@ private:
 };
 
 void HidTask::Update() {
+  if (Flash::IsUpdating()) {
+    return;
+  }
+
   buttonManager.Tick();
 
 #if JAVELIN_SPLIT

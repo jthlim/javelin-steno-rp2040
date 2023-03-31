@@ -45,18 +45,19 @@ void Ssd1306::Ssd1306Data::DrawPaperTape(const StenoStroke *strokes,
 
   Clear();
 
-  constexpr size_t MAXIMUM_STROKES = JAVELIN_OLED_HEIGHT / 8;
+#if JAVELIN_DISPLAY_WIDTH >= 64
+  constexpr size_t MAXIMUM_STROKES = JAVELIN_DISPLAY_HEIGHT / 8;
   size_t startingStroke =
       length > MAXIMUM_STROKES ? length - MAXIMUM_STROKES : 0;
   size_t lineOffset = length < MAXIMUM_STROKES ? MAXIMUM_STROKES - length : 0;
 
   if (lineOffset >= 2) {
-    DrawLine(0, 0, JAVELIN_OLED_WIDTH, 0);
-    DrawLine(JAVELIN_OLED_WIDTH - 1, 0, JAVELIN_OLED_WIDTH - 1, 15);
-    DrawLine(0, 15, JAVELIN_OLED_WIDTH, 15);
+    DrawLine(0, 0, JAVELIN_DISPLAY_WIDTH, 0);
+    DrawLine(JAVELIN_DISPLAY_WIDTH - 1, 0, JAVELIN_DISPLAY_WIDTH - 1, 15);
+    DrawLine(0, 15, JAVELIN_DISPLAY_WIDTH, 15);
     DrawLine(0, 0, 0, 15);
-    DrawText(JAVELIN_OLED_WIDTH / 2, 12, &Font::DEFAULT, TextAlignment::MIDDLE,
-             "Paper Tape");
+    DrawText(JAVELIN_DISPLAY_WIDTH / 2, 12, &Font::DEFAULT,
+             TextAlignment::MIDDLE, "Paper Tape");
   }
 
   for (size_t i = startingStroke; i < length; ++i) {
@@ -69,15 +70,35 @@ void Ssd1306::Ssd1306Data::DrawPaperTape(const StenoStroke *strokes,
       if (stroke & (1 << i)) {
         for (int x = 0; x < width; ++x) {
           *p = *f++;
-          p += JAVELIN_OLED_HEIGHT / 8;
+          p += JAVELIN_DISPLAY_HEIGHT / 8;
         }
       } else {
-        p += width * (JAVELIN_OLED_HEIGHT / 8);
+        p += width * (JAVELIN_DISPLAY_HEIGHT / 8);
         f += width;
       }
-      p += JAVELIN_OLED_HEIGHT / 8;
+      p += JAVELIN_DISPLAY_HEIGHT / 8;
     }
   }
+#elif JAVELIN_DISPLAY_WIDTH >= 23
+  constexpr size_t MAXIMUM_STROKES = JAVELIN_DISPLAY_HEIGHT;
+  size_t startingStroke =
+      length > MAXIMUM_STROKES ? length - MAXIMUM_STROKES : 0;
+  size_t y = length < MAXIMUM_STROKES ? MAXIMUM_STROKES - length : 0;
+
+  for (size_t i = startingStroke; i < length; ++i) {
+    uint32_t stroke = strokes[i].GetKeyState();
+    uint8_t *p = &buffer8[y / 8];
+    uint8_t mask = 1 << (y & 7);
+    ++y;
+
+    for (size_t i = 0; i < 23; ++i) {
+      if (stroke & (1 << i)) {
+        *p |= mask;
+      }
+      p += JAVELIN_DISPLAY_HEIGHT / 8;
+    }
+  }
+#endif
 }
 
 //---------------------------------------------------------------------------

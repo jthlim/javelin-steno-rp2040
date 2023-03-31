@@ -46,6 +46,10 @@ const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
     (const uint8_t *)0x10f70000;
 const size_t STENO_USER_DICTIONARY_SIZE = 0x80000;
 
+const size_t MAXIMUM_MAP_DICTIONARY_SIZE = 0xb70000;
+const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0xf00;
+const size_t BUTTON_COUNT = 29;
+
 const char *const MANUFACTURER_NAME = "stenokeyboards";
 const char *const PRODUCT_NAME = "The Uni (Javelin)";
 const int VENDOR_ID = 0x9000;

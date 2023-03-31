@@ -30,6 +30,8 @@ struct StenoMapDictionaryCollection;
 #define JAVELIN_OLED_DRIVER 1306
 #define JAVELIN_OLED_WIDTH 128
 #define JAVELIN_OLED_HEIGHT 64
+#define JAVELIN_DISPLAY_WIDTH 128
+#define JAVELIN_DISPLAY_HEIGHT 64
 #define JAVELIN_OLED_I2C i2c1
 #define JAVELIN_OLED_SDA_PIN 2
 #define JAVELIN_OLED_SCL_PIN 3
@@ -103,6 +105,9 @@ constexpr uint8_t RGB_MAP[62] = {
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
     (const StenoConfigBlock *)0x10040000;
 const uint8_t *const BUTTON_MANAGER_BYTE_CODE = (const uint8_t *)0x10040100;
+
+const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
+const size_t BUTTON_COUNT = 50;
 
 const char *const MANUFACTURER_NAME = "splitkb";
 const char *const PRODUCT_NAME = "Kyria (Javelin)";

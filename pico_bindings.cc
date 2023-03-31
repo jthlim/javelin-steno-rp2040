@@ -167,7 +167,7 @@ public:
   }
 
 private:
-  static const size_t MAXIMUM_STROKE_COUNT = 16;
+  static const size_t MAXIMUM_STROKE_COUNT = 128;
   uint8_t strokeCount = 0;
   uint32_t lastUpdateTime = 0;
 #if JAVELIN_SPLIT
@@ -182,15 +182,19 @@ private:
 
     char buffer[16];
     sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
+#if JAVELIN_DISPLAY_WIDTH >= 64
     const Font *font = &Font::LARGE_DIGITS;
-    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2,
-                      JAVELIN_OLED_HEIGHT / 2 - font->height / 2 +
+#else
+    const Font *font = &Font::MEDIUM_DIGITS;
+#endif
+    Ssd1306::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
+                      JAVELIN_DISPLAY_HEIGHT / 2 - font->height / 2 +
                           font->baseline / 2,
                       font, TextAlignment::MIDDLE, buffer);
 
     font = &Font::DEFAULT;
-    Ssd1306::DrawText(displayId, JAVELIN_OLED_WIDTH / 2,
-                      JAVELIN_OLED_HEIGHT * 3 / 4 + font->baseline / 2, font,
+    Ssd1306::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
+                      JAVELIN_DISPLAY_HEIGHT * 3 / 4 + font->baseline / 2, font,
                       TextAlignment::MIDDLE, "wpm");
   }
 };
@@ -455,6 +459,39 @@ void SetKeyboardProtocol(void *context, const char *commandLine) {
   Console::SendOk();
 }
 
+struct ParameterData {
+  const char *name;
+  const void *value;
+};
+
+static const ParameterData PARAMETER_DATA[] = {
+#if JAVELIN_USE_EMBEDDED_STENO
+  {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
+  {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
+#endif
+  {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
+  {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
+  {"button_count", (void *)BUTTON_COUNT},
+};
+
+void GetParameterBinding(void *context, const char *commandLine) {
+  const char *parameterName = strchr(commandLine, ' ');
+  if (!parameterName) {
+    Console::Printf("ERR No parameter specified\n\n");
+    return;
+  }
+  ++parameterName;
+
+  for (const ParameterData &data : PARAMETER_DATA) {
+    if (Str::Eq(parameterName, data.name)) {
+      Console::Printf("%p\n\n", data.value);
+      return;
+    }
+  }
+
+  Console::Printf("ERR Unknown parameter %s\n\n", parameterName);
+}
+
 #if JAVELIN_USE_EMBEDDED_STENO
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
@@ -483,6 +520,18 @@ struct WordListData {
 
 void InitSlave() {
   Console &console = Console::instance;
+  console.RegisterCommand("get_parameter",
+                          "Gets the value of the specified parameter",
+                          GetParameterBinding, nullptr);
+  console.RegisterCommand("begin_write",
+                          "Begin a flash write to the specified address",
+                          &Flash::BeginWriteBinding, nullptr);
+  console.RegisterCommand("write",
+                          "Writes base64 data to the address specified in "
+                          "begin_write",
+                          &Flash::WriteBinding, nullptr);
+  console.RegisterCommand("end_write", "Completes writing to flash",
+                          &Flash::EndWriteBinding, nullptr);
   console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if JAVELIN_USE_WATCHDOG
@@ -590,6 +639,18 @@ void InitJavelinSteno() {
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
 #endif
+  console.RegisterCommand("get_parameter",
+                          "Gets the value of the specified parameter",
+                          GetParameterBinding, nullptr);
+  console.RegisterCommand("begin_write",
+                          "Begin a flash write to the specified address",
+                          &Flash::BeginWriteBinding, nullptr);
+  console.RegisterCommand("write",
+                          "Writes base64 data to the address specified in "
+                          "begin_write",
+                          &Flash::WriteBinding, nullptr);
+  console.RegisterCommand("end_write", "Completes writing to flash",
+                          &Flash::EndWriteBinding, nullptr);
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
                           LaunchBootrom, nullptr);
 #if JAVELIN_SPLIT
