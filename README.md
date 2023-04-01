@@ -10,14 +10,19 @@
 3. Clone this repository.
 
 4. From within this repository, link the javelin-steno repository:
-   `ln -s <path-to-javelin-steno> javelin`
 
-5. Standard CMake, with '-D BOARD=xxx'
+```
+> ln -s <path-to-javelin-steno> javelin
+```
 
-- `mkdir build`
-- `cd build`
-- `cmake .. -D BOARD=uni_v4`
-- `make`
+6. Standard CMake, with '-D BOARD=xxx'
+
+```
+> mkdir build
+> cd build
+> cmake .. -D BOARD=uni_v4
+> make
+```
 
 You should now have a uf2 file that can be copied to the device.
 
