@@ -10,7 +10,7 @@
 3. Clone this repository.
 
 4. From within this repository, link the javelin-steno repository:
-   `ln -s <path-to-javelin-steno>/javelin`
+   `ln -s <path-to-javelin-steno> javelin`
 
 5. Standard CMake, with '-D BOARD=xxx'
 
