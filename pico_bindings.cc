@@ -39,6 +39,7 @@
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
 #include "javelin/rgb.h"
+#include "javelin/script_byte_code.h"
 #include "javelin/serial_port.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
@@ -464,6 +465,11 @@ struct ParameterData {
   const void *value;
 };
 
+struct DynamicParameterData {
+  const char *name;
+  void (*const valueProvider)();
+};
+
 static const ParameterData PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
   {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
@@ -472,6 +478,15 @@ static const ParameterData PARAMETER_DATA[] = {
   {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
   {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
   {"button_count", (void *)BUTTON_COUNT},
+  {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
+};
+
+static void GetStrokeCount() {
+  Console::Printf("%zu\n\n", engineContainer->GetStrokeCount());
+}
+
+static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
+    {"stroke_count", GetStrokeCount},
 };
 
 void GetParameterBinding(void *context, const char *commandLine) {
@@ -485,6 +500,13 @@ void GetParameterBinding(void *context, const char *commandLine) {
   for (const ParameterData &data : PARAMETER_DATA) {
     if (Str::Eq(parameterName, data.name)) {
       Console::Printf("%p\n\n", data.value);
+      return;
+    }
+  }
+
+  for (const DynamicParameterData &data : DYNAMIC_PARAMETER_DATA) {
+    if (Str::Eq(parameterName, data.name)) {
+      data.valueProvider();
       return;
     }
   }

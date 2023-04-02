@@ -2,7 +2,7 @@
 
 #include "split_tx_rx.h"
 #include "javelin/console.h"
-#include "javelin/crc32.h"
+#include "javelin/crc.h"
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
 #include "rp2040_spinlock.h"

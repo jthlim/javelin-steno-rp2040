@@ -12,7 +12,7 @@
 #include "javelin/static_allocate.h"
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
-#include "rp2040_crc32.h"
+#include "rp2040_crc.h"
 #include "split_hid_report_buffer.h"
 #include "split_led_status.h"
 #include "split_serial_buffer.h"
@@ -294,7 +294,7 @@ int main(void) {
   InitMulticore();
 #endif
   KeyState::Initialize();
-  Rp2040Crc32::Initialize();
+  Rp2040Crc::Initialize();
   Ws2812::Initialize();
   SplitTxRx::Initialize();
   Ssd1306::Initialize();

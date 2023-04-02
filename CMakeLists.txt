@@ -55,7 +55,8 @@ target_sources(${NAME} PUBLIC
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
-  rp2040_crc32.cc
+  rp2040_crc.cc
+  rp2040_random.cc
   split_hid_report_buffer.cc
   split_led_status.cc
   split_serial_buffer.cc
@@ -70,7 +71,7 @@ target_sources(${NAME} PUBLIC
   javelin/bit.cc
   javelin/button_manager.cc
   javelin/console.cc
-  javelin/crc32.cc
+  javelin/crc.cc
   javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
   javelin/dictionary/dictionary.cc
