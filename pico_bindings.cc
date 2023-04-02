@@ -481,12 +481,16 @@ static const ParameterData PARAMETER_DATA[] = {
   {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
 };
 
+#if JAVELIN_USE_EMBEDDED_STENO
 static void GetStrokeCount() {
   Console::Printf("%zu\n\n", engineContainer->GetStrokeCount());
 }
+#endif
 
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
-    {"stroke_count", GetStrokeCount},
+#if JAVELIN_USE_EMBEDDED_STENO
+  {"stroke_count", GetStrokeCount},
+#endif
 };
 
 void GetParameterBinding(void *context, const char *commandLine) {
