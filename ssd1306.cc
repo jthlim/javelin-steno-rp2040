@@ -672,8 +672,8 @@ void Display::DrawText(int displayId, int x, int y, FontId fontId,
   displayId = 0;
 #endif
 
-  // TODO: FontId -> Font*
-  Ssd1306::instances[displayId].DrawText(x, y, &Font::DEFAULT, alignment, text);
+  const Font *font = Font::GetFont(fontId);
+  Ssd1306::instances[displayId].DrawText(x, y, font, alignment, text);
 }
 
 void Display::DrawRect(int displayId, int left, int top, int right,

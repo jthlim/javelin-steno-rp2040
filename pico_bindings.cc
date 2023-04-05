@@ -267,8 +267,8 @@ void MeasureText_Binding(void *context, const char *commandLine) {
   }
   ++p;
 
-  // TODO: Use fontId.
-  uint32_t width = Font::DEFAULT.GetStringWidth(p);
+  const Font *font = Font::GetFont(fontId);
+  uint32_t width = font->GetStringWidth(p);
   Console::Printf("Width: %u\n\n", width);
 }
 
@@ -285,21 +285,21 @@ static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
 
 static StenoGemini gemini;
 static StenoPloverHid ploverHid;
+static StenoProcessorElement *processors;
 
-static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
-#if JAVELIN_USE_EMBEDDED_STENO
-static JavelinStaticAllocate<StenoEngine> engineContainer;
-#endif
 #if JAVELIN_OLED_DRIVER
 static JavelinStaticAllocate<StenoStrokeCapture> passthroughContainer;
 #else
 static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
 #endif
+
+#if JAVELIN_USE_EMBEDDED_STENO
+static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
+static JavelinStaticAllocate<StenoEngine> engineContainer;
 static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
 static JavelinStaticAllocate<StenoAllUp> allUpContainer;
 static JavelinStaticAllocate<StenoRepeat> repeatContainer;
 static JavelinStaticAllocate<StenoJeffModifiers> jeffModifiersContainer;
-static StenoProcessorElement *processors;
 
 static JavelinStaticAllocate<StenoCompiledOrthography>
     compiledOrthographyContainer;
@@ -311,17 +311,13 @@ static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
     reverseAutoSuffixDictionaryContainer;
 
 static List<StenoDictionaryListEntry> dictionaries;
+#endif
 
 extern int resumeCount;
 extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
 
-#if JAVELIN_USE_EMBEDDED_STENO
 static void PrintInfo_Binding(void *context, const char *commandLine) {
-  StenoEngine *engine = (StenoEngine *)context;
-  const StenoConfigBlock *config =
-      (const StenoConfigBlock *)STENO_CONFIG_BLOCK_ADDRESS;
-
   uint32_t uptime = Clock::GetCurrentTime();
   auto &uptimeDivider = divider->Divide(uptime, 1000);
   uint32_t microseconds = uptimeDivider.remainder;
@@ -377,18 +373,21 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidReportBufferBase::PrintInfo();
   SplitTxRx::PrintInfo();
   Ssd1306::PrintInfo();
+#if JAVELIN_USE_EMBEDDED_STENO
   Console::Printf("Processing chain\n");
   processors->PrintInfo();
   Console::Printf("Text block: %zu bytes\n",
                   STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+#endif
   Console::Write("\n", 1);
 }
-#endif
 
+#if JAVELIN_USE_EMBEDDED_STENO
 #if JAVELIN_OLED_DRIVER
 void Display::SetAutoDraw(int displayId, int autoDrawId) {
   passthroughContainer->SetAutoDraw(displayId, (AutoDraw)autoDrawId);
 }
+#endif
 #endif
 
 static void LaunchBootrom(void *const, const char *commandLine) {
@@ -544,8 +543,10 @@ struct WordListData {
   uint8_t data[1];
 };
 
-void InitSlave() {
+void InitJavelinSlave() {
   Console &console = Console::instance;
+  console.RegisterCommand("info", "System information", PrintInfo_Binding,
+                          nullptr);
   console.RegisterCommand("get_parameter",
                           "Gets the value of the specified parameter",
                           GetParameterBinding, nullptr);
@@ -569,7 +570,8 @@ void InitSlave() {
 #endif
 }
 
-void InitJavelinSteno() {
+void InitJavelinMaster() {
+#if JAVELIN_USE_EMBEDDED_STENO
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
 
   HidKeyboardReportBuilder::instance.SetCompatibilityMode(
@@ -577,7 +579,6 @@ void InitJavelinSteno() {
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   KeyboardLayout::SetActiveLayout(config->keyboardLayout);
 
-#if JAVELIN_USE_EMBEDDED_STENO
   const WordListData *const wordListData =
       (const WordListData *)STENO_WORD_LIST_ADDRESS;
   WordList::SetData(wordListData->data, wordListData->length);
@@ -661,10 +662,8 @@ void InitJavelinSteno() {
 #endif
 
   Console &console = Console::instance;
-#if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
-#endif
   console.RegisterCommand("get_parameter",
                           "Gets the value of the specified parameter",
                           GetParameterBinding, nullptr);
@@ -798,6 +797,7 @@ void InitJavelinSteno() {
   }
 #endif
 
+#if JAVELIN_USE_EMBEDDED_STENO
   if (config->useFirstUp) {
     processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
   } else {
@@ -807,6 +807,7 @@ void InitJavelinSteno() {
   if (config->useRepeat) {
     processorElement = new (repeatContainer) StenoRepeat(*processorElement);
   }
+#endif
 
   processors = processorElement;
 }

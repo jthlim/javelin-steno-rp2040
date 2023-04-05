@@ -5,6 +5,13 @@
 
 //---------------------------------------------------------------------------
 
+const Font *const Font::FONTS[] = {
+    &Font::DEFAULT,
+    &Font::SMALL_DIGITS,
+    &Font::MEDIUM_DIGITS,
+    &Font::LARGE_DIGITS,
+};
+
 uint32_t Font::GetCharacterWidth(uint32_t c) const {
   if (width != 0) {
     return width;

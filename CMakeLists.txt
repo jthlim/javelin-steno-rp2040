@@ -48,6 +48,7 @@ target_sources(${NAME} PUBLIC
   font/default.cc
   font/large_digits.cc
   font/medium_digits.cc
+  font/small_digits.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   key_state.cc

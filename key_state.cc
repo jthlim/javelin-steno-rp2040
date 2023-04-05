@@ -13,6 +13,30 @@
 //---------------------------------------------------------------------------
 
 #if JAVELIN_SPLIT
+#if defined(JAVELIN_SPLIT_IS_LEFT)
+#if JAVELIN_SPLIT_IS_LEFT
+
+#define COLUMN_PINS LEFT_COLUMN_PINS
+#define COLUMN_PIN_MASK LEFT_COLUMN_PIN_MASK
+#define ROW_PINS LEFT_ROW_PINS
+#define ROW_PIN_MASK LEFT_ROW_PIN_MASK
+#define KEY_MAP LEFT_KEY_MAP
+const size_t COLUMN_PIN_COUNT = sizeof(LEFT_COLUMN_PINS);
+const size_t ROW_PIN_COUNT = sizeof(LEFT_ROW_PINS);
+
+#else // JAVELIN_SPLIT_IS_LEFT
+
+#define COLUMN_PINS RIGHT_COLUMN_PINS
+#define COLUMN_PIN_MASK RIGHT_COLUMN_PIN_MASK
+#define ROW_PINS RIGHT_ROW_PINS
+#define ROW_PIN_MASK RIGHT_ROW_PIN_MASK
+#define KEY_MAP RIGHT_KEY_MAP
+const size_t COLUMN_PIN_COUNT = sizeof(RIGHT_COLUMN_PINS);
+const size_t ROW_PIN_COUNT = sizeof(RIGHT_ROW_PINS);
+
+#endif // JAVELIN_SPLIT_IS_LEFT
+#else  // defined(JAVELIN_SPLIT_IS_LEFT)
+
 auto COLUMN_PINS = LEFT_COLUMN_PINS;
 auto COLUMN_PIN_MASK = LEFT_COLUMN_PIN_MASK;
 auto ROW_PINS = LEFT_ROW_PINS;
@@ -20,15 +44,20 @@ auto ROW_PIN_MASK = LEFT_ROW_PIN_MASK;
 auto KEY_MAP = LEFT_KEY_MAP;
 const size_t COLUMN_PIN_COUNT = sizeof(LEFT_COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(LEFT_ROW_PINS);
+
+#endif // defined(JAVELIN_SPLIT_IS_LEFT)
 #else
+
 const size_t COLUMN_PIN_COUNT = sizeof(COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
+
 #endif
 
 //---------------------------------------------------------------------------
 
 void KeyState::Initialize() {
 #if JAVELIN_SPLIT
+#if !defined(JAVELIN_SPLIT_IS_LEFT)
   if (!SplitTxRx::IsLeft()) {
     COLUMN_PINS = RIGHT_COLUMN_PINS;
     COLUMN_PIN_MASK = RIGHT_COLUMN_PIN_MASK;
@@ -36,6 +65,7 @@ void KeyState::Initialize() {
     ROW_PIN_MASK = RIGHT_ROW_PIN_MASK;
     KEY_MAP = RIGHT_KEY_MAP;
   }
+#endif
 #endif
 
   gpio_init_mask(COLUMN_PIN_MASK | ROW_PIN_MASK);

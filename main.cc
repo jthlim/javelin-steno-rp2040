@@ -27,8 +27,8 @@
 
 //---------------------------------------------------------------------------
 
-void InitJavelinSteno();
-void InitSlave();
+void InitJavelinMaster();
+void InitJavelinSlave();
 void ProcessStenoTick();
 void InitMulticore();
 
@@ -314,7 +314,7 @@ int main(void) {
     SplitSerialBuffer::RegisterTxHandler();
     Ssd1306::RegisterMasterHandlers();
 
-    InitJavelinSteno();
+    InitJavelinMaster();
     tusb_init();
 
     DoMasterRunLoop();
@@ -330,7 +330,7 @@ int main(void) {
     SplitSerialBuffer::RegisterRxHandler();
     Ssd1306::RegisterSlaveHandlers();
 
-    InitSlave();
+    InitJavelinSlave();
     tusb_init();
     DoSlaveRunLoop();
   }

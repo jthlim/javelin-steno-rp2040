@@ -21,7 +21,7 @@ size_t txPacketTypeCounts[SplitHandlerId::COUNT];
 
 bool TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
   uint32_t wordLength = (length + 3) >> 2;
-  if (header.wordCount + 1 + wordLength > BUFFER_SIZE) {
+  if (header.wordCount + 1 + wordLength > JAVELIN_SPLIT_TX_RX_BUFFER_SIZE) {
     return false;
   }
 
@@ -113,7 +113,8 @@ void SplitTxRx::SplitTxRxData::ResetRxDma() {
   dma3->Abort();
   dma3->source = &PIO_INSTANCE->rxf[RX_STATE_MACHINE_INDEX];
   dma3->destination = &rxBuffer.header;
-  dma3->count = BUFFER_SIZE + sizeof(TxRxHeader) / sizeof(uint32_t);
+  dma3->count =
+      JAVELIN_SPLIT_TX_RX_BUFFER_SIZE + sizeof(TxRxHeader) / sizeof(uint32_t);
 
   Rp2040DmaControl receiveControl = {
       .enable = true,
@@ -163,9 +164,7 @@ void SplitTxRx::SplitTxRxData::Initialize() {
 
   gpio_pull_down(JAVELIN_SPLIT_RX_PIN);
 
-  if (IsMaster()) {
-    // TODO: Anything?
-  } else {
+  if (!IsMaster()) {
     StartRx();
   }
 }
@@ -254,7 +253,7 @@ void SplitTxRx::SplitTxRxData::OnReceiveSucceeded() {
 
 bool SplitTxRx::SplitTxRxData::ProcessReceive() {
   size_t dma3Count = dma3->count;
-  if (dma3Count > BUFFER_SIZE) {
+  if (dma3Count > JAVELIN_SPLIT_TX_RX_BUFFER_SIZE) {
     // Header has not been received.
     receiveStatusReason[0]++;
     return false;
@@ -267,7 +266,7 @@ bool SplitTxRx::SplitTxRxData::ProcessReceive() {
     return false;
   }
 
-  size_t bufferCount = BUFFER_SIZE - dma3Count;
+  size_t bufferCount = JAVELIN_SPLIT_TX_RX_BUFFER_SIZE - dma3Count;
   if (bufferCount < rxBuffer.header.wordCount) {
     // Data has not been fully received.
     receiveStatusReason[1]++;

@@ -24,6 +24,10 @@ enum SplitHandlerId {
   COUNT,
 };
 
+#if !defined(JAVELIN_SPLIT_TX_RX_BUFFER_SIZE)
+#define JAVELIN_SPLIT_TX_RX_BUFFER_SIZE 2048
+#endif
+
 struct TxRxHeader {
   uint16_t magic;
   uint16_t wordCount;
@@ -39,17 +43,13 @@ public:
   void Reset() { header.wordCount = 0; }
   bool Add(SplitHandlerId id, const void *data, size_t length);
 
-  static const size_t BUFFER_SIZE = 2048;
-
   TxRxHeader header;
-  uint32_t buffer[BUFFER_SIZE];
+  uint32_t buffer[JAVELIN_SPLIT_TX_RX_BUFFER_SIZE];
 };
 
 struct RxBuffer {
-  static const size_t BUFFER_SIZE = 2048;
-
   TxRxHeader header;
-  uint32_t buffer[BUFFER_SIZE];
+  uint32_t buffer[JAVELIN_SPLIT_TX_RX_BUFFER_SIZE];
 };
 
 class SplitTxHandler {
@@ -95,8 +95,6 @@ private:
     };
 
     SplitTxRxData();
-
-    static const size_t BUFFER_SIZE = 2048;
 
     State state;
     uint32_t programOffset;
