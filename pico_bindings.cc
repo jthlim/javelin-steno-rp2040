@@ -51,6 +51,7 @@
 #include "split_hid_report_buffer.h"
 #include "split_serial_buffer.h"
 #include "split_tx_rx.h"
+#include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
@@ -313,7 +314,6 @@ static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
 static List<StenoDictionaryListEntry> dictionaries;
 #endif
 
-extern int resumeCount;
 extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
 
@@ -332,13 +332,16 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   uint32_t hours = totalHoursDivider.remainder;
   uint32_t days = totalHoursDivider.quotient;
 
-  Console::Printf("Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
+  Console::Printf("System\n");
+  uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
+  uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
+  Console::Printf("  Clock: %u MHz\n", systemMhz);
+  Console::Printf("  Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
-  Console::Printf("Resume count: %d\n", resumeCount);
-  Console::Printf("Chip version: %u\n", rp2040_chip_version());
-  Console::Printf("ROM version: %u\n", rp2040_rom_version());
+  Console::Printf("  Chip version: %u\n", rp2040_chip_version());
+  Console::Printf("  ROM version: %u\n", rp2040_rom_version());
 
-  Console::Printf("Serial number: ");
+  Console::Printf("  Serial number: ");
   uint8_t serialId[8];
 
   uint32_t interrupts = save_and_disable_interrupts();
@@ -349,16 +352,13 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     Console::Printf("%02x", serialId[i]);
   }
   Console::Printf("\n");
+
+  Console::Printf("  ");
   HidKeyboardReportBuilder::instance.PrintInfo();
 
-  uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
-  uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
-  uint32_t usbClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_USB);
-  uint32_t usbMhz = divider->Divide(usbClockKhz, 1000).quotient;
-
-  Console::Printf("Clocks\n");
-  Console::Printf("  System: %u MHz\n", systemMhz);
-  Console::Printf("  USB: %u MHz\n", usbMhz);
+  Console::Printf("USB\n");
+  Console::Printf("  Mount count: %zu\n", UsbStatus::GetMountCount());
+  Console::Printf("  Suspend count: %zu\n", UsbStatus::GetSuspendCount());
 
   Console::Printf("Memory\n");
   Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
@@ -372,7 +372,12 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
   SplitTxRx::PrintInfo();
-  Ssd1306::PrintInfo();
+
+  // The slave will always just print "Screen: present, present" here here
+  // Rather than print incorrect info, don't print anything on the slave at all.
+  if (SplitTxRx::IsMaster()) {
+    Ssd1306::PrintInfo();
+  }
 #if JAVELIN_USE_EMBEDDED_STENO
   Console::Printf("Processing chain\n");
   processors->PrintInfo();

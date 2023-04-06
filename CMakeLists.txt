@@ -62,6 +62,7 @@ target_sources(${NAME} PUBLIC
   split_led_status.cc
   split_serial_buffer.cc
   split_tx_rx.cc
+  split_usb_status.cc
   ssd1306.cc
   ssd1306_paper_tape.cc
   ssd1306_steno_layout.cc
@@ -128,6 +129,7 @@ target_sources(${NAME} PUBLIC
   javelin/stroke_history.cc
   javelin/stroke_list_parser.cc
   javelin/unicode.cc
+  javelin/usb_status.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc

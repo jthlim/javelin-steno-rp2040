@@ -17,6 +17,7 @@
 #include "split_led_status.h"
 #include "split_serial_buffer.h"
 #include "split_tx_rx.h"
+#include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
 #include "ws2812.h"
@@ -34,9 +35,6 @@ void InitMulticore();
 
 //---------------------------------------------------------------------------
 
-const uint64_t DEBOUNCE_TIME_US = 5000;
-int resumeCount = 0;
-
 #if JAVELIN_USE_WATCHDOG
 extern uint32_t watchdogData[8];
 #endif
@@ -50,22 +48,24 @@ extern "C" void tud_mount_cb(void) {
   ConsoleBuffer::instance.Reset();
   PloverHidReportBuffer::instance.Reset();
   HidKeyboardReportBuilder::instance.Reset();
+  SplitUsbStatus::instance.OnMount();
 }
 
 // Invoked when device is unmounted
-extern "C" void tud_umount_cb(void) {}
+extern "C" void tud_umount_cb(void) { SplitUsbStatus::instance.OnUnmount(); }
 
 // Invoked when usb bus is suspended
 // remoteWakeupEnabled: if host allow us  to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
 extern "C" void tud_suspend_cb(bool remoteWakeupEnabled) {
   // set_sys_clock_khz(25000, true);
+  SplitUsbStatus::instance.OnSuspend();
 }
 
 // Invoked when usb bus is resumed
 extern "C" void tud_resume_cb(void) {
   // set_sys_clock_khz(125000, true);
-  ++resumeCount;
+  SplitUsbStatus::instance.OnResume();
 }
 
 //---------------------------------------------------------------------------
@@ -313,6 +313,7 @@ int main(void) {
     Bootrom::RegisterTxHandler();
     SplitSerialBuffer::RegisterTxHandler();
     Ssd1306::RegisterMasterHandlers();
+    SplitUsbStatus::RegisterRxHandler();
 
     InitJavelinMaster();
     tusb_init();
@@ -329,6 +330,7 @@ int main(void) {
     Bootrom::RegisterRxHandler();
     SplitSerialBuffer::RegisterRxHandler();
     Ssd1306::RegisterSlaveHandlers();
+    SplitUsbStatus::RegisterTxHandler();
 
     InitJavelinSlave();
     tusb_init();

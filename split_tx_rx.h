@@ -20,6 +20,7 @@ enum SplitHandlerId {
   OLED_DATA,
   OLED_AVAILABLE,
   OLED_CONTROL,
+  USB_STATUS,
 
   COUNT,
 };
