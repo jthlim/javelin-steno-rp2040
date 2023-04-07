@@ -475,14 +475,16 @@ struct DynamicParameterData {
 };
 
 static const ParameterData PARAMETER_DATA[] = {
+  {"button_count", (void *)BUTTON_COUNT},
+  {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
+  {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
 #if JAVELIN_USE_EMBEDDED_STENO
   {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
+#endif
+  {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
+#if JAVELIN_USE_EMBEDDED_STENO
   {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
 #endif
-  {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
-  {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
-  {"button_count", (void *)BUTTON_COUNT},
-  {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
@@ -534,10 +536,12 @@ static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
   {"keyboard_layout", GetKeyboardLayout},
   {"keyboard_protocol", GetKeyboardProtocol},
   {"space_position", GetSpacePosition},
+#endif
+  {"steno_mode", GetStenoMode},
+#if JAVELIN_USE_EMBEDDED_STENO
   {"stroke_count", GetStrokeCount},
   {"unicode_mode", GetUnicodeMode},
 #endif
-  {"steno_mode", GetStenoMode},
 };
 
 void GetParameterBinding(void *context, const char *commandLine) {
