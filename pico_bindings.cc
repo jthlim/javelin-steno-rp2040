@@ -565,6 +565,20 @@ void GetParameterBinding(void *context, const char *commandLine) {
   Console::Printf("ERR Unknown parameter %s\n\n", parameterName);
 }
 
+void ListParametersBinding(void *context, const char *commandLine) {
+  Console::Printf("Static parameters\n");
+  for (const ParameterData &data : PARAMETER_DATA) {
+    Console::Printf("  • %s\n", data.name);
+  }
+
+  Console::Printf(" \nDynamic parameters\n");
+  for (const DynamicParameterData &data : DYNAMIC_PARAMETER_DATA) {
+    Console::Printf("  • %s\n", data.name);
+  }
+
+  Console::Printf("\n");
+}
+
 #if JAVELIN_USE_EMBEDDED_STENO
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
@@ -595,6 +609,9 @@ void InitJavelinSlave() {
   Console &console = Console::instance;
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
+  console.RegisterCommand("list_parameters",
+                          "Lists all available parameter names",
+                          ListParametersBinding, nullptr);
   console.RegisterCommand("get_parameter",
                           "Gets the value of the specified parameter",
                           GetParameterBinding, nullptr);
@@ -715,6 +732,9 @@ void InitJavelinMaster() {
   console.RegisterCommand("get_parameter",
                           "Gets the value of the specified parameter",
                           GetParameterBinding, nullptr);
+  console.RegisterCommand("list_parameters",
+                          "Lists all available parameter names",
+                          ListParametersBinding, nullptr);
   console.RegisterCommand("begin_write",
                           "Begin a flash write to the specified address",
                           &Flash::BeginWriteBinding, nullptr);
