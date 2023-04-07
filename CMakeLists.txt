@@ -117,6 +117,7 @@ target_sources(${NAME} PUBLIC
   javelin/processor/repeat.cc
   javelin/rgb.cc
   javelin/script.cc
+  javelin/script_byte_code.cc
   javelin/segment.cc
   javelin/state.cc
   javelin/steno_key_code.cc

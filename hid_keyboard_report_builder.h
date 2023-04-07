@@ -22,6 +22,7 @@ public:
     return reportBuffer.GetAvailableBufferCount();
   }
 
+  bool IsCompatibilityMode() const { return compatibilityMode; }
   void SetCompatibilityMode(bool mode) { compatibilityMode = mode; }
 
   void PrintInfo() const;

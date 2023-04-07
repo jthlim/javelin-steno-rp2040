@@ -486,15 +486,58 @@ static const ParameterData PARAMETER_DATA[] = {
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
+
+static void GetKeyboardLayout() {
+  Console::Printf("%s\n\n", KeyboardLayout::GetActiveLayout().GetName());
+}
+
+static void GetKeyboardProtocol() {
+  Console::Printf("%s\n\n",
+                  HidKeyboardReportBuilder::instance.IsCompatibilityMode()
+                      ? "compatibility"
+                      : "default");
+}
+
+static void GetSpacePosition() {
+  Console::Printf("%s\n\n",
+                  engineContainer->IsSpaceAfter() ? "after" : "before");
+}
+
 static void GetStrokeCount() {
   Console::Printf("%zu\n\n", engineContainer->GetStrokeCount());
 }
+
+static void GetUnicodeMode() {
+  Console::Printf("%s\n\n", StenoKeyCodeEmitter::GetUnicodeModeName());
+}
+
 #endif
+
+static void GetStenoMode() {
+  const StenoProcessorElement *processor = passthroughContainer->GetNext();
+#if JAVELIN_USE_EMBEDDED_STENO
+  if (processor == &engineContainer.value) {
+    Console::Printf("embedded\n\n");
+  } else
+#endif
+      if (processor == &gemini) {
+    Console::Printf("gemini\n\n");
+  } else if (processor == &ploverHid) {
+    Console::Printf("plover_hid\n\n");
+  } else {
+    Console::Printf("ERR Internal consistency error\n\n");
+  }
+}
 
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
+  {"keyboard_layout", GetKeyboardLayout},
+  {"keyboard_protocol", GetKeyboardProtocol},
+  {"space_position", GetSpacePosition},
   {"stroke_count", GetStrokeCount},
+  {"unicode_mode", GetUnicodeMode},
 #endif
+  {"steno_mode", GetStenoMode},
 };
 
 void GetParameterBinding(void *context, const char *commandLine) {
@@ -800,9 +843,7 @@ void InitJavelinMaster() {
     processorElement =
         new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
   }
-#endif
 
-#if JAVELIN_USE_EMBEDDED_STENO
   if (config->useFirstUp) {
     processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
   } else {
