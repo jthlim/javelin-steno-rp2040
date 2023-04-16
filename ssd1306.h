@@ -1,9 +1,9 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/hal/split.h"
 #include "javelin/stroke.h"
 #include "javelin/text_alignment.h"
-#include "split_tx_rx.h"
 
 //---------------------------------------------------------------------------
 
@@ -35,16 +35,16 @@ public:
 
 #if JAVELIN_SPLIT
   static void RegisterMasterHandlers() {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_AVAILABLE,
-                                 &instances[1].available);
-    SplitTxRx::RegisterTxHandler(&instances[1]);
-    SplitTxRx::RegisterTxHandler(&instances[1].control);
+    Split::RegisterRxHandler(SplitHandlerId::OLED_AVAILABLE,
+                             &instances[1].available);
+    Split::RegisterTxHandler(&instances[1]);
+    Split::RegisterTxHandler(&instances[1].control);
   }
   static void RegisterSlaveHandlers() {
-    SplitTxRx::RegisterTxHandler(&instances[1].available);
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_DATA, &instances[1]);
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::OLED_CONTROL,
-                                 &instances[1].control);
+    Split::RegisterTxHandler(&instances[1].available);
+    Split::RegisterRxHandler(SplitHandlerId::OLED_DATA, &instances[1]);
+    Split::RegisterRxHandler(SplitHandlerId::OLED_CONTROL,
+                             &instances[1].control);
   }
 #else
   static void RegisterMasterHandlers() {}
@@ -154,7 +154,7 @@ private:
 
 #if JAVELIN_SPLIT
   static Ssd1306Data &GetInstance() {
-    if (SplitTxRx::IsMaster()) {
+    if (Split::IsMaster()) {
       return instances[0];
     } else {
       return instances[1];

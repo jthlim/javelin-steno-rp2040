@@ -5,6 +5,7 @@
 #include "hid_keyboard_report_builder.h"
 #include "javelin/console.h"
 #include "plover_hid_report_buffer.h"
+#include "rp2040_split.h"
 #include "usb_descriptors.h"
 #include <hardware/watchdog.h>
 #include <pico/time.h>
@@ -68,7 +69,7 @@ void SplitHidReportBuffer::SplitHidReportBufferData::Add(uint8_t interface,
                                                          const uint8_t *data,
                                                          size_t length) {
   while (bufferSize.bufferSize.available[interface] == 0) {
-    SplitTxRx::Update();
+    Rp2040Split::Update();
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
 #endif

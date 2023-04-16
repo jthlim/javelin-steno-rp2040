@@ -2,21 +2,21 @@
 
 #include JAVELIN_BOARD_CONFIG
 
-#include "bootrom.h"
 #include "console_buffer.h"
 #include "console_input_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
+#include "javelin/hal/bootrom.h"
 #include "javelin/key.h"
+#include "javelin/keyboard_led_status.h"
 #include "javelin/static_allocate.h"
 #include "key_state.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_crc.h"
+#include "rp2040_split.h"
 #include "split_hid_report_buffer.h"
-#include "split_led_status.h"
 #include "split_serial_buffer.h"
-#include "split_tx_rx.h"
 #include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
@@ -206,8 +206,7 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
     if (reportType != HID_REPORT_TYPE_OUTPUT || bufferSize < 1) {
       return;
     }
-    Key::SetKeyboardLedStatus(*(KeyboardLedStatus *)buffer);
-    SplitLedStatus::Set(buffer[0]);
+    KeyboardLedStatus::Set(*(KeyboardLedStatusValue *)buffer);
     break;
 
   case ITF_NUM_CONSOLE:
@@ -243,7 +242,7 @@ void DoMasterRunLoop() {
   while (1) {
     tud_task(); // tinyusb device task
     hidTaskContainer->Update();
-    SplitTxRx::Update();
+    Rp2040Split::Update();
     cdc_task();
 
     ProcessStenoTick();
@@ -266,7 +265,7 @@ void DoSlaveRunLoop() {
   while (1) {
     tud_task(); // tinyusb device task
     slaveHidTaskContainer->Update();
-    SplitTxRx::Update();
+    Rp2040Split::Update();
     cdc_task();
 
     SplitHidReportBuffer::Update();
@@ -296,18 +295,18 @@ int main(void) {
   KeyState::Initialize();
   Rp2040Crc::Initialize();
   Ws2812::Initialize();
-  SplitTxRx::Initialize();
+  Rp2040Split::Initialize();
   Ssd1306::Initialize();
 
   // Trigger button init script.
   new (hidTaskContainer) HidTask;
   Ws2812::Update();
 
-  if (SplitTxRx::IsMaster()) {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::KEY_STATE,
-                                 &hidTaskContainer.value);
+  if (Split::IsMaster()) {
+    Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
+                             &hidTaskContainer.value);
     ConsoleInputBuffer::RegisterRxHandler();
-    SplitLedStatus::RegisterRxHandler();
+    KeyboardLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
     Bootrom::RegisterTxHandler();
@@ -322,9 +321,9 @@ int main(void) {
   } else {
     new (slaveHidTaskContainer) SlaveHidTask;
 
-    SplitTxRx::RegisterTxHandler(&slaveHidTaskContainer.value);
+    Split::RegisterTxHandler(&slaveHidTaskContainer.value);
     ConsoleInputBuffer::RegisterTxHandler();
-    SplitLedStatus::RegisterTxHandler();
+    KeyboardLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();
     Bootrom::RegisterRxHandler();

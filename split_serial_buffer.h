@@ -1,10 +1,8 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/hal/split.h"
 #include "javelin/queue.h"
-#include "split_tx_rx.h"
-#include <stdint.h>
-#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
@@ -16,10 +14,10 @@ public:
     instance.Add(data, length);
   }
 
-  static void RegisterTxHandler() { SplitTxRx::RegisterTxHandler(&instance); }
+  static void RegisterTxHandler() { Split::RegisterTxHandler(&instance); }
 
   static void RegisterRxHandler() {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::SERIAL, &instance);
+    Split::RegisterRxHandler(SplitHandlerId::SERIAL, &instance);
   }
 
 private:

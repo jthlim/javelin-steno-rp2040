@@ -1,4 +1,4 @@
-.program split_tx_rx
+.program rp2040split
 .side_set 1 opt
 
 public tx_start:

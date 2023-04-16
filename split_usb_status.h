@@ -1,10 +1,8 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/hal/split.h"
 #include "javelin/usb_status.h"
-#include "split_tx_rx.h"
-#include <stdint.h>
-#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
@@ -17,10 +15,10 @@ public:
   void OnSuspend();
   void OnResume();
 
-  static void RegisterTxHandler() { SplitTxRx::RegisterTxHandler(&instance); }
+  static void RegisterTxHandler() { Split::RegisterTxHandler(&instance); }
 
   static void RegisterRxHandler() {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::USB_STATUS, &instance);
+    Split::RegisterRxHandler(SplitHandlerId::USB_STATUS, &instance);
   }
 
   static SplitUsbStatus instance;

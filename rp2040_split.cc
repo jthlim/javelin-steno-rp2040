@@ -1,13 +1,13 @@
 //---------------------------------------------------------------------------
 
-#include "split_tx_rx.h"
+#include "rp2040_split.h"
 #include "javelin/console.h"
 #include "javelin/crc.h"
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
 #include "rp2040_spinlock.h"
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-#include "split_tx_rx.pio.h"
+#include "rp2040_split.pio.h"
 #endif
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
@@ -15,34 +15,21 @@
 
 //---------------------------------------------------------------------------
 
-size_t txPacketTypeCounts[SplitHandlerId::COUNT];
-
-//---------------------------------------------------------------------------
-
-bool TxBuffer::Add(SplitHandlerId id, const void *data, size_t length) {
-  uint32_t wordLength = (length + 3) >> 2;
-  if (header.wordCount + 1 + wordLength > JAVELIN_SPLIT_TX_RX_BUFFER_SIZE) {
-    return false;
-  }
-
-  txPacketTypeCounts[id]++;
-
-  uint32_t blockHeader = (id << 16) | length;
-  buffer[header.wordCount++] = blockHeader;
-
-  memcpy(&buffer[header.wordCount], data, length);
-  header.wordCount += wordLength;
-
-  return true;
-}
-
-//---------------------------------------------------------------------------
-
 #if JAVELIN_SPLIT
 
 //---------------------------------------------------------------------------
 
-SplitTxRx::SplitTxRxData SplitTxRx::instance;
+Rp2040Split::SplitData Rp2040Split::instance;
+
+//---------------------------------------------------------------------------
+
+bool Split::IsLeft() {
+#if defined(JAVELIN_SPLIT_SIDE_PIN)
+  return gpio_get(JAVELIN_SPLIT_SIDE_PIN);
+#else
+  return JAVELIN_SPLIT_IS_LEFT;
+#endif
+}
 
 //---------------------------------------------------------------------------
 
@@ -58,7 +45,7 @@ const int RX_STATE_MACHINE_INDEX = 0;
 const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
 const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 50000;
 
-void SplitTxRx::SplitTxRxData::StartTx() {
+void Rp2040Split::SplitData::StartTx() {
   const PIO pio = PIO_INSTANCE;
   const int sm = TX_STATE_MACHINE_INDEX;
   const int pin = JAVELIN_SPLIT_TX_PIN;
@@ -68,27 +55,19 @@ void SplitTxRx::SplitTxRxData::StartTx() {
   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
   pio_gpio_init(pio, pin);
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_tx_start, &config);
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &config);
 #else
-  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_tx_start, &txConfig);
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &txConfig);
 #endif
 
   pio_sm_set_enabled(pio, sm, true);
 }
 
-SplitTxRx::SplitTxRxData::SplitTxRxData() {
+Rp2040Split::SplitData::SplitData() {
   state = IsMaster() ? State::READY_TO_SEND : State::RECEIVING;
 }
 
-bool SplitTxRx::IsLeft() {
-#if defined(JAVELIN_SPLIT_SIDE_PIN)
-  return gpio_get(JAVELIN_SPLIT_SIDE_PIN);
-#else
-  return JAVELIN_SPLIT_IS_LEFT;
-#endif
-}
-
-void SplitTxRx::SplitTxRxData::StartRx() {
+void Rp2040Split::SplitData::StartRx() {
   const PIO pio = PIO_INSTANCE;
   const int sm = RX_STATE_MACHINE_INDEX;
   const int pin = JAVELIN_SPLIT_RX_PIN;
@@ -97,9 +76,9 @@ void SplitTxRx::SplitTxRxData::StartRx() {
   pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_rx_start, &config);
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &config);
 #else
-  pio_sm_init(pio, sm, programOffset + split_tx_rx_offset_rx_start, &rxConfig);
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &rxConfig);
 #endif
 
   ResetRxDma();
@@ -109,7 +88,7 @@ void SplitTxRx::SplitTxRxData::StartRx() {
   pio_sm_set_enabled(pio, sm, true);
 }
 
-void SplitTxRx::SplitTxRxData::ResetRxDma() {
+void Rp2040Split::SplitData::ResetRxDma() {
   dma3->Abort();
   dma3->source = &PIO_INSTANCE->rxf[RX_STATE_MACHINE_INDEX];
   dma3->destination = &rxBuffer.header;
@@ -128,11 +107,11 @@ void SplitTxRx::SplitTxRxData::ResetRxDma() {
   dma3->controlTrigger = receiveControl;
 }
 
-void SplitTxRx::SplitTxRxData::Initialize() {
-  programOffset = pio_add_program(PIO_INSTANCE, &split_tx_rx_program);
+void Rp2040Split::SplitData::Initialize() {
+  programOffset = pio_add_program(PIO_INSTANCE, &rp2040split_program);
 
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-  config = split_tx_rx_program_get_default_config(programOffset);
+  config = rp2040split_program_get_default_config(programOffset);
   sm_config_set_in_pins(&config, JAVELIN_SPLIT_RX_PIN);
   sm_config_set_jmp_pin(&config, JAVELIN_SPLIT_RX_PIN);
   sm_config_set_out_pins(&config, JAVELIN_SPLIT_TX_PIN, 1);
@@ -142,13 +121,13 @@ void SplitTxRx::SplitTxRxData::Initialize() {
   sm_config_set_out_shift(&config, true, true, 32);
   sm_config_set_clkdiv_int_frac(&config, 1, 0);
 #else
-  rxConfig = split_tx_rx_program_get_default_config(programOffset);
+  rxConfig = rp2040split_program_get_default_config(programOffset);
   sm_config_set_in_pins(&rxConfig, JAVELIN_SPLIT_RX_PIN);
   sm_config_set_jmp_pin(&rxConfig, JAVELIN_SPLIT_RX_PIN);
   sm_config_set_in_shift(&rxConfig, true, true, 32);
   sm_config_set_clkdiv(&rxConfig, 1.0);
 
-  txConfig = split_tx_rx_program_get_default_config(programOffset);
+  txConfig = rp2040split_program_get_default_config(programOffset);
   sm_config_set_sideset_pins(&txConfig, JAVELIN_SPLIT_TX_PIN);
   sm_config_set_out_shift(&txConfig, true, true, 32);
   sm_config_set_fifo_join(&txConfig, PIO_FIFO_JOIN_TX);
@@ -169,7 +148,7 @@ void SplitTxRx::SplitTxRxData::Initialize() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::SendTxBuffer() {
+void Rp2040Split::SplitData::SendTxBuffer() {
   // Since Rx immediately follows Tx, set Rx dma before sending anything.
   ResetRxDma();
 
@@ -198,7 +177,7 @@ void SplitTxRx::SplitTxRxData::SendTxBuffer() {
   dma2->controlTrigger = sendControl;
 }
 
-void SplitTxRx::SplitTxRxData::ProcessReceiveBuffer() {
+void Rp2040Split::SplitData::ProcessReceiveBuffer() {
   size_t offset = 0;
   while (offset < rxBuffer.header.wordCount) {
     uint32_t blockHeader = rxBuffer.buffer[offset++];
@@ -217,7 +196,7 @@ void SplitTxRx::SplitTxRxData::ProcessReceiveBuffer() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
+void Rp2040Split::SplitData::OnReceiveFailed() {
   if (IsMaster()) {
     state = State::READY_TO_SEND;
   } else {
@@ -225,7 +204,7 @@ void SplitTxRx::SplitTxRxData::OnReceiveFailed() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
+void Rp2040Split::SplitData::OnReceiveTimeout() {
   for (size_t i = 0; i < txHandlerCount; ++i) {
     txHandlers[i]->OnTransmitConnectionReset();
   }
@@ -240,7 +219,7 @@ void SplitTxRx::SplitTxRxData::OnReceiveTimeout() {
   OnReceiveFailed();
 }
 
-void SplitTxRx::SplitTxRxData::OnReceiveSucceeded() {
+void Rp2040Split::SplitData::OnReceiveSucceeded() {
   // Receiving succeeded without timeout means the previous transmit was
   // successful.
   for (size_t i = 0; i < txHandlerCount; ++i) {
@@ -251,7 +230,7 @@ void SplitTxRx::SplitTxRxData::OnReceiveSucceeded() {
   SendData();
 }
 
-bool SplitTxRx::SplitTxRxData::ProcessReceive() {
+bool Rp2040Split::SplitData::ProcessReceive() {
   size_t dma3Count = dma3->count;
   if (dma3Count > JAVELIN_SPLIT_TX_RX_BUFFER_SIZE) {
     // Header has not been received.
@@ -296,7 +275,7 @@ bool SplitTxRx::SplitTxRxData::ProcessReceive() {
   return true;
 }
 
-void SplitTxRx::SplitTxRxData::SendData() {
+void Rp2040Split::SplitData::SendData() {
   dma2->WaitUntilComplete();
   StartTx();
   state = State::SENDING;
@@ -307,7 +286,7 @@ void SplitTxRx::SplitTxRxData::SendData() {
   SendTxBuffer();
 }
 
-void SplitTxRx::SplitTxRxData::Update() {
+void Rp2040Split::SplitData::Update() {
   switch (state) {
   case State::READY_TO_SEND:
     SendData();
@@ -332,14 +311,14 @@ void SplitTxRx::SplitTxRxData::Update() {
   }
 }
 
-void SplitTxRx::SplitTxRxData::PrintInfo() {
+void Rp2040Split::SplitData::PrintInfo() {
   Console::Printf("Split data\n");
   Console::Printf("  Transmitted bytes/packets: %llu/%llu\n", 4 * txWords,
                   txIrqCount);
   Console::Printf("  Received bytes/packets: %llu/%llu\n", 4 * rxWords,
                   rxPacketCount);
   Console::Printf("  Transmit types:");
-  for (size_t count : txPacketTypeCounts) {
+  for (size_t count : TxBuffer::txPacketTypeCounts) {
     Console::Printf(" %zu", count);
   }
   Console::Printf("\n");
@@ -350,7 +329,7 @@ void SplitTxRx::SplitTxRxData::PrintInfo() {
   Console::Printf("\n");
 }
 
-void __no_inline_not_in_flash_func(SplitTxRx::SplitTxRxData::TxIrqHandler)() {
+void __no_inline_not_in_flash_func(Rp2040Split::SplitData::TxIrqHandler)() {
   pio_interrupt_clear(PIO_INSTANCE, 0);
   instance.txIrqCount++;
   instance.state = State::RECEIVING;

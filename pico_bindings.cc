@@ -1,6 +1,5 @@
 //---------------------------------------------------------------------------
 
-#include "bootrom.h"
 #include "console_buffer.h"
 #include "font.h"
 #include "hid_keyboard_report_builder.h"
@@ -27,7 +26,7 @@
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/display.h"
 #include "javelin/engine.h"
-#include "javelin/gpio.h"
+#include "javelin/hal/bootrom.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
 #include "javelin/processor/all_up.h"
@@ -48,9 +47,9 @@
 #include "javelin/wpm_tracker.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
+#include "rp2040_split.h"
 #include "split_hid_report_buffer.h"
 #include "split_serial_buffer.h"
-#include "split_tx_rx.h"
 #include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
@@ -59,7 +58,6 @@
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
 #include <hardware/timer.h>
-#include <hardware/watchdog.h>
 #include <malloc.h>
 #include <tusb.h>
 
@@ -371,11 +369,11 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
-  SplitTxRx::PrintInfo();
+  Rp2040Split::PrintInfo();
 
   // The slave will always just print "Screen: present, present" here here
   // Rather than print incorrect info, don't print anything on the slave at all.
-  if (SplitTxRx::IsMaster()) {
+  if (Rp2040Split::IsMaster()) {
     Ssd1306::PrintInfo();
   }
 #if JAVELIN_USE_EMBEDDED_STENO
@@ -955,24 +953,16 @@ void SerialPort::SendData(const uint8_t *data, size_t length) {
     tud_cdc_write_flush();
   } else {
 #if JAVELIN_SPLIT
-    if (SplitTxRx::IsMaster()) {
+    if (Split::IsMaster()) {
       SplitSerialBuffer::Add(data, length);
     }
 #endif
   }
 }
 
-uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }
-
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
   PloverHidReportBuffer::instance.SendReport(
       ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
-}
-
-void Gpio::SetPin(int pin, bool value) {
-  gpio_init(pin);
-  gpio_set_dir(pin, true);
-  gpio_put(pin, value);
 }
 
 //---------------------------------------------------------------------------

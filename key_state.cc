@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "key_state.h"
-#include "split_tx_rx.h"
+#include "javelin/hal/split.h"
 #include <hardware/gpio.h>
 #include <hardware/structs/ioqspi.h>
 #include <hardware/structs/sio.h>
@@ -58,7 +58,7 @@ const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 void KeyState::Initialize() {
 #if JAVELIN_SPLIT
 #if !defined(JAVELIN_SPLIT_IS_LEFT)
-  if (!SplitTxRx::IsLeft()) {
+  if (!Split::IsLeft()) {
     COLUMN_PINS = RIGHT_COLUMN_PINS;
     COLUMN_PIN_MASK = RIGHT_COLUMN_PIN_MASK;
     ROW_PINS = RIGHT_ROW_PINS;

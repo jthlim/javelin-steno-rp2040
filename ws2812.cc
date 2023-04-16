@@ -86,9 +86,8 @@ void Ws2812::Ws28128Data::Update() {
   lastUpdate = now;
 
 #if JAVELIN_SPLIT
-  dma1->sourceTrigger = SplitTxRx::IsMaster()
-                            ? pixelValues
-                            : pixelValues + JAVELIN_RGB_MASTER_COUNT;
+  dma1->sourceTrigger =
+      Split::IsMaster() ? pixelValues : pixelValues + JAVELIN_RGB_MASTER_COUNT;
 #else
   dma1->sourceTrigger = &pixelValues;
 #endif

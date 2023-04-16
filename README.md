@@ -20,7 +20,7 @@
 ```
 > mkdir build
 > cd build
-> cmake .. -D BOARD=uni_v4
+> cmake .. -D JAVELIN_BOARD=uni_v4
 > make
 ```
 

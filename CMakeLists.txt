@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.12)
 
 set(NAME javelin-steno-rp2040)
-set(BOARD "" CACHE STRING "Target board, e.g. \"uni_v4\"")
+set(JAVELIN_BOARD "" CACHE STRING "Target board, e.g. \"uni_v4\"")
 
-if ("${BOARD}" STREQUAL "")
-  message(FATAL_ERROR, "Target board must be specified")
+if ("${JAVELIN_BOARD}" STREQUAL "")
+  message(FATAL_ERROR, "Target board (e.g. 'uni_v4') must be specified")
 endif()
 
 add_definitions(
   -DJAVELIN_ASSEMBLER_THUMB2=1
-  -DJAVELIN_BOARD_CONFIG=\"config/${BOARD}.h\"
+  -DJAVELIN_BOARD_CONFIG=\"config/${JAVELIN_BOARD}.h\"
   -DJAVELIN_PLATFORM_PICO_SDK=1
   -DJAVELIN_THREADS=1
   -DJAVELIN_USE_CUSTOM_POP_COUNT=1
@@ -35,15 +35,13 @@ pico_sdk_init()
 
 add_executable(${NAME})
 
-pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/split_tx_rx.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split.pio)
 pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
-  bootrom.cc
   console_buffer.cc
   console_input_buffer.cc
-  flash.cc
   font.cc
   font/default.cc
   font/large_digits.cc
@@ -56,12 +54,15 @@ target_sources(${NAME} PUBLIC
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
+  rp2040_bootrom.cc
+  rp2040_clock.cc
   rp2040_crc.cc
+  rp2040_flash.cc
+  rp2040_gpio.cc
   rp2040_random.cc
+  rp2040_split.cc
   split_hid_report_buffer.cc
-  split_led_status.cc
   split_serial_buffer.cc
-  split_tx_rx.cc
   split_usb_status.cc
   ssd1306.cc
   ssd1306_paper_tape.cc
@@ -97,9 +98,12 @@ target_sources(${NAME} PUBLIC
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc
+  javelin/hal/bootrom.cc
+  javelin/hal/split.cc
   javelin/key.cc
   javelin/key_code.cc
   javelin/keyboard_layout.cc
+  javelin/keyboard_led_status.cc
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc

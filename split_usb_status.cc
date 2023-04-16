@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "split_usb_status.h"
-#include "split_tx_rx.h"
+#include <assert.h>
 #include <string.h>
 
 //---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ void SplitUsbStatus::OnDataReceived(const void *data, size_t length) {
 
 void SplitUsbStatus::UpdateUsbStatusInstance() {
   dirty = true;
-  if (SplitTxRx::IsMaster()) {
+  if (Split::IsMaster()) {
     UsbStatus::instance = status;
   }
 }

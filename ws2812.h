@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include "split_tx_rx.h"
+#include "javelin/hal/split.h"
 #include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------
@@ -22,10 +22,10 @@ public:
     instance.SetRgb(pixelId, ws2812Color);
   }
 
-  static void RegisterTxHandler() { SplitTxRx::RegisterTxHandler(&instance); }
+  static void RegisterTxHandler() { Split::RegisterTxHandler(&instance); }
 
   static void RegisterRxHandler() {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::RGB, &instance);
+    Split::RegisterRxHandler(SplitHandlerId::RGB, &instance);
   }
 
 private:

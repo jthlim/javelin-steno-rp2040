@@ -1,10 +1,8 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/hal/split.h"
 #include "javelin/queue.h"
-#include "split_tx_rx.h"
-#include <stdint.h>
-#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
@@ -20,14 +18,14 @@ public:
   static void Update() { instance.Update(); }
 
   static void RegisterMasterHandlers() {
-    SplitTxRx::RegisterTxHandler(&instance);
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::HID_BUFFER_SIZE,
-                                 &instance.bufferSize);
+    Split::RegisterTxHandler(&instance);
+    Split::RegisterRxHandler(SplitHandlerId::HID_BUFFER_SIZE,
+                             &instance.bufferSize);
   }
 
   static void RegisterSlaveHandlers() {
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::HID_REPORT, &instance);
-    SplitTxRx::RegisterTxHandler(&instance.bufferSize);
+    Split::RegisterRxHandler(SplitHandlerId::HID_REPORT, &instance);
+    Split::RegisterTxHandler(&instance.bufferSize);
   }
 
 private:

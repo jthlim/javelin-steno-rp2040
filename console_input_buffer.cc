@@ -32,7 +32,7 @@ void ConsoleInputBuffer::ConsoleInputBufferData::Add(const uint8_t *data,
 
 void ConsoleInputBuffer::ConsoleInputBufferData::Process() {
 #if JAVELIN_SPLIT
-  if (SplitTxRx::IsSlave() && isConnected) {
+  if (Split::IsSlave() && isConnected) {
     // This will be dealt with using UpdateBuffer() instead.
     return;
   }

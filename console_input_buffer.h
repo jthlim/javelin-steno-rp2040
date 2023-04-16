@@ -1,10 +1,8 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/hal/split.h"
 #include "javelin/queue.h"
-#include "split_tx_rx.h"
-#include <stdint.h>
-#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
@@ -18,13 +16,13 @@ public:
 
   static void RegisterTxHandler() {
 #if JAVELIN_SPLIT
-    SplitTxRx::RegisterTxHandler(&instance);
+    Split::RegisterTxHandler(&instance);
 #endif
   }
 
   static void RegisterRxHandler() {
 #if JAVELIN_SPLIT
-    SplitTxRx::RegisterRxHandler(SplitHandlerId::CONSOLE, &instance);
+    Split::RegisterRxHandler(SplitHandlerId::CONSOLE, &instance);
 #endif
   }
 
