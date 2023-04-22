@@ -23,13 +23,14 @@ Rp2040Split::SplitData Rp2040Split::instance;
 
 //---------------------------------------------------------------------------
 
+#if !defined(JAVELIN_SPLIT_IS_LEFT)
 bool Split::IsLeft() {
 #if defined(JAVELIN_SPLIT_SIDE_PIN)
   return gpio_get(JAVELIN_SPLIT_SIDE_PIN);
-#else
-  return JAVELIN_SPLIT_IS_LEFT;
 #endif
+  return false;
 }
+#endif
 
 //---------------------------------------------------------------------------
 

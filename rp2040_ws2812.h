@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 
-#if defined(JAVELIN_RGB_COUNT) && defined(JAVELIN_RGB_PIN)
+#if JAVELIN_RGB
 
 class Ws2812 {
 public:
@@ -30,9 +30,9 @@ public:
 
 private:
 #if JAVELIN_SPLIT
-  struct Ws28128Data final : public SplitTxHandler, SplitRxHandler {
+  struct Ws2812Data final : public SplitTxHandler, SplitRxHandler {
 #else
-  struct Ws28128Data {
+  struct Ws2812Data {
 #endif
     bool dirty;
 #if JAVELIN_SPLIT
@@ -54,10 +54,19 @@ private:
         return;
       }
 #if JAVELIN_SPLIT
-      if (pixelId < JAVELIN_RGB_MASTER_COUNT) {
-        dirty = true;
+      if (Split::IsLeft()) {
+        if (pixelId < JAVELIN_RGB_LEFT_COUNT) {
+          dirty = true;
+        } else {
+          slaveDirty = true;
+        }
+
       } else {
-        slaveDirty = true;
+        if (pixelId < JAVELIN_RGB_LEFT_COUNT) {
+          slaveDirty = true;
+        } else {
+          dirty = true;
+        }
       }
 #else
       dirty = true;
@@ -72,7 +81,7 @@ private:
 #endif
   };
 
-  static Ws28128Data instance;
+  static Ws2812Data instance;
 };
 
 #else

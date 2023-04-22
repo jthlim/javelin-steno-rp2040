@@ -1,8 +1,8 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
+#define JAVELIN_RGB 1
 #define JAVELIN_RGB_COUNT 32
 #define JAVELIN_RGB_PIN 4
 

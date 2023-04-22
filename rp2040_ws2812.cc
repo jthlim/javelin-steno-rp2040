@@ -1,25 +1,29 @@
 //---------------------------------------------------------------------------
 
-#include "ws2812.h"
+#include "rp2040_ws2812.h"
 #include "javelin/rgb.h"
 #include "rp2040_dma.h"
-#include "ws2812.pio.h"
+#include "rp2040_ws2812.pio.h"
 #include <hardware/clocks.h>
 #include <hardware/pio.h>
 #include <hardware/timer.h>
 
 //---------------------------------------------------------------------------
 
-#if defined(JAVELIN_RGB_COUNT) && defined(JAVELIN_RGB_PIN)
+#if JAVELIN_RGB
 
 //---------------------------------------------------------------------------
 
 const PIO PIO_INSTANCE = pio0;
 const int STATE_MACHINE_INDEX = 2;
 
+#if JAVELIN_SPLIT
+#define JAVELIN_RGB_RIGHT_COUNT (JAVELIN_RGB_COUNT - JAVELIN_RGB_LEFT_COUNT)
+#endif
+
 //---------------------------------------------------------------------------
 
-Ws2812::Ws28128Data Ws2812::instance;
+Ws2812::Ws2812Data Ws2812::instance;
 
 //---------------------------------------------------------------------------
 
@@ -57,20 +61,19 @@ void Ws2812::Initialize() {
 
   // clang-format off
 #if JAVELIN_SPLIT
-  #define JAVELIN_RGB_SLAVE_COUNT (JAVELIN_RGB_COUNT - JAVELIN_RGB_MASTER_COUNT)
-  #if JAVELIN_RGB_COUNT == 2 * JAVELIN_RGB_MASTER_COUNT
-    dma1->count = JAVELIN_RGB_MASTER_COUNT;
+  #if JAVELIN_LEFT_COUNT == JAVELIN_RIGHT_COUNT
+    dma1->count = JAVELIN_RGB_LEFT_COUNT;
   #else
-    dma1->count = IsMaster() ? JAVELIN_RGB_MASTER_COUNT
-                           : JAVELIN_RGB_SLAVE_COUNT;
-  #endif // JAVELIN_RGB_COUNT == 2 * JAVELIN_RGB_MASTER_COUNT
+    dma1->count = Split::IsLeft() ? JAVELIN_RGB_LEFT_COUNT
+                                  : JAVELIN_RGB_SLAVE_COUNT;
+  #endif
 #else
   dma1->count = JAVELIN_RGB_COUNT;
 #endif // JAVELIN_SPLIT
   // clang-format on
 }
 
-void Ws2812::Ws28128Data::Update() {
+void Ws2812::Ws2812Data::Update() {
   if (!dirty) {
     return;
   }
@@ -87,29 +90,37 @@ void Ws2812::Ws28128Data::Update() {
 
 #if JAVELIN_SPLIT
   dma1->sourceTrigger =
-      Split::IsMaster() ? pixelValues : pixelValues + JAVELIN_RGB_MASTER_COUNT;
+      Split::IsMaster() ? pixelValues : pixelValues + JAVELIN_RGB_LEFT_COUNT;
 #else
   dma1->sourceTrigger = &pixelValues;
 #endif
 }
 
 #if JAVELIN_SPLIT
-void Ws2812::Ws28128Data::UpdateBuffer(TxBuffer &buffer) {
+void Ws2812::Ws2812Data::UpdateBuffer(TxBuffer &buffer) {
   if (!slaveDirty) {
     return;
   }
 
   slaveDirty = false;
-  buffer.Add(SplitHandlerId::RGB, pixelValues + JAVELIN_RGB_MASTER_COUNT,
-             sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT);
+  if (Split::IsLeft()) {
+    buffer.Add(SplitHandlerId::RGB, pixelValues + JAVELIN_RGB_LEFT_COUNT,
+               sizeof(uint32_t) * JAVELIN_RGB_RIGHT_COUNT);
+  } else {
+    buffer.Add(SplitHandlerId::RGB, pixelValues,
+               sizeof(uint32_t) * JAVELIN_RGB_LEFT_COUNT);
+  }
 }
 
-void Ws2812::Ws28128Data::OnDataReceived(const void *data, size_t length) {
+void Ws2812::Ws2812Data::OnDataReceived(const void *data, size_t length) {
   dirty = true;
-  memcpy(pixelValues + JAVELIN_RGB_MASTER_COUNT, data,
-         sizeof(uint32_t) * JAVELIN_RGB_SLAVE_COUNT);
+  if (Split::IsLeft()) {
+    memcpy(pixelValues, data, sizeof(uint32_t) * JAVELIN_RGB_LEFT_COUNT);
+  } else {
+    memcpy(pixelValues + JAVELIN_RGB_LEFT_COUNT, data,
+           sizeof(uint32_t) * JAVELIN_RGB_RIGHT_COUNT);
+  }
 }
-
 #endif
 
 //---------------------------------------------------------------------------
@@ -122,6 +133,6 @@ size_t Rgb::GetCount() { return JAVELIN_RGB_COUNT; }
 
 //---------------------------------------------------------------------------
 
-#endif // defined(JAVELIN_RGB_COUNT) && defined(JAVELIN_RGB_PIN)
+#endif // JAVELIN_RGB
 
 //---------------------------------------------------------------------------

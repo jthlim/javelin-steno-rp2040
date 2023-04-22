@@ -2,7 +2,7 @@
 
 #pragma once
 #include "rp2040_dma.h"
-#include <stdlib.h>
+#include <stddef.h>
 
 //---------------------------------------------------------------------------
 

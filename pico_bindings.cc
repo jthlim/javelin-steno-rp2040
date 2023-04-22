@@ -39,7 +39,6 @@
 #include "javelin/processor/repeat.h"
 #include "javelin/rgb.h"
 #include "javelin/script_byte_code.h"
-#include "javelin/serial_port.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
@@ -49,11 +48,9 @@
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
 #include "split_hid_report_buffer.h"
-#include "split_serial_buffer.h"
 #include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
-#include "ws2812.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
@@ -295,9 +292,6 @@ static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
 #if JAVELIN_USE_EMBEDDED_STENO
 static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
 static JavelinStaticAllocate<StenoEngine> engineContainer;
-static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
-static JavelinStaticAllocate<StenoAllUp> allUpContainer;
-static JavelinStaticAllocate<StenoRepeat> repeatContainer;
 static JavelinStaticAllocate<StenoJeffModifiers> jeffModifiersContainer;
 
 static JavelinStaticAllocate<StenoCompiledOrthography>
@@ -311,6 +305,10 @@ static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
 
 static List<StenoDictionaryListEntry> dictionaries;
 #endif
+
+static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
+static JavelinStaticAllocate<StenoAllUp> allUpContainer;
+static JavelinStaticAllocate<StenoRepeat> repeatContainer;
 
 extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
@@ -638,9 +636,9 @@ void InitJavelinSlave() {
 }
 
 void InitJavelinMaster() {
-#if JAVELIN_USE_EMBEDDED_STENO
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
 
+#if JAVELIN_USE_EMBEDDED_STENO
   HidKeyboardReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
@@ -762,6 +760,11 @@ void InitJavelinMaster() {
                           "Sets the current steno mode [\"embedded\", "
                           "\"gemini\", \"plover_hid\"]",
                           SetStenoMode, nullptr);
+#else
+  console.RegisterCommand("set_steno_mode",
+                          "Sets the current steno mode ["
+                          "\"gemini\", \"plover_hid\"]",
+                          SetStenoMode, nullptr);
 #endif
   console.RegisterCommand("set_keyboard_protocol",
                           "Sets the current keyboard protocol "
@@ -814,10 +817,10 @@ void InitJavelinMaster() {
                           StenoEngine::LookupStroke_Binding, engine);
 #endif
 
-  if (Ws2812::IsAvailable()) {
-    console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
-                            Rgb::SetRgb_Binding, nullptr);
-  }
+#if JAVELIN_RGB
+  console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
+                          Rgb::SetRgb_Binding, nullptr);
+#endif
 
 #if JAVELIN_OLED_DRIVER
   console.RegisterCommand("set_auto_draw",
@@ -865,6 +868,7 @@ void InitJavelinMaster() {
     processorElement =
         new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
   }
+#endif
 
   if (config->useFirstUp) {
     processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
@@ -875,7 +879,6 @@ void InitJavelinMaster() {
   if (config->useRepeat) {
     processorElement = new (repeatContainer) StenoRepeat(*processorElement);
   }
-#endif
 
   processors = processorElement;
 }
@@ -946,19 +949,6 @@ void Key::ReleaseRaw(KeyCode key) {
 }
 
 void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }
-
-void SerialPort::SendData(const uint8_t *data, size_t length) {
-  if (tud_cdc_connected()) {
-    tud_cdc_write(data, length);
-    tud_cdc_write_flush();
-  } else {
-#if JAVELIN_SPLIT
-    if (Split::IsMaster()) {
-      SplitSerialBuffer::Add(data, length);
-    }
-#endif
-  }
-}
 
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
   PloverHidReportBuffer::instance.SendReport(

@@ -15,7 +15,7 @@
 > ln -s <path-to-javelin-steno> javelin
 ```
 
-6. Standard CMake, with '-D BOARD=xxx'
+6. Standard CMake, with '-D JAVELIN_BOARD=xxx'
 
 ```
 > mkdir build

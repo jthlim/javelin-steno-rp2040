@@ -15,12 +15,12 @@
 #include "plover_hid_report_buffer.h"
 #include "rp2040_crc.h"
 #include "rp2040_split.h"
+#include "rp2040_ws2812.h"
 #include "split_hid_report_buffer.h"
 #include "split_serial_buffer.h"
 #include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
-#include "ws2812.h"
 
 #include <hardware/watchdog.h>
 #include <pico/time.h>

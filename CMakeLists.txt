@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
+cmake_policy(SET CMP0076 NEW)
 
 set(NAME javelin-steno-rp2040)
 set(JAVELIN_BOARD "" CACHE STRING "Target board, e.g. \"uni_v4\"")
@@ -36,7 +37,7 @@ pico_sdk_init()
 add_executable(${NAME})
 
 pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split.pio)
-pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
@@ -60,7 +61,9 @@ target_sources(${NAME} PUBLIC
   rp2040_flash.cc
   rp2040_gpio.cc
   rp2040_random.cc
+  rp2040_serial_port.cc
   rp2040_split.cc
+  rp2040_ws2812.cc
   split_hid_report_buffer.cc
   split_serial_buffer.cc
   split_usb_status.cc
@@ -68,7 +71,6 @@ target_sources(${NAME} PUBLIC
   ssd1306_paper_tape.cc
   ssd1306_steno_layout.cc
   usb_descriptors.cc
-  ws2812.cc
 
   javelin/base64.cc
   javelin/bit.cc
