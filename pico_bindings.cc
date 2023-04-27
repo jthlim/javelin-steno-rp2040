@@ -15,7 +15,6 @@
 #include "javelin/dictionary/jeff_numbers_dictionary.h"
 #include "javelin/dictionary/jeff_phrasing_dictionary.h"
 #include "javelin/dictionary/jeff_show_stroke_dictionary.h"
-#include "javelin/dictionary/main_dictionary.h"
 #include "javelin/dictionary/map_dictionary.h"
 #include "javelin/dictionary/map_dictionary_definition.h"
 #include "javelin/dictionary/reverse_auto_suffix_dictionary.h"

@@ -80,7 +80,6 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/jeff_phrasing_dictionary.cc
   javelin/dictionary/jeff_phrasing_dictionary_data.cc
   javelin/dictionary/jeff_show_stroke_dictionary.cc
-  javelin/dictionary/main_dictionary.cc
   javelin/dictionary/map_dictionary.cc
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
