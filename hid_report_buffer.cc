@@ -14,8 +14,7 @@ uint32_t HidReportBufferBase::reportsSentCount[ITF_NUM_TOTAL] = {};
 
 //---------------------------------------------------------------------------
 
-void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
-                                     const uint8_t *data, size_t length) {
+void HidReportBufferBase::SendReport(const uint8_t *data, size_t length) {
   assert(length == dataSize);
   do {
     tud_task();
@@ -23,28 +22,25 @@ void HidReportBufferBase::SendReport(uint8_t instance, uint8_t reportId,
 
   bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
-    if (!tud_hid_n_ready(instance)) {
+    if (!tud_hid_n_ready(instanceNumber)) {
 #if JAVELIN_SPLIT
       if (Split::IsMaster()) {
-        reportsSentCount[instance]++;
-        SplitHidReportBuffer::Add(instance, reportId, data, length);
+        reportsSentCount[instanceNumber]++;
+        SplitHidReportBuffer::Add(instanceNumber, reportId, data, length);
       }
 #endif
       return;
     }
 
-    if (tud_hid_n_report(instance, reportId, data, dataSize)) {
+    if (tud_hid_n_report(instanceNumber, reportId, data, dataSize)) {
       ++endIndex;
-      reportsSentCount[instance]++;
+      reportsSentCount[instanceNumber]++;
     }
     return;
   }
 
-  HidReportBufferEntry *entry = &entries[endIndex & (NUMBER_OF_ENTRIES - 1)];
   uint8_t *buffer = entryData + dataSize * (endIndex & (NUMBER_OF_ENTRIES - 1));
   ++endIndex;
-  entry->instance = instance;
-  entry->reportId = reportId;
   memcpy(buffer, data, dataSize);
 }
 
@@ -63,13 +59,11 @@ void HidReportBufferBase::SendNextReport() {
       return;
     }
 
-    HidReportBufferEntry *entry =
-        &entries[startIndex & (NUMBER_OF_ENTRIES - 1)];
     uint8_t *buffer =
         entryData + dataSize * (startIndex & (NUMBER_OF_ENTRIES - 1));
 
-    reportsSentCount[entry->instance]++;
-    if (tud_hid_n_report(entry->instance, entry->reportId, buffer, dataSize)) {
+    reportsSentCount[instanceNumber]++;
+    if (tud_hid_n_report(instanceNumber, reportId, buffer, dataSize)) {
       return;
     }
   }

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include "javelin/hal/split.h"
+#include "javelin/split/split.h"
 #include <hardware/pio.h>
 
 //---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ public:
   }
 
   static void RegisterRxHandler(SplitHandlerId id, SplitRxHandler *handler) {
-    instance.rxHandlers[id] = handler;
+    instance.rxHandlers[(size_t)id] = handler;
   }
 
   static void PrintInfo() { instance.PrintInfo(); }
@@ -44,8 +44,8 @@ private:
     size_t receiveStatusReason[6];
 
     size_t txHandlerCount = 0;
-    SplitTxHandler *txHandlers[SplitHandlerId::COUNT];
-    SplitRxHandler *rxHandlers[SplitHandlerId::COUNT];
+    SplitTxHandler *txHandlers[(size_t)SplitHandlerId::COUNT];
+    SplitRxHandler *rxHandlers[(size_t)SplitHandlerId::COUNT];
 
     TxBuffer txBuffer;
     RxBuffer rxBuffer;

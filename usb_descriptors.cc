@@ -199,20 +199,20 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
     // address, size & polling interval
     TUD_HID_DESCRIPTOR(ITF_NUM_KEYBOARD, 0, HID_ITF_PROTOCOL_KEYBOARD,
                        sizeof(desc_hid_keyboard_report), EPNUM_KEYBOARD,
-                       CFG_TUD_HID_EP_BUFSIZE, 1),
+                       CFG_KEYBOARD_BUFSIZE, 1),
 
     // HID Input & Output descriptor
     // Interface number, string index, protocol, report descriptor len,
     // EP OUT & IN address, size & polling interval
     TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_CONSOLE, 0, HID_ITF_PROTOCOL_NONE,
                              sizeof(desc_hid_console_report), EPNUM_CONSOLE_OUT,
-                             EPNUM_CONSOLE_IN, CFG_TUD_CONSOLE_BUFSIZE, 1),
+                             EPNUM_CONSOLE_IN, CFG_CONSOLE_BUFSIZE, 1),
 
     // Interface number, string index, protocol, report descriptor len, EP In
     // address, size & polling interval
     TUD_HID_DESCRIPTOR(ITF_NUM_PLOVER_HID, 0, HID_ITF_PROTOCOL_NONE,
                        sizeof(desc_hid_plover_hid_report), EPNUM_PLOVER_HID,
-                       CFG_TUD_PLOVER_HID_EP_BUFSIZE, 1),
+                       CFG_PLOVER_HID_EP_BUFSIZE, 1),
 
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT,
                        EPNUM_CDC_IN, 64),

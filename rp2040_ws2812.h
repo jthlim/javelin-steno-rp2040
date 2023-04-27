@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include "javelin/hal/split.h"
+#include "javelin/split/split.h"
 #include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------

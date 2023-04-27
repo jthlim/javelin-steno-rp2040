@@ -2,23 +2,23 @@
 
 #include JAVELIN_BOARD_CONFIG
 
-#include "console_buffer.h"
-#include "console_input_buffer.h"
+#include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
+#include "javelin/console_input_buffer.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
 #include "javelin/hal/bootrom.h"
 #include "javelin/key.h"
 #include "javelin/keyboard_led_status.h"
+#include "javelin/split/split_serial_buffer.h"
+#include "javelin/split/split_usb_status.h"
 #include "javelin/static_allocate.h"
-#include "key_state.h"
 #include "plover_hid_report_buffer.h"
+#include "rp2040_button_state.h"
 #include "rp2040_crc.h"
 #include "rp2040_split.h"
 #include "rp2040_ws2812.h"
 #include "split_hid_report_buffer.h"
-#include "split_serial_buffer.h"
-#include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
 
@@ -45,7 +45,7 @@ extern uint32_t watchdogData[8];
 
 // Invoked when device is mounted
 extern "C" void tud_mount_cb(void) {
-  ConsoleBuffer::instance.Reset();
+  ConsoleReportBuffer::instance.Reset();
   PloverHidReportBuffer::instance.Reset();
   HidKeyboardReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
@@ -106,24 +106,25 @@ void HidTask::Update() {
   buttonManager.Tick();
 
 #if JAVELIN_SPLIT
-  Debounced<ButtonState> keyState =
-      debouncer.Update(KeyState::Read() | splitState);
+  Debounced<ButtonState> buttonState =
+      debouncer.Update(Rp2040ButtonState::Read() | splitState);
 #else
-  Debounced<ButtonState> keyState = debouncer.Update(KeyState::Read());
+  Debounced<ButtonState> buttonState =
+      debouncer.Update(Rp2040ButtonState::Read());
 #endif
-  if (!keyState.isUpdated) {
+  if (!buttonState.isUpdated) {
     return;
   }
 
   if (tud_suspended()) {
-    if (keyState.value.IsAnySet()) {
+    if (buttonState.value.IsAnySet()) {
       // Wake up host if we are in suspend mode
       // and REMOTE_WAKEUP feature is enabled by host
       tud_remote_wakeup();
     }
   }
 
-  buttonManager.Update(keyState.value);
+  buttonManager.Update(buttonState.value);
 }
 
 class SlaveHidTask final : public SplitTxHandler {
@@ -139,7 +140,7 @@ private:
 };
 
 void SlaveHidTask::Update() {
-  ButtonState newButtonState = KeyState::Read();
+  ButtonState newButtonState = Rp2040ButtonState::Read();
   if (newButtonState == buttonState) {
     return;
   }
@@ -181,7 +182,7 @@ extern "C" void tud_hid_report_complete_cb(uint8_t instance,
     PloverHidReportBuffer::instance.SendNextReport();
     break;
   case ITF_NUM_CONSOLE:
-    ConsoleBuffer::instance.SendNextReport();
+    ConsoleReportBuffer::instance.SendNextReport();
     break;
   }
 }
@@ -270,7 +271,7 @@ void DoSlaveRunLoop() {
 
     SplitHidReportBuffer::Update();
     HidKeyboardReportBuilder::instance.FlushIfRequired();
-    ConsoleBuffer::instance.Flush();
+    ConsoleReportBuffer::instance.Flush();
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
@@ -292,7 +293,7 @@ int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
-  KeyState::Initialize();
+  Rp2040ButtonState::Initialize();
   Rp2040Crc::Initialize();
   Ws2812::Initialize();
   Rp2040Split::Initialize();

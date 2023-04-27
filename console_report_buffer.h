@@ -2,12 +2,10 @@
 
 #pragma once
 #include "hid_report_buffer.h"
-#include <stddef.h>
-#include <stdint.h>
 
 //---------------------------------------------------------------------------
 
-struct ConsoleBuffer {
+struct ConsoleReportBuffer {
 public:
   void SendData(const uint8_t *data, size_t length);
   void Flush();
@@ -21,10 +19,10 @@ public:
     return reportBuffer.GetAvailableBufferCount();
   }
 
-  static ConsoleBuffer instance;
+  static ConsoleReportBuffer instance;
 
 private:
-  ConsoleBuffer() = default;
+  ConsoleReportBuffer();
 
   static const size_t MAX_BUFFER_SIZE = 64;
 

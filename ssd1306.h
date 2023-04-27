@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include "javelin/hal/split.h"
+#include "javelin/split/split.h"
 #include "javelin/stroke.h"
 #include "javelin/text_alignment.h"
 

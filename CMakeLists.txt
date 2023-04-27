@@ -30,7 +30,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_C_FLAGS "-O2 -g -mcpu=cortex-m0plus")
-set(CMAKE_CXX_FLAGS "-O2 -g -mcpu=cortex-m0plus -fno-exceptions -fno-devirtualize-speculatively")
+set(CMAKE_CXX_FLAGS "-O2 -g -mcpu=cortex-m0plus -fno-exceptions -fno-devirtualize-speculatively -save-temps")
 
 pico_sdk_init()
 
@@ -41,22 +41,17 @@ pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
-  console_buffer.cc
-  console_input_buffer.cc
-  font.cc
-  font/default.cc
-  font/large_digits.cc
-  font/medium_digits.cc
-  font/small_digits.cc
+  console_report_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
-  key_state.cc
   libc_stubs.cc
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
   rp2040_bootrom.cc
+  rp2040_button_state.cc
   rp2040_clock.cc
+  rp2040_console.cc
   rp2040_crc.cc
   rp2040_flash.cc
   rp2040_gpio.cc
@@ -65,8 +60,6 @@ target_sources(${NAME} PUBLIC
   rp2040_split.cc
   rp2040_ws2812.cc
   split_hid_report_buffer.cc
-  split_serial_buffer.cc
-  split_usb_status.cc
   ssd1306.cc
   ssd1306_paper_tape.cc
   ssd1306_steno_layout.cc
@@ -76,6 +69,7 @@ target_sources(${NAME} PUBLIC
   javelin/bit.cc
   javelin/button_manager.cc
   javelin/console.cc
+  javelin/console_input_buffer.cc
   javelin/crc.cc
   javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
@@ -100,8 +94,12 @@ target_sources(${NAME} PUBLIC
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc
+  javelin/font/monochrome/data/default.cc
+  javelin/font/monochrome/data/small_digits.cc
+  javelin/font/monochrome/data/medium_digits.cc
+  javelin/font/monochrome/data/large_digits.cc
+  javelin/font/monochrome/font.cc
   javelin/hal/bootrom.cc
-  javelin/hal/split.cc
   javelin/key.cc
   javelin/key_code.cc
   javelin/keyboard_layout.cc
@@ -126,6 +124,9 @@ target_sources(${NAME} PUBLIC
   javelin/script.cc
   javelin/script_byte_code.cc
   javelin/segment.cc
+  javelin/split/split.cc
+  javelin/split/split_serial_buffer.cc
+  javelin/split/split_usb_status.cc
   javelin/state.cc
   javelin/steno_key_code.cc
   javelin/steno_key_code_buffer.cc

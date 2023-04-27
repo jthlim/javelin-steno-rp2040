@@ -8,6 +8,9 @@
 struct PloverHidReportBuffer : public HidReportBuffer<8> {
 public:
   static PloverHidReportBuffer instance;
+
+private:
+  PloverHidReportBuffer();
 };
 
 //---------------------------------------------------------------------------

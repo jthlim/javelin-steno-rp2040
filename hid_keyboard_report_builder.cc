@@ -6,7 +6,6 @@
 #include "usb_descriptors.h"
 
 #include <string.h>
-#include <tusb.h>
 
 //---------------------------------------------------------------------------
 
@@ -16,7 +15,8 @@ HidKeyboardReportBuilder HidKeyboardReportBuilder::instance;
 
 const size_t MODIFIER_OFFSET = 0;
 
-HidKeyboardReportBuilder::HidKeyboardReportBuilder() {
+HidKeyboardReportBuilder::HidKeyboardReportBuilder()
+    : reportBuffer(ITF_NUM_KEYBOARD, 0) {
   memset(&buffers, 0, sizeof(buffers));
 }
 
@@ -129,7 +129,7 @@ void HidKeyboardReportBuilder::FlushIfRequired() {
 }
 
 void HidKeyboardReportBuilder::Flush() {
-  reportBuffer.SendReport(ITF_NUM_KEYBOARD, 0, buffers[0].data, 32);
+  reportBuffer.SendReport(buffers[0].data, 32);
 
   for (int i = 0; i < 8; ++i) {
     buffers[0].data32[i] =

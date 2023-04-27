@@ -185,7 +185,7 @@ void Rp2040Split::SplitData::ProcessReceiveBuffer() {
     int type = blockHeader >> 16;
     size_t length = blockHeader & 0xffff;
 
-    if (type < SplitHandlerId::COUNT) {
+    if (type < (size_t)SplitHandlerId::COUNT) {
       SplitRxHandler *handler = rxHandlers[type];
       if (handler != nullptr) {
         handler->OnDataReceived(&rxBuffer.buffer[offset], length);
@@ -240,7 +240,7 @@ bool Rp2040Split::SplitData::ProcessReceive() {
   }
 
   if (rxBuffer.header.magic != TxRxHeader::MAGIC) {
-    // Error: Magic mistmatch!
+    // Error: Magic mismatch!
     receiveStatusReason[3]++;
     OnReceiveFailed();
     return false;

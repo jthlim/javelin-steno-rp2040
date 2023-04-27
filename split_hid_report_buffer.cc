@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "split_hid_report_buffer.h"
-#include "console_buffer.h"
+#include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "javelin/console.h"
 #include "plover_hid_report_buffer.h"
@@ -28,7 +28,7 @@ void SplitHidReportBuffer::SplitHidReportBufferSize::UpdateBuffer(
   newBufferSize.available[ITF_NUM_KEYBOARD] =
       HidKeyboardReportBuilder::instance.GetAvailableBufferCount();
   newBufferSize.available[ITF_NUM_CONSOLE] =
-      ConsoleBuffer::instance.GetAvailableBufferCount();
+      ConsoleReportBuffer::instance.GetAvailableBufferCount();
   newBufferSize.available[ITF_NUM_PLOVER_HID] =
       PloverHidReportBuffer::instance.GetAvailableBufferCount();
 
@@ -100,18 +100,16 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.interface, entry->data.reportId,
-                            entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.data, entry->data.length);
     return true;
   }
   case ITF_NUM_CONSOLE: {
-    auto &reportBuffer = ConsoleBuffer::instance.reportBuffer;
+    auto &reportBuffer = ConsoleReportBuffer::instance.reportBuffer;
     if (reportBuffer.IsFull()) {
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.interface, entry->data.reportId,
-                            entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.data, entry->data.length);
     return true;
   }
   case ITF_NUM_PLOVER_HID: {
@@ -120,8 +118,7 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.interface, entry->data.reportId,
-                            entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.data, entry->data.length);
     return true;
   }
   }

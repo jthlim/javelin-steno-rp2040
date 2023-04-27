@@ -5,7 +5,7 @@
 
 //---------------------------------------------------------------------------
 
-class KeyState {
+class Rp2040ButtonState {
 public:
   static void Initialize();
 

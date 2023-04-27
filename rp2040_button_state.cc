@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
-#include "key_state.h"
-#include "javelin/hal/split.h"
+#include "rp2040_button_state.h"
+#include "javelin/split/split.h"
 #include <hardware/gpio.h>
 #include <hardware/structs/ioqspi.h>
 #include <hardware/structs/sio.h>
@@ -55,7 +55,7 @@ const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 
 //---------------------------------------------------------------------------
 
-void KeyState::Initialize() {
+void Rp2040ButtonState::Initialize() {
 #if JAVELIN_SPLIT
 #if !defined(JAVELIN_SPLIT_IS_LEFT)
   if (!Split::IsLeft()) {
@@ -118,7 +118,7 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 }
 #endif
 
-ButtonState KeyState::Read() {
+ButtonState Rp2040ButtonState::Read() {
   ButtonState state;
   state.ClearAll();
 

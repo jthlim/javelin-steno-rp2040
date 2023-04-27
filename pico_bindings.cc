@@ -1,7 +1,6 @@
 //---------------------------------------------------------------------------
 
-#include "console_buffer.h"
-#include "font.h"
+#include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/button_manager.h"
@@ -26,6 +25,7 @@
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/display.h"
 #include "javelin/engine.h"
+#include "javelin/font/monochrome/font.h"
 #include "javelin/hal/bootrom.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
@@ -42,19 +42,19 @@
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
+#include "javelin/usb_status.h"
 #include "javelin/word_list.h"
 #include "javelin/wpm_tracker.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
-#include "split_hid_report_buffer.h"
-#include "split_usb_status.h"
 #include "ssd1306.h"
 #include "usb_descriptors.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
 #include <hardware/timer.h>
+#include <hardware/watchdog.h>
 #include <malloc.h>
 #include <tusb.h>
 
@@ -178,7 +178,7 @@ private:
     Display::Clear(displayId);
 
     char buffer[16];
-    sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
+    Str::Sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
 #if JAVELIN_DISPLAY_WIDTH >= 64
     const Font *font = &Font::LARGE_DIGITS;
 #else
@@ -353,8 +353,8 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidKeyboardReportBuilder::instance.PrintInfo();
 
   Console::Printf("USB\n");
-  Console::Printf("  Mount count: %zu\n", UsbStatus::GetMountCount());
-  Console::Printf("  Suspend count: %zu\n", UsbStatus::GetSuspendCount());
+  Console::Printf("  Mount count: %u\n", UsbStatus::GetMountCount());
+  Console::Printf("  Suspend count: %u\n", UsbStatus::GetSuspendCount());
 
   Console::Printf("Memory\n");
   Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
@@ -369,17 +369,19 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidReportBufferBase::PrintInfo();
   Rp2040Split::PrintInfo();
 
-  // The slave will always just print "Screen: present, present" here here
-  // Rather than print incorrect info, don't print anything on the slave at all.
   if (Rp2040Split::IsMaster()) {
+    // The slave will always just print "Screen: present, present" here.
+    // Rather than print incorrect info, don't print anything on the slave at
+    // all.
     Ssd1306::PrintInfo();
-  }
+
 #if JAVELIN_USE_EMBEDDED_STENO
-  Console::Printf("Processing chain\n");
-  processors->PrintInfo();
-  Console::Printf("Text block: %zu bytes\n",
-                  STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+    Console::Printf("Processing chain\n");
+    processors->PrintInfo();
+    Console::Printf("Text block: %zu bytes\n",
+                    STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
 #endif
+  }
   Console::Write("\n", 1);
 }
 
@@ -391,12 +393,8 @@ void Display::SetAutoDraw(int displayId, int autoDrawId) {
 #endif
 #endif
 
-static void LaunchBootrom(void *const, const char *commandLine) {
-  Bootrom::Launch();
-}
-
-static void LaunchSlaveBootrom(void *const, const char *commandLine) {
-  Bootrom::LaunchSlave();
+void Restart_Binding(void *context, const char *commandLine) {
+  watchdog_reboot(0, 0, 0);
 }
 
 void SetUnicodeMode(void *context, const char *commandLine) {
@@ -477,6 +475,7 @@ static const ParameterData PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
   {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
 #endif
+  {"flash_memory_address", (void *)0x10000000},
   {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
 #if JAVELIN_USE_EMBEDDED_STENO
   {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
@@ -605,16 +604,18 @@ struct WordListData {
   uint8_t data[1];
 };
 
-void InitJavelinSlave() {
+void InitCommonCommands() {
   Console &console = Console::instance;
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
                           nullptr);
-  console.RegisterCommand("list_parameters",
-                          "Lists all available parameter names",
-                          ListParametersBinding, nullptr);
+  console.RegisterCommand("restart", "Restart the device", Restart_Binding,
+                          nullptr);
   console.RegisterCommand("get_parameter",
                           "Gets the value of the specified parameter",
                           GetParameterBinding, nullptr);
+  console.RegisterCommand("list_parameters",
+                          "Lists all available parameter names",
+                          ListParametersBinding, nullptr);
   console.RegisterCommand("begin_write",
                           "Begin a flash write to the specified address",
                           &Flash::BeginWriteBinding, nullptr);
@@ -624,8 +625,14 @@ void InitJavelinSlave() {
                           &Flash::WriteBinding, nullptr);
   console.RegisterCommand("end_write", "Completes writing to flash",
                           &Flash::EndWriteBinding, nullptr);
+}
+
+void InitJavelinSlave() {
+  InitCommonCommands();
+
+  Console &console = Console::instance;
   console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
-                          LaunchBootrom, nullptr);
+                          Bootrom::LaunchBootrom, nullptr);
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
                           Watchdog_Binding, nullptr);
@@ -726,29 +733,13 @@ void InitJavelinMaster() {
   engine->SetSpaceAfter(config->useSpaceAfter);
 #endif
 
+  InitCommonCommands();
   Console &console = Console::instance;
-  console.RegisterCommand("info", "System information", PrintInfo_Binding,
-                          nullptr);
-  console.RegisterCommand("get_parameter",
-                          "Gets the value of the specified parameter",
-                          GetParameterBinding, nullptr);
-  console.RegisterCommand("list_parameters",
-                          "Lists all available parameter names",
-                          ListParametersBinding, nullptr);
-  console.RegisterCommand("begin_write",
-                          "Begin a flash write to the specified address",
-                          &Flash::BeginWriteBinding, nullptr);
-  console.RegisterCommand("write",
-                          "Writes base64 data to the address specified in "
-                          "begin_write",
-                          &Flash::WriteBinding, nullptr);
-  console.RegisterCommand("end_write", "Completes writing to flash",
-                          &Flash::EndWriteBinding, nullptr);
   console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
-                          LaunchBootrom, nullptr);
+                          Bootrom::LaunchBootrom, nullptr);
 #if JAVELIN_SPLIT
   console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
-                          LaunchSlaveBootrom, nullptr);
+                          Bootrom::LaunchSlaveBootrom, nullptr);
 #endif
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
@@ -921,16 +912,10 @@ bool Script::ProcessScanCode(int scanCode, ScanCodeAction action) {
 void ProcessStenoTick() {
   processors->Tick();
   HidKeyboardReportBuilder::instance.FlushIfRequired();
-  ConsoleBuffer::instance.Flush();
+  ConsoleReportBuffer::instance.Flush();
 }
 
 //---------------------------------------------------------------------------
-
-void ConsoleWriter::Write(const char *data, size_t length) {
-  ConsoleBuffer::instance.SendData((const uint8_t *)data, length);
-}
-
-void Console::Flush() { ConsoleBuffer::instance.Flush(); }
 
 void Key::PressRaw(KeyCode key) {
 #if JAVELIN_OLED_DRIVER
@@ -949,10 +934,5 @@ void Key::ReleaseRaw(KeyCode key) {
 }
 
 void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }
-
-void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
-  PloverHidReportBuffer::instance.SendReport(
-      ITF_NUM_PLOVER_HID, 0x50, (uint8_t *)&packet, sizeof(packet));
-}
 
 //---------------------------------------------------------------------------
