@@ -84,10 +84,10 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
   javelin/dictionary/reverse_prefix_dictionary.cc
+  javelin/dictionary/test_dictionary.cc
   javelin/dictionary/unicode_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/dictionary/wrapped_dictionary.cc
-  javelin/display.cc
   javelin/engine_add_translation_mode.cc
   javelin/engine_binding.cc
   javelin/engine_normal_mode.cc
@@ -98,7 +98,13 @@ target_sources(${NAME} PUBLIC
   javelin/font/monochrome/data/medium_digits.cc
   javelin/font/monochrome/data/large_digits.cc
   javelin/font/monochrome/font.cc
+  javelin/hal/ble.cc
   javelin/hal/bootrom.cc
+  javelin/hal/connection.cc
+  javelin/hal/display.cc
+  javelin/hal/power.cc
+  javelin/hal/rgb.cc
+  javelin/hal/usb_status.cc
   javelin/key.cc
   javelin/key_code.cc
   javelin/keyboard_layout.cc
@@ -119,7 +125,6 @@ target_sources(${NAME} PUBLIC
   javelin/processor/processor_list.cc
   javelin/processor/repeat.cc
   javelin/random.cc
-  javelin/rgb.cc
   javelin/script.cc
   javelin/script_byte_code.cc
   javelin/segment.cc
@@ -137,7 +142,6 @@ target_sources(${NAME} PUBLIC
   javelin/stroke_history.cc
   javelin/stroke_list_parser.cc
   javelin/unicode.cc
-  javelin/usb_status.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc

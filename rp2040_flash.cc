@@ -1,5 +1,7 @@
 //---------------------------------------------------------------------------
 
+#include JAVELIN_BOARD_CONFIG
+
 #include "javelin/flash.h"
 #include <hardware/flash.h>
 #include <hardware/sync.h>
@@ -7,7 +9,15 @@
 
 //---------------------------------------------------------------------------
 
+static bool IsWritableRange(const void *p) {
+  return p >= STENO_CONFIG_BLOCK_ADDRESS;
+}
+
 void Flash::Erase(const void *target, size_t size) {
+  if (!IsWritableRange(target)) {
+    return;
+  }
+
   const uint8_t *const t = (const uint8_t *)target;
 
   size_t eraseStart = 0;
@@ -35,6 +45,10 @@ void Flash::Erase(const void *target, size_t size) {
 }
 
 void Flash::Write(const void *target, const void *data, size_t size) {
+  if (!IsWritableRange(target)) {
+    return;
+  }
+
   const uint8_t *const t = (const uint8_t *)target;
   const uint8_t *const d = (const uint8_t *)data;
 

@@ -56,7 +56,7 @@ extern "C" const uint8_t *tud_descriptor_device_cb(void) {
 //---------------------------------------------------------------------------
 
 // clang-format off
-const uint8_t desc_hid_keyboard_report[] = {
+const uint8_t keyboardReportDescriptor[] = {
     // Keyboard
     HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
     HID_USAGE(HID_USAGE_DESKTOP_KEYBOARD),
@@ -98,7 +98,7 @@ const uint8_t desc_hid_keyboard_report[] = {
     HID_COLLECTION_END,
 };
 
-const uint8_t desc_hid_console_report[] = {
+const uint8_t consoleReportDescriptor[] = {
     // Console
     0x06, 0x31, 0xFF, // HID_USAGE_PAGE(0xff31)
     HID_USAGE(0x0074),
@@ -120,7 +120,7 @@ const uint8_t desc_hid_console_report[] = {
     HID_COLLECTION_END,
 };
 
-const uint8_t desc_hid_plover_hid_report[] = {
+const uint8_t ploverHidReportDescriptor[] = {
      0x06, 0x50, 0xff,              // UsagePage (65360)
      0x0a, 0x56, 0x4c,              // Usage (19542)
      0xa1, 0x02,                    // Collection (Logical)
@@ -142,13 +142,13 @@ const uint8_t desc_hid_plover_hid_report[] = {
 extern "C" const uint8_t *tud_hid_descriptor_report_cb(uint8_t instance) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    return desc_hid_keyboard_report;
+    return keyboardReportDescriptor;
 
   case ITF_NUM_CONSOLE:
-    return desc_hid_console_report;
+    return consoleReportDescriptor;
 
   case ITF_NUM_PLOVER_HID:
-    return desc_hid_plover_hid_report;
+    return ploverHidReportDescriptor;
 
   default:
     __builtin_unreachable();
@@ -198,20 +198,20 @@ const uint8_t MAIN_CONFIGURATION_DESCRIPTOR[] = {
     // Interface number, string index, protocol, report descriptor len, EP In
     // address, size & polling interval
     TUD_HID_DESCRIPTOR(ITF_NUM_KEYBOARD, 0, HID_ITF_PROTOCOL_KEYBOARD,
-                       sizeof(desc_hid_keyboard_report), EPNUM_KEYBOARD,
+                       sizeof(keyboardReportDescriptor), EPNUM_KEYBOARD,
                        CFG_KEYBOARD_BUFSIZE, 1),
 
     // HID Input & Output descriptor
     // Interface number, string index, protocol, report descriptor len,
     // EP OUT & IN address, size & polling interval
     TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_CONSOLE, 0, HID_ITF_PROTOCOL_NONE,
-                             sizeof(desc_hid_console_report), EPNUM_CONSOLE_OUT,
+                             sizeof(consoleReportDescriptor), EPNUM_CONSOLE_OUT,
                              EPNUM_CONSOLE_IN, CFG_CONSOLE_BUFSIZE, 1),
 
     // Interface number, string index, protocol, report descriptor len, EP In
     // address, size & polling interval
     TUD_HID_DESCRIPTOR(ITF_NUM_PLOVER_HID, 0, HID_ITF_PROTOCOL_NONE,
-                       sizeof(desc_hid_plover_hid_report), EPNUM_PLOVER_HID,
+                       sizeof(ploverHidReportDescriptor), EPNUM_PLOVER_HID,
                        CFG_PLOVER_HID_EP_BUFSIZE, 1),
 
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT,

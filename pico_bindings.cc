@@ -22,10 +22,12 @@
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
 #include "javelin/dictionary/unicode_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
-#include "javelin/display.h"
 #include "javelin/engine.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/bootrom.h"
+#include "javelin/hal/connection.h"
+#include "javelin/hal/display.h"
+#include "javelin/hal/rgb.h"
 #include "javelin/key.h"
 #include "javelin/orthography.h"
 #include "javelin/processor/all_up.h"
@@ -36,12 +38,10 @@
 #include "javelin/processor/plover_hid.h"
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
-#include "javelin/rgb.h"
 #include "javelin/script_byte_code.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
-#include "javelin/usb_status.h"
 #include "javelin/word_list.h"
 #include "javelin/wpm_tracker.h"
 #include "plover_hid_report_buffer.h"
@@ -137,7 +137,7 @@ public:
   virtual void Tick() {
     StenoPassthrough::Tick();
 
-    uint32_t now = time_us_32();
+    uint32_t now = Clock::GetMicroseconds();
     if (now - lastUpdateTime < 1000000) {
       return;
     }
@@ -313,7 +313,7 @@ extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
 
 static void PrintInfo_Binding(void *context, const char *commandLine) {
-  uint32_t uptime = Clock::GetCurrentTime();
+  uint32_t uptime = Clock::GetMilliseconds();
   auto &uptimeDivider = divider->Divide(uptime, 1000);
   uint32_t microseconds = uptimeDivider.remainder;
   uint32_t totalSeconds = uptimeDivider.quotient;
@@ -351,9 +351,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("  ");
   HidKeyboardReportBuilder::instance.PrintInfo();
 
-  Console::Printf("USB\n");
-  Console::Printf("  Mount count: %u\n", UsbStatus::GetMountCount());
-  Console::Printf("  Suspend count: %u\n", UsbStatus::GetSuspendCount());
+  Connection::PrintInfo();
 
   Console::Printf("Memory\n");
   Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
@@ -374,9 +372,9 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     // all.
     Ssd1306::PrintInfo();
 
-#if JAVELIN_USE_EMBEDDED_STENO
     Console::Printf("Processing chain\n");
     processors->PrintInfo();
+#if JAVELIN_USE_EMBEDDED_STENO
     Console::Printf("Text block: %zu bytes\n",
                     STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
 #endif
@@ -879,11 +877,11 @@ void Script::OnStenoKeyPressed() {
 
 void Script::OnStenoKeyReleased() {
 #if TRACE_RELEASE_PROCESSING_TIME
-  uint32_t t0 = time_us_32();
+  uint32_t t0 = Clock::GetMicroseconds();
 #endif
   processors->Process(stenoState, StenoAction::RELEASE);
 #if TRACE_RELEASE_PROCESSING_TIME
-  uint32_t t1 = time_us_32();
+  uint32_t t1 = Clock::GetMicroseconds();
   Console::Printf("Release processing time: %u\n\n", t1 - t0);
 #endif
 }

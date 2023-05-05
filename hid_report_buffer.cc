@@ -47,7 +47,6 @@ void HidReportBufferBase::SendReport(const uint8_t *data, size_t length) {
 //---------------------------------------------------------------------------
 
 void HidReportBufferBase::SendNextReport() {
-
   // This should never happen!
   if (startIndex == endIndex) {
     return;

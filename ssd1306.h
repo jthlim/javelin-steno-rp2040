@@ -1,9 +1,9 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "javelin/font/text_alignment.h"
 #include "javelin/split/split.h"
 #include "javelin/stroke.h"
-#include "javelin/text_alignment.h"
 
 //---------------------------------------------------------------------------
 

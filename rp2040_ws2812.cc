@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_ws2812.h"
-#include "javelin/rgb.h"
+#include "javelin/hal/rgb.h"
 #include "rp2040_dma.h"
 #include "rp2040_ws2812.pio.h"
 #include <hardware/clocks.h>

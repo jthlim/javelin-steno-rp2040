@@ -5,6 +5,8 @@
 
 //---------------------------------------------------------------------------
 
-uint32_t Clock::GetCurrentTime() { return (time_us_64() * 4294968) >> 32; }
+uint32_t Clock::GetMilliseconds() { return (time_us_64() * 4294968) >> 32; }
+
+uint32_t Clock::GetMicroseconds() { return time_us_32(); }
 
 //---------------------------------------------------------------------------

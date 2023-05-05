@@ -46,66 +46,8 @@ const int RX_STATE_MACHINE_INDEX = 0;
 const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
 const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 50000;
 
-void Rp2040Split::SplitData::StartTx() {
-  const PIO pio = PIO_INSTANCE;
-  const int sm = TX_STATE_MACHINE_INDEX;
-  const int pin = JAVELIN_SPLIT_TX_PIN;
-
-  pio_sm_set_enabled(pio, sm, false);
-  pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
-  pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
-  pio_gpio_init(pio, pin);
-#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &config);
-#else
-  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &txConfig);
-#endif
-
-  pio_sm_set_enabled(pio, sm, true);
-}
-
 Rp2040Split::SplitData::SplitData() {
   state = IsMaster() ? State::READY_TO_SEND : State::RECEIVING;
-}
-
-void Rp2040Split::SplitData::StartRx() {
-  const PIO pio = PIO_INSTANCE;
-  const int sm = RX_STATE_MACHINE_INDEX;
-  const int pin = JAVELIN_SPLIT_RX_PIN;
-
-  pio_sm_set_enabled(pio, sm, false);
-  pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
-  pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
-#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &config);
-#else
-  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &rxConfig);
-#endif
-
-  ResetRxDma();
-  state = State::RECEIVING;
-  receiveStartTime = time_us_32();
-
-  pio_sm_set_enabled(pio, sm, true);
-}
-
-void Rp2040Split::SplitData::ResetRxDma() {
-  dma3->Abort();
-  dma3->source = &PIO_INSTANCE->rxf[RX_STATE_MACHINE_INDEX];
-  dma3->destination = &rxBuffer.header;
-  dma3->count =
-      JAVELIN_SPLIT_TX_RX_BUFFER_SIZE + sizeof(TxRxHeader) / sizeof(uint32_t);
-
-  Rp2040DmaControl receiveControl = {
-      .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
-      .incrementRead = false,
-      .incrementWrite = true,
-      .chainToDma = 3,
-      .transferRequest = Rp2040DmaTransferRequest::PIO0_RX0,
-      .sniffEnable = false,
-  };
-  dma3->controlTrigger = receiveControl;
 }
 
 void Rp2040Split::SplitData::Initialize() {
@@ -147,6 +89,64 @@ void Rp2040Split::SplitData::Initialize() {
   if (!IsMaster()) {
     StartRx();
   }
+}
+
+void Rp2040Split::SplitData::StartTx() {
+  const PIO pio = PIO_INSTANCE;
+  const int sm = TX_STATE_MACHINE_INDEX;
+  const int pin = JAVELIN_SPLIT_TX_PIN;
+
+  pio_sm_set_enabled(pio, sm, false);
+  pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
+  pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+  pio_gpio_init(pio, pin);
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &config);
+#else
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_tx_start, &txConfig);
+#endif
+
+  pio_sm_set_enabled(pio, sm, true);
+}
+
+void Rp2040Split::SplitData::StartRx() {
+  const PIO pio = PIO_INSTANCE;
+  const int sm = RX_STATE_MACHINE_INDEX;
+  const int pin = JAVELIN_SPLIT_RX_PIN;
+
+  pio_sm_set_enabled(pio, sm, false);
+  pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
+  pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
+#if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &config);
+#else
+  pio_sm_init(pio, sm, programOffset + rp2040split_offset_rx_start, &rxConfig);
+#endif
+
+  ResetRxDma();
+  state = State::RECEIVING;
+  receiveStartTime = time_us_32();
+
+  pio_sm_set_enabled(pio, sm, true);
+}
+
+void Rp2040Split::SplitData::ResetRxDma() {
+  dma3->Abort();
+  dma3->source = &PIO_INSTANCE->rxf[RX_STATE_MACHINE_INDEX];
+  dma3->destination = &rxBuffer.header;
+  dma3->count =
+      JAVELIN_SPLIT_TX_RX_BUFFER_SIZE + sizeof(TxRxHeader) / sizeof(uint32_t);
+
+  Rp2040DmaControl receiveControl = {
+      .enable = true,
+      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .incrementRead = false,
+      .incrementWrite = true,
+      .chainToDma = 3,
+      .transferRequest = Rp2040DmaTransferRequest::PIO0_RX0,
+      .sniffEnable = false,
+  };
+  dma3->controlTrigger = receiveControl;
 }
 
 void Rp2040Split::SplitData::SendTxBuffer() {

@@ -2,8 +2,8 @@
 
 #include "ssd1306.h"
 #include "javelin/console.h"
-#include "javelin/display.h"
 #include "javelin/font/monochrome/font.h"
+#include "javelin/hal/display.h"
 #include "javelin/utf8_pointer.h"
 #include "rp2040_dma.h"
 #include <hardware/gpio.h>
