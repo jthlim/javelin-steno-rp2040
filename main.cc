@@ -211,7 +211,7 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
     break;
 
   case ITF_NUM_CONSOLE:
-    ConsoleInputBuffer::Add(buffer, bufferSize);
+    ConsoleInputBuffer::Add(buffer, bufferSize, ConnectionId::USB);
     break;
   }
 }

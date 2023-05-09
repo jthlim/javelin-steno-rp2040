@@ -44,7 +44,11 @@ const int RX_STATE_MACHINE_INDEX = 0;
 #endif
 
 const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
-const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 50000;
+const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 8000;
+
+const uint32_t RETRY_COUNT = 5;
+
+//---------------------------------------------------------------------------
 
 Rp2040Split::SplitData::SplitData() {
   state = IsMaster() ? State::READY_TO_SEND : State::RECEIVING;
@@ -134,8 +138,7 @@ void Rp2040Split::SplitData::ResetRxDma() {
   dma3->Abort();
   dma3->source = &PIO_INSTANCE->rxf[RX_STATE_MACHINE_INDEX];
   dma3->destination = &rxBuffer.header;
-  dma3->count =
-      JAVELIN_SPLIT_TX_RX_BUFFER_SIZE + sizeof(TxRxHeader) / sizeof(uint32_t);
+  dma3->count = sizeof(RxBuffer) / sizeof(uint32_t);
 
   Rp2040DmaControl receiveControl = {
       .enable = true,
@@ -153,13 +156,9 @@ void Rp2040Split::SplitData::SendTxBuffer() {
   // Since Rx immediately follows Tx, set Rx dma before sending anything.
   ResetRxDma();
 
-  txBuffer.header.crc =
-      Crc32(txBuffer.buffer, sizeof(uint32_t) * txBuffer.header.wordCount);
-
   dma2->source = &txBuffer.header;
   dma2->destination = &PIO_INSTANCE->txf[TX_STATE_MACHINE_INDEX];
-  size_t wordCount =
-      txBuffer.header.wordCount + sizeof(TxRxHeader) / sizeof(uint32_t);
+  size_t wordCount = txBuffer.GetWordCount();
   txWords += wordCount;
   dma2->count = wordCount;
 
@@ -178,26 +177,17 @@ void Rp2040Split::SplitData::SendTxBuffer() {
   dma2->controlTrigger = sendControl;
 }
 
-void Rp2040Split::SplitData::ProcessReceiveBuffer() {
-  size_t offset = 0;
-  while (offset < rxBuffer.header.wordCount) {
-    uint32_t blockHeader = rxBuffer.buffer[offset++];
-    int type = blockHeader >> 16;
-    size_t length = blockHeader & 0xffff;
-
-    if (type < (size_t)SplitHandlerId::COUNT) {
-      SplitRxHandler *handler = rxHandlers[type];
-      if (handler != nullptr) {
-        handler->OnDataReceived(&rxBuffer.buffer[offset], length);
-      }
-    }
-
-    uint32_t wordLength = (length + 3) >> 2;
-    offset += wordLength;
-  }
-}
-
 void Rp2040Split::SplitData::OnReceiveFailed() {
+  if (++retryCount == RETRY_COUNT) {
+    isConnected = false;
+    updateSendData = true;
+    retryCount = 0;
+    metrics[SplitMetricId::RESET_COUNT]++;
+
+    TxBuffer::OnConnectionReset();
+    RxBuffer::OnConnectionReset();
+  }
+
   if (IsMaster()) {
     state = State::READY_TO_SEND;
   } else {
@@ -205,73 +195,49 @@ void Rp2040Split::SplitData::OnReceiveFailed() {
   }
 }
 
-void Rp2040Split::SplitData::OnReceiveTimeout() {
-  for (size_t i = 0; i < txHandlerCount; ++i) {
-    txHandlers[i]->OnTransmitConnectionReset();
-  }
-
-  for (size_t i = 0; i < sizeof(rxHandlers) / sizeof(*rxHandlers); ++i) {
-    SplitRxHandler *handler = rxHandlers[i];
-    if (handler) {
-      handler->OnReceiveConnectionReset();
-    }
-  }
-
-  OnReceiveFailed();
-}
+void Rp2040Split::SplitData::OnReceiveTimeout() { OnReceiveFailed(); }
 
 void Rp2040Split::SplitData::OnReceiveSucceeded() {
   // Receiving succeeded without timeout means the previous transmit was
   // successful.
-  for (size_t i = 0; i < txHandlerCount; ++i) {
-    txHandlers[i]->OnTransmitSucceeded();
-  }
+  TxBuffer::OnTransmitSucceeded();
 
   // After receiving data, immediately start sending the data here.
+  isConnected = true;
+  updateSendData = true;
+  retryCount = 0;
   SendData();
 }
 
 bool Rp2040Split::SplitData::ProcessReceive() {
   size_t dma3Count = dma3->count;
-  if (dma3Count > JAVELIN_SPLIT_TX_RX_BUFFER_SIZE) {
-    // Header has not been received.
-    receiveStatusReason[0]++;
-    return false;
-  }
+  size_t receivedWordCount = sizeof(RxBuffer) / sizeof(uint32_t) - dma3Count;
 
-  if (rxBuffer.header.magic != TxRxHeader::MAGIC) {
-    // Error: Magic mismatch!
-    receiveStatusReason[3]++;
+  switch (rxBuffer.Validate(receivedWordCount, metrics)) {
+  case RxBufferValidateResult::CONTINUE:
+    return false;
+
+  case RxBufferValidateResult::ERROR:
     OnReceiveFailed();
-    return false;
+    return true;
+
+  case RxBufferValidateResult::OK:
+    ++rxPacketCount;
+    rxWords += rxBuffer.GetWordCount();
+
+    if (rxBuffer.header.transferId == lastRxId) {
+      metrics[SplitMetricId::REPEAT_DATA_COUNT]++;
+
+      // Repeat of the last, don't process the data again. Resend previous data.
+      SendData();
+      return true;
+    }
+
+    lastRxId = rxBuffer.header.transferId;
+    rxBuffer.Process();
+    OnReceiveSucceeded();
+    break;
   }
-
-  size_t bufferCount = JAVELIN_SPLIT_TX_RX_BUFFER_SIZE - dma3Count;
-  if (bufferCount < rxBuffer.header.wordCount) {
-    // Data has not been fully received.
-    receiveStatusReason[1]++;
-    return false;
-  }
-
-  if (rxBuffer.header.wordCount != bufferCount) {
-    // Excess data has been received.
-    receiveStatusReason[5]++;
-  }
-
-  uint32_t expectedCrc =
-      Crc32(rxBuffer.buffer, sizeof(uint32_t) * rxBuffer.header.wordCount);
-  if (rxBuffer.header.crc != expectedCrc) {
-    // Crc failure.
-    receiveStatusReason[4]++;
-    OnReceiveFailed();
-    return false;
-  }
-
-  ++rxPacketCount;
-  rxWords += rxBuffer.header.wordCount + sizeof(TxRxHeader) / sizeof(uint32_t);
-  ProcessReceiveBuffer();
-
-  OnReceiveSucceeded();
 
   return true;
 }
@@ -280,10 +246,13 @@ void Rp2040Split::SplitData::SendData() {
   dma2->WaitUntilComplete();
   StartTx();
   state = State::SENDING;
-  txBuffer.Reset();
-  for (size_t i = 0; i < txHandlerCount; ++i) {
-    txHandlers[i]->UpdateBuffer(txBuffer);
+
+  if (updateSendData) {
+    updateSendData = false;
+    txBuffer.Build();
+    txBuffer.header.transferId = ++txId;
   }
+
   SendTxBuffer();
 }
 
@@ -304,7 +273,7 @@ void Rp2040Split::SplitData::Update() {
       uint32_t receiveTimeout =
           IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
       if (timeSinceLastUpdate > receiveTimeout) {
-        receiveStatusReason[2]++;
+        metrics[SplitMetricId::TIMEOUT_COUNT]++;
         OnReceiveTimeout();
       }
     }
@@ -323,9 +292,9 @@ void Rp2040Split::SplitData::PrintInfo() {
     Console::Printf(" %zu", count);
   }
   Console::Printf("\n");
-  Console::Printf("  Receive status:");
-  for (size_t reason : receiveStatusReason) {
-    Console::Printf(" %zu", reason);
+  Console::Printf("  Metrics:");
+  for (size_t i = 0; i < SplitMetricId::COUNT; ++i) {
+    Console::Printf(" %zu", metrics[i]);
   }
   Console::Printf("\n");
 }
@@ -336,6 +305,10 @@ void __no_inline_not_in_flash_func(Rp2040Split::SplitData::TxIrqHandler)() {
   instance.state = State::RECEIVING;
   instance.receiveStartTime = time_us_32();
 }
+
+//---------------------------------------------------------------------------
+
+bool Split::IsPairConnected() { return Rp2040Split::IsPairConnected(); }
 
 //---------------------------------------------------------------------------
 

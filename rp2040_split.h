@@ -11,22 +11,13 @@
 class Rp2040Split : public Split {
 public:
   static void Initialize() { instance.Initialize(); }
-
   static void Update() { instance.Update(); }
-
-  static void RegisterTxHandler(SplitTxHandler *handler) {
-    instance.txHandlers[instance.txHandlerCount++] = handler;
-  }
-
-  static void RegisterRxHandler(SplitHandlerId id, SplitRxHandler *handler) {
-    instance.rxHandlers[(size_t)id] = handler;
-  }
-
   static void PrintInfo() { instance.PrintInfo(); }
+  static bool IsPairConnected() { return instance.isConnected; }
 
 private:
   struct SplitData {
-    enum class State {
+    enum class State : uint8_t {
       READY_TO_SEND,
       SENDING,
       RECEIVING,
@@ -35,17 +26,18 @@ private:
     SplitData();
 
     State state;
+    bool updateSendData = true;
+    bool isConnected = false;
+    uint8_t retryCount;
+    uint16_t txId;
+    uint16_t lastRxId;
     uint32_t programOffset;
     uint32_t receiveStartTime;
     uint64_t rxPacketCount;
     uint64_t txIrqCount;
     uint64_t rxWords;
     uint64_t txWords;
-    size_t receiveStatusReason[6];
-
-    size_t txHandlerCount = 0;
-    SplitTxHandler *txHandlers[(size_t)SplitHandlerId::COUNT];
-    SplitRxHandler *rxHandlers[(size_t)SplitHandlerId::COUNT];
+    size_t metrics[SplitMetricId::COUNT];
 
     TxBuffer txBuffer;
     RxBuffer rxBuffer;
@@ -65,7 +57,6 @@ private:
     void OnReceiveFailed();
     void OnReceiveTimeout();
     void OnReceiveSucceeded();
-    void ProcessReceiveBuffer();
 
     bool ProcessReceive();
 
@@ -77,14 +68,6 @@ private:
   static SplitData instance;
 };
 
-inline void Split::RegisterTxHandler(SplitTxHandler *handler) {
-  Rp2040Split::RegisterTxHandler(handler);
-}
-inline void Split::RegisterRxHandler(SplitHandlerId id,
-                                     SplitRxHandler *handler) {
-  Rp2040Split::RegisterRxHandler(id, handler);
-}
-
 #else
 
 class Rp2040Split : public Split {
@@ -92,10 +75,8 @@ public:
   static void Initialize() {}
   static void Update() {}
   static void PrintInfo() {}
+  static bool IsPairConnected() { return false; }
 };
-
-inline void Split::RegisterTxHandler(void *handler) {}
-inline void Split::RegisterRxHandler(SplitHandlerId id, void *handler) {}
 
 #endif // JAVELIN_SPLIT
 

@@ -74,16 +74,25 @@ const uint8_t keyboardReportDescriptor[] = {
 
       // Bitmap of keys.
       HID_USAGE_MIN(0),
-      HID_USAGE_MAX(223),
-      HID_REPORT_COUNT(224),
+      HID_USAGE_MAX(159),
+      HID_REPORT_COUNT(160),
       HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
-      HID_USAGE_MIN(232),
-      HID_USAGE_MAX(255),
-      HID_REPORT_COUNT(24),
+    HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
+      HID_USAGE_MIN(0xb0),
+      HID_USAGE_MAX(0xf7),
+      HID_REPORT_COUNT(72),
       HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
+    HID_USAGE_PAGE(0xff), // AppleVendor Page Top Case
+      HID_USAGE_MIN(3),
+      HID_USAGE_MAX(0x12),
+      HID_REPORT_COUNT(16),
+      HID_REPORT_SIZE(1),
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
     // LED Indicator
     HID_USAGE_PAGE(HID_USAGE_PAGE_LED),
       HID_USAGE_MIN(1),
