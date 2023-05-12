@@ -49,10 +49,14 @@ extern "C" void tud_mount_cb(void) {
   PloverHidReportBuffer::instance.Reset();
   HidKeyboardReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
+  SplitUsbStatus::instance.SetPowered(true);
 }
 
 // Invoked when device is unmounted
-extern "C" void tud_umount_cb(void) { SplitUsbStatus::instance.OnUnmount(); }
+extern "C" void tud_umount_cb(void) {
+  SplitUsbStatus::instance.OnUnmount();
+  SplitUsbStatus::instance.SetPowered(false);
+}
 
 // Invoked when usb bus is suspended
 // remoteWakeupEnabled: if host allow us  to perform remote wakeup
@@ -313,7 +317,7 @@ int main(void) {
     Bootrom::RegisterTxHandler();
     SplitSerialBuffer::RegisterTxHandler();
     Ssd1306::RegisterMasterHandlers();
-    SplitUsbStatus::RegisterRxHandler();
+    SplitUsbStatus::RegisterHandlers();
 
     InitJavelinMaster();
     tusb_init();
@@ -330,7 +334,7 @@ int main(void) {
     Bootrom::RegisterRxHandler();
     SplitSerialBuffer::RegisterRxHandler();
     Ssd1306::RegisterSlaveHandlers();
-    SplitUsbStatus::RegisterTxHandler();
+    SplitUsbStatus::RegisterHandlers();
 
     InitJavelinSlave();
     tusb_init();

@@ -200,7 +200,7 @@ void Rp2040Split::SplitData::OnReceiveTimeout() { OnReceiveFailed(); }
 void Rp2040Split::SplitData::OnReceiveSucceeded() {
   // Receiving succeeded without timeout means the previous transmit was
   // successful.
-  TxBuffer::OnTransmitSucceeded();
+  TxBuffer::OnTransmitConnected();
 
   // After receiving data, immediately start sending the data here.
   isConnected = true;
