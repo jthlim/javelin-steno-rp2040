@@ -35,15 +35,15 @@ public:
 
 #if JAVELIN_SPLIT
   static void RegisterMasterHandlers() {
-    Split::RegisterRxHandler(SplitHandlerId::OLED_AVAILABLE,
+    Split::RegisterRxHandler(SplitHandlerId::DISPLAY_AVAILABLE,
                              &instances[1].available);
     Split::RegisterTxHandler(&instances[1]);
     Split::RegisterTxHandler(&instances[1].control);
   }
   static void RegisterSlaveHandlers() {
     Split::RegisterTxHandler(&instances[1].available);
-    Split::RegisterRxHandler(SplitHandlerId::OLED_DATA, &instances[1]);
-    Split::RegisterRxHandler(SplitHandlerId::OLED_CONTROL,
+    Split::RegisterRxHandler(SplitHandlerId::DISPLAY_DATA, &instances[1]);
+    Split::RegisterRxHandler(SplitHandlerId::DISPLAY_CONTROL,
                              &instances[1].control);
   }
 #else

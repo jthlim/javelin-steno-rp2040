@@ -77,12 +77,12 @@ extern "C" void tud_resume_cb(void) {
 //---------------------------------------------------------------------------
 
 #if JAVELIN_SPLIT
-class HidTask final : public SplitRxHandler {
+class MasterTask final : public SplitRxHandler {
 #else
-class HidTask {
+class MasterTask {
 #endif
 public:
-  HidTask() : buttonManager(BUTTON_MANAGER_BYTE_CODE) {}
+  MasterTask() : buttonManager(BUTTON_MANAGER_BYTE_CODE) {}
 
   void Update();
 
@@ -102,7 +102,7 @@ private:
 #endif
 };
 
-void HidTask::Update() {
+void MasterTask::Update() {
   if (Flash::IsUpdating()) {
     return;
   }
@@ -131,7 +131,7 @@ void HidTask::Update() {
   buttonManager.Update(buttonState.value);
 }
 
-class SlaveHidTask final : public SplitTxHandler {
+class SlaveTask final : public SplitTxHandler {
 public:
   void Update();
   void UpdateBuffer(TxBuffer &buffer);
@@ -143,7 +143,7 @@ private:
   virtual void OnTransmitConnectionReset() { needsTransmit = true; }
 };
 
-void SlaveHidTask::Update() {
+void SlaveTask::Update() {
   ButtonState newButtonState = Rp2040ButtonState::Read();
   if (newButtonState == buttonState) {
     return;
@@ -161,7 +161,7 @@ void SlaveHidTask::Update() {
   }
 }
 
-void SlaveHidTask::UpdateBuffer(TxBuffer &buffer) {
+void SlaveTask::UpdateBuffer(TxBuffer &buffer) {
   if (needsTransmit) {
     needsTransmit = false;
     buffer.Add(SplitHandlerId::KEY_STATE, &buttonState, sizeof(ButtonState));
@@ -236,8 +236,8 @@ static void cdc_task() {
 
 //---------------------------------------------------------------------------
 
-JavelinStaticAllocate<HidTask> hidTaskContainer;
-JavelinStaticAllocate<SlaveHidTask> slaveHidTaskContainer;
+JavelinStaticAllocate<MasterTask> masterTaskContainer;
+JavelinStaticAllocate<SlaveTask> slaveTaskContainer;
 
 void DoMasterRunLoop() {
 #if JAVELIN_USE_WATCHDOG
@@ -246,7 +246,7 @@ void DoMasterRunLoop() {
 
   while (1) {
     tud_task(); // tinyusb device task
-    hidTaskContainer->Update();
+    masterTaskContainer->Update();
     Rp2040Split::Update();
     cdc_task();
 
@@ -269,7 +269,7 @@ void DoSlaveRunLoop() {
 
   while (1) {
     tud_task(); // tinyusb device task
-    slaveHidTaskContainer->Update();
+    slaveTaskContainer->Update();
     Rp2040Split::Update();
     cdc_task();
 
@@ -304,12 +304,12 @@ int main(void) {
   Ssd1306::Initialize();
 
   // Trigger button init script.
-  new (hidTaskContainer) HidTask;
+  new (masterTaskContainer) MasterTask;
   Ws2812::Update();
 
   if (Split::IsMaster()) {
     Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
-                             &hidTaskContainer.value);
+                             &masterTaskContainer.value);
     ConsoleInputBuffer::RegisterRxHandler();
     KeyboardLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
@@ -324,9 +324,9 @@ int main(void) {
 
     DoMasterRunLoop();
   } else {
-    new (slaveHidTaskContainer) SlaveHidTask;
+    new (slaveTaskContainer) SlaveTask;
 
-    Split::RegisterTxHandler(&slaveHidTaskContainer.value);
+    Split::RegisterTxHandler(&slaveTaskContainer.value);
     ConsoleInputBuffer::RegisterTxHandler();
     KeyboardLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();

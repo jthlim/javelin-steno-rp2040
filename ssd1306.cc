@@ -540,7 +540,7 @@ void Ssd1306::Ssd1306Availability::UpdateBuffer(TxBuffer &buffer) {
     return;
   }
   dirty = false;
-  buffer.Add(SplitHandlerId::OLED_AVAILABLE, &available, sizeof(bool));
+  buffer.Add(SplitHandlerId::DISPLAY_AVAILABLE, &available, sizeof(bool));
 }
 
 void Ssd1306::Ssd1306Availability::OnDataReceived(const void *data,
@@ -553,7 +553,7 @@ void Ssd1306::Ssd1306Control::UpdateBuffer(TxBuffer &buffer) {
     return;
   }
   dirtyFlag = 0;
-  buffer.Add(SplitHandlerId::OLED_CONTROL, &data, sizeof(data));
+  buffer.Add(SplitHandlerId::DISPLAY_CONTROL, &data, sizeof(data));
 }
 
 void Ssd1306::Ssd1306Control::OnDataReceived(const void *data, size_t length) {
@@ -580,7 +580,7 @@ void Ssd1306::Ssd1306Data::UpdateBuffer(TxBuffer &buffer) {
     return;
   }
   dirty = false;
-  buffer.Add(SplitHandlerId::OLED_DATA, buffer8, sizeof(buffer8));
+  buffer.Add(SplitHandlerId::DISPLAY_DATA, buffer8, sizeof(buffer8));
 }
 
 void Ssd1306::Ssd1306Data::OnDataReceived(const void *data, size_t length) {
