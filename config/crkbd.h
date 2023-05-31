@@ -121,4 +121,10 @@ const char *const PRODUCT_NAME = "Corne (Javelin)";
 const int VENDOR_ID = 0x4653;
 // const int PRODUCT_ID = 0x0001;
 
+#define JAVELIN_SCRIPT_HEADER                                                  \
+  "const JAVELIN_HAS_DISPLAY = 1;\n"                                           \
+  "const JAVELIN_DISPLAY_WIDTH = 32;\n"                                        \
+  "const JAVELIN_DISPLAY_HEIGHT = 128;\n"                                      \
+  "\n"
+
 //---------------------------------------------------------------------------

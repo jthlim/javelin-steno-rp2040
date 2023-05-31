@@ -82,8 +82,6 @@ class MasterTask final : public SplitRxHandler {
 class MasterTask {
 #endif
 public:
-  MasterTask() : buttonManager(BUTTON_MANAGER_BYTE_CODE) {}
-
   void Update();
 
 private:
@@ -91,7 +89,6 @@ private:
   ButtonState splitState;
 #endif
   GlobalDeferredDebounce<ButtonState> debouncer;
-  ButtonManager buttonManager;
 
 #if JAVELIN_SPLIT
   virtual void OnReceiveConnectionReset() { splitState.ClearAll(); }
@@ -107,7 +104,7 @@ void MasterTask::Update() {
     return;
   }
 
-  buttonManager.Tick();
+  ButtonManager::GetInstance().Tick();
 
 #if JAVELIN_SPLIT
   Debounced<ButtonState> buttonState =
@@ -128,7 +125,7 @@ void MasterTask::Update() {
     }
   }
 
-  buttonManager.Update(buttonState.value);
+  ButtonManager::GetInstance().Update(buttonState.value);
 }
 
 class SlaveTask final : public SplitTxHandler {
@@ -304,10 +301,12 @@ int main(void) {
   Ssd1306::Initialize();
 
   // Trigger button init script.
-  new (masterTaskContainer) MasterTask;
+  ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
   Ws2812::Update();
 
   if (Split::IsMaster()) {
+    new (masterTaskContainer) MasterTask;
+
     Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
                              &masterTaskContainer.value);
     ConsoleInputBuffer::RegisterRxHandler();

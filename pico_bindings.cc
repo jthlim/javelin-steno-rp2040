@@ -480,7 +480,6 @@ static const ParameterData PARAMETER_DATA[] = {
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
-
 static void GetKeyboardLayout() {
   Console::Printf("%s\n\n", KeyboardLayout::GetActiveLayout().GetName());
 }
@@ -491,7 +490,11 @@ static void GetKeyboardProtocol() {
                       ? "compatibility"
                       : "default");
 }
+#endif
 
+static void GetScriptHeader() { Console::Printf(JAVELIN_SCRIPT_HEADER); }
+
+#if JAVELIN_USE_EMBEDDED_STENO
 static void GetSpacePosition() {
   Console::Printf("%s\n\n",
                   engineContainer->IsSpaceAfter() ? "after" : "before");
@@ -527,6 +530,9 @@ static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
   {"keyboard_layout", GetKeyboardLayout},
   {"keyboard_protocol", GetKeyboardProtocol},
+#endif
+  {"script_header", GetScriptHeader},
+#if JAVELIN_USE_EMBEDDED_STENO
   {"space_position", GetSpacePosition},
 #endif
   {"steno_mode", GetStenoMode},

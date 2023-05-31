@@ -126,4 +126,10 @@ const char *const PRODUCT_NAME = "Kyria (Javelin)";
 const int VENDOR_ID = 0x8d1d;
 // const int PRODUCT_ID = 0xcf44;
 
+#define JAVELIN_SCRIPT_HEADER                                                  \
+  "const JAVELIN_HAS_DISPLAY = 1;\n"                                           \
+  "const JAVELIN_DISPLAY_WIDTH = 128;\n"                                       \
+  "const JAVELIN_DISPLAY_HEIGHT = 64;\n"                                       \
+  "\n"
+
 //---------------------------------------------------------------------------
