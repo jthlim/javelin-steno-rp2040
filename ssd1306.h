@@ -127,7 +127,6 @@ private:
     void DrawStenoLayout(StenoStroke stroke);
 
     void Update();
-    void PrintInfo();
 
   private:
     union {
