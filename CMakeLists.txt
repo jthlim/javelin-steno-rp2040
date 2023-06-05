@@ -41,6 +41,7 @@ pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
+  auto_draw.cc
   console_report_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc

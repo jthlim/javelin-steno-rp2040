@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------
 
+#include "auto_draw.h"
 #include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
@@ -66,209 +67,6 @@
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_DRIVER
-
-enum class AutoDraw : uint8_t {
-  NONE,
-  PAPER_TAPE,
-  STENO_LAYOUT,
-  WPM,
-};
-
-class StenoStrokeCapture : public StenoPassthrough {
-public:
-  StenoStrokeCapture(StenoProcessorElement *next) : StenoPassthrough(next) {}
-
-  void Process(const StenoKeyState &value, StenoAction action) {
-    if (action == StenoAction::TRIGGER) {
-      if (strokeCount < MAXIMUM_STROKE_COUNT) {
-        strokes[strokeCount++] = value.ToStroke();
-      } else {
-        memmove(&strokes[0], &strokes[1],
-                sizeof(StenoStroke) * (MAXIMUM_STROKE_COUNT - 1));
-        strokes[MAXIMUM_STROKE_COUNT - 1] = value.ToStroke();
-      }
-      Update(true);
-    }
-    StenoPassthrough::Process(value, action);
-  }
-
-  void Update(bool onStrokeInput) {
-#if JAVELIN_SPLIT
-    for (int displayId = 0; displayId < 2; ++displayId) {
-#else
-    const int displayId = 0;
-    {
-#endif
-      switch (autoDraw[displayId]) {
-      case AutoDraw::NONE:
-        // Do nothing
-        break;
-      case AutoDraw::PAPER_TAPE:
-        Ssd1306::DrawPaperTape(displayId, strokes, strokeCount);
-        break;
-      case AutoDraw::STENO_LAYOUT:
-        Ssd1306::DrawStenoLayout(displayId, strokeCount != 0
-                                                ? strokes[strokeCount - 1]
-                                                : StenoStroke(0));
-        break;
-      case AutoDraw::WPM:
-        if (!onStrokeInput) {
-          DrawWpm(displayId);
-        }
-        break;
-      }
-    }
-  }
-
-  static void SetAutoDraw_Binding(void *context, const char *commandLine);
-  void SetAutoDraw(int displayId, AutoDraw autoDrawId) {
-#if JAVELIN_SPLIT
-    if (displayId < 0 || displayId >= 2) {
-      return;
-    }
-#else
-    displayId = 0;
-#endif
-    autoDraw[displayId] = autoDrawId;
-    Update(false);
-  }
-
-  virtual void Tick() {
-    StenoPassthrough::Tick();
-
-    uint32_t now = Clock::GetMicroseconds();
-    if (now - lastUpdateTime < 1000000) {
-      return;
-    }
-    lastUpdateTime = now;
-
-#if JAVELIN_SPLIT
-    for (int displayId = 0; displayId < 2; ++displayId) {
-#else
-    const int displayId = 0;
-    {
-#endif
-      switch (autoDraw[displayId]) {
-      case AutoDraw::NONE:
-      case AutoDraw::PAPER_TAPE:
-      case AutoDraw::STENO_LAYOUT:
-        break;
-
-      case AutoDraw::WPM:
-        DrawWpm(displayId);
-        break;
-      }
-    }
-  }
-
-private:
-  static const size_t MAXIMUM_STROKE_COUNT = 128;
-  uint8_t strokeCount = 0;
-  uint32_t lastUpdateTime = 0;
-#if JAVELIN_SPLIT
-  AutoDraw autoDraw[2];
-#else
-  AutoDraw autoDraw[1];
-#endif
-  StenoStroke strokes[MAXIMUM_STROKE_COUNT];
-
-  static void DrawWpm(int displayId) {
-    Display::Clear(displayId);
-
-    char buffer[16];
-    Str::Sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
-#if JAVELIN_DISPLAY_WIDTH >= 64
-    const Font *font = &Font::LARGE_DIGITS;
-#else
-    const Font *font = &Font::MEDIUM_DIGITS;
-#endif
-    Ssd1306::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
-                      JAVELIN_DISPLAY_HEIGHT / 2 - font->height / 2 +
-                          font->baseline / 2,
-                      font, TextAlignment::MIDDLE, buffer);
-
-    font = &Font::DEFAULT;
-    Ssd1306::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
-                      JAVELIN_DISPLAY_HEIGHT * 3 / 4 + font->baseline / 2, font,
-                      TextAlignment::MIDDLE, "wpm");
-  }
-};
-
-void StenoStrokeCapture::SetAutoDraw_Binding(void *context,
-                                             const char *commandLine) {
-  StenoStrokeCapture *capture = (StenoStrokeCapture *)context;
-  const char *p = strchr(commandLine, ' ');
-  if (!p) {
-    Console::Printf("ERR No parameters specified\n\n");
-    return;
-  }
-  int displayId = 0;
-  ++p;
-#if !JAVELIN_SPLIT
-  if ('a' <= *p && *p <= 'z')
-    goto skipDisplayId;
-#endif
-  if (*p < '0' && *p >= '9') {
-    Console::Printf("ERR displayId parameter missing\n\n");
-    return;
-  }
-  while ('0' <= *p && *p <= '9') {
-    displayId = 10 * displayId + *p - '0';
-    ++p;
-  }
-  if (*p != ' ') {
-    Console::Printf("ERR displayId parameter missing\n\n");
-    return;
-  }
-  ++p;
-
-skipDisplayId:
-  if (Str::Eq(p, "none")) {
-    capture->SetAutoDraw(displayId, AutoDraw::NONE);
-  } else if (Str::Eq(p, "paper_tape")) {
-    capture->SetAutoDraw(displayId, AutoDraw::PAPER_TAPE);
-  } else if (Str::Eq(p, "steno_layout")) {
-    capture->SetAutoDraw(displayId, AutoDraw::STENO_LAYOUT);
-  } else if (Str::Eq(p, "wpm")) {
-    capture->SetAutoDraw(displayId, AutoDraw::WPM);
-  } else {
-    Console::Printf("ERR Unable to set auto draw: \"%s\"\n\n", p);
-    return;
-  }
-  Console::SendOk();
-}
-
-void MeasureText_Binding(void *context, const char *commandLine) {
-  const char *p = strchr(commandLine, ' ');
-
-  if (!p) {
-    Console::Printf("ERR No parameters specified\n\n");
-    return;
-  }
-  int fontId = 0;
-  ++p;
-  if (*p < '0' && *p >= '9') {
-    Console::Printf("ERR fontId parameter missing\n\n");
-    return;
-  }
-  while ('0' <= *p && *p <= '9') {
-    fontId = 10 * fontId + *p - '0';
-    ++p;
-  }
-  if (*p != ' ') {
-    Console::Printf("ERR fontId parameter missing\n\n");
-    return;
-  }
-  ++p;
-
-  const Font *font = Font::GetFont(fontId);
-  uint32_t width = font->GetStringWidth(p);
-  Console::Printf("Width: %u\n\n", width);
-}
-
-#endif
-
 #if JAVELIN_USE_EMBEDDED_STENO
 #if JAVELIN_USE_USER_DICTIONARY
 StenoUserDictionaryData
@@ -283,7 +81,8 @@ static StenoPloverHid ploverHid;
 static StenoProcessorElement *processors;
 
 #if JAVELIN_OLED_DRIVER
-static JavelinStaticAllocate<StenoStrokeCapture> passthroughContainer;
+static JavelinStaticAllocate<StenoStrokeCapture> &passthroughContainer =
+    StenoStrokeCapture::container;
 #else
 static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
 #endif
@@ -382,14 +181,6 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Write("\n", 1);
 }
 
-#if JAVELIN_USE_EMBEDDED_STENO
-#if JAVELIN_OLED_DRIVER
-void Display::SetAutoDraw(int displayId, int autoDrawId) {
-  passthroughContainer->SetAutoDraw(displayId, (AutoDraw)autoDrawId);
-}
-#endif
-#endif
-
 void Restart_Binding(void *context, const char *commandLine) {
   watchdog_reboot(0, 0, 0);
 }
@@ -466,16 +257,16 @@ struct DynamicParameterData {
 };
 
 static const ParameterData PARAMETER_DATA[] = {
-  {"button_count", (void *)BUTTON_COUNT},
-  {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
-  {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
+    {"button_count", (void *)BUTTON_COUNT},
+    {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
+    {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
 #if JAVELIN_USE_EMBEDDED_STENO
-  {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
+    {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
 #endif
-  {"flash_memory_address", (void *)0x10000000},
-  {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
+    {"flash_memory_address", (void *)0x10000000},
+    {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
 #if JAVELIN_USE_EMBEDDED_STENO
-  {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
+    {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
 #endif
 };
 
@@ -528,17 +319,17 @@ static void GetStenoMode() {
 
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
-  {"keyboard_layout", GetKeyboardLayout},
-  {"keyboard_protocol", GetKeyboardProtocol},
+    {"keyboard_layout", GetKeyboardLayout},
+    {"keyboard_protocol", GetKeyboardProtocol},
 #endif
-  {"script_header", GetScriptHeader},
+    {"script_header", GetScriptHeader},
 #if JAVELIN_USE_EMBEDDED_STENO
-  {"space_position", GetSpacePosition},
+    {"space_position", GetSpacePosition},
 #endif
-  {"steno_mode", GetStenoMode},
+    {"steno_mode", GetStenoMode},
 #if JAVELIN_USE_EMBEDDED_STENO
-  {"stroke_count", GetStrokeCount},
-  {"unicode_mode", GetUnicodeMode},
+    {"stroke_count", GetStrokeCount},
+    {"unicode_mode", GetUnicodeMode},
 #endif
 };
 
@@ -585,6 +376,38 @@ void ListParametersBinding(void *context, const char *commandLine) {
 void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
   ORTHOGRAPHY_ADDRESS->Print();
 }
+#endif
+
+#if JAVELIN_OLED_DRIVER
+
+void MeasureText_Binding(void *context, const char *commandLine) {
+  const char *p = strchr(commandLine, ' ');
+
+  if (!p) {
+    Console::Printf("ERR No parameters specified\n\n");
+    return;
+  }
+  int fontId = 0;
+  ++p;
+  if (*p < '0' && *p >= '9') {
+    Console::Printf("ERR fontId parameter missing\n\n");
+    return;
+  }
+  while ('0' <= *p && *p <= '9') {
+    fontId = 10 * fontId + *p - '0';
+    ++p;
+  }
+  if (*p != ' ') {
+    Console::Printf("ERR fontId parameter missing\n\n");
+    return;
+  }
+  ++p;
+
+  const Font *font = Font::GetFont(fontId);
+  uint32_t width = font->GetStringWidth(p);
+  Console::Printf("Width: %u\n\n", width);
+}
+
 #endif
 
 #if ENABLE_DEBUG_COMMAND
