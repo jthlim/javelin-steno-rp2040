@@ -104,7 +104,7 @@ void MasterTask::Update() {
     return;
   }
 
-  ButtonManager::GetInstance().Tick();
+  ButtonManager::GetInstance().Tick(Clock::GetMilliseconds());
 
 #if JAVELIN_SPLIT
   Debounced<ButtonState> buttonState =
@@ -125,7 +125,8 @@ void MasterTask::Update() {
     }
   }
 
-  ButtonManager::GetInstance().Update(buttonState.value);
+  ButtonManager::GetInstance().Update(buttonState.value,
+                                      Clock::GetMilliseconds());
 }
 
 class SlaveTask final : public SplitTxHandler {

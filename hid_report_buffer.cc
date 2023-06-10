@@ -24,7 +24,8 @@ void HidReportBufferBase::SendReport(const uint8_t *data, size_t length) {
   if (triggerSend) {
     if (!tud_hid_n_ready(instanceNumber)) {
 #if JAVELIN_SPLIT
-      if (Split::IsMaster()) {
+      if (Split::IsMaster() &&
+          Connection::IsPairConnected(PairConnectionId::ACTIVE)) {
         reportsSentCount[instanceNumber]++;
         SplitHidReportBuffer::Add(instanceNumber, reportId, data, length);
       }
