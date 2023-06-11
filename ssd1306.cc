@@ -1,6 +1,8 @@
 //---------------------------------------------------------------------------
 
 #include "ssd1306.h"
+#include "javelin/button_manager.h"
+#include "javelin/clock.h"
 #include "javelin/console.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
@@ -392,6 +394,10 @@ void Ssd1306::Ssd1306Data::Update() {
   if (!dirty || dma4->IsBusy() || !IsI2cTxReady()) {
     return;
   }
+
+  ButtonManager::GetInstance().ExecuteScript(ScriptId::DISPLAY_OVERLAY,
+                                             Clock::GetMilliseconds());
+
   dirty = false;
 
   JAVELIN_OLED_I2C->hw->enable = 0;
