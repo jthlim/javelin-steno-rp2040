@@ -395,8 +395,7 @@ void Ssd1306::Ssd1306Data::Update() {
     return;
   }
 
-  ButtonManager::GetInstance().ExecuteScript(ScriptId::DISPLAY_OVERLAY,
-                                             Clock::GetMilliseconds());
+  ButtonManager::GetInstance().ExecuteScript(ScriptId::DISPLAY_OVERLAY);
 
   dirty = false;
 

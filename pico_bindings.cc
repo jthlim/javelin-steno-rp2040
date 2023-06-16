@@ -165,6 +165,8 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidReportBufferBase::PrintInfo();
   Rp2040Split::PrintInfo();
 
+  ButtonManager::GetInstance().PrintInfo();
+
   if (Rp2040Split::IsMaster()) {
     // The slave will always just print "Screen: present, present" here.
     // Rather than print incorrect info, don't print anything on the slave at

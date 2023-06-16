@@ -301,10 +301,6 @@ int main(void) {
   Rp2040Split::Initialize();
   Ssd1306::Initialize();
 
-  // Trigger button init script.
-  ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
-  Ws2812::Update();
-
   if (Split::IsMaster()) {
     new (masterTaskContainer) MasterTask;
 
@@ -320,6 +316,7 @@ int main(void) {
     SplitUsbStatus::RegisterHandlers();
 
     InitJavelinMaster();
+    ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
     tusb_init();
 
     DoMasterRunLoop();
@@ -337,6 +334,8 @@ int main(void) {
     SplitUsbStatus::RegisterHandlers();
 
     InitJavelinSlave();
+    ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
+
     tusb_init();
     DoSlaveRunLoop();
   }
