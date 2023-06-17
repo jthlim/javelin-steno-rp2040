@@ -72,6 +72,8 @@ target_sources(${NAME} PUBLIC
   javelin/console.cc
   javelin/console_input_buffer.cc
   javelin/crc.cc
+  javelin/dictionary/compact_map_dictionary.cc
+  javelin/dictionary/compact_test_dictionary.cc
   javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
   javelin/dictionary/dictionary.cc
@@ -81,11 +83,9 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/jeff_phrasing_dictionary.cc
   javelin/dictionary/jeff_phrasing_dictionary_data.cc
   javelin/dictionary/jeff_show_stroke_dictionary.cc
-  javelin/dictionary/map_dictionary.cc
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
   javelin/dictionary/reverse_prefix_dictionary.cc
-  javelin/dictionary/test_dictionary.cc
   javelin/dictionary/unicode_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/dictionary/wrapped_dictionary.cc

@@ -8,6 +8,7 @@
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
+#include "javelin/dictionary/compact_map_dictionary.h"
 #include "javelin/dictionary/corrupted_dictionary.h"
 #include "javelin/dictionary/debug_dictionary.h"
 #include "javelin/dictionary/dictionary.h"
@@ -16,7 +17,6 @@
 #include "javelin/dictionary/jeff_numbers_dictionary.h"
 #include "javelin/dictionary/jeff_phrasing_dictionary.h"
 #include "javelin/dictionary/jeff_show_stroke_dictionary.h"
-#include "javelin/dictionary/map_dictionary.h"
 #include "javelin/dictionary/map_dictionary_definition.h"
 #include "javelin/dictionary/reverse_auto_suffix_dictionary.h"
 #include "javelin/dictionary/reverse_map_dictionary.h"
@@ -518,8 +518,9 @@ void InitJavelinMaster() {
       const StenoMapDictionaryDefinition *definition =
           STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->dictionaries[i];
 
-      dictionaries.Add(StenoDictionaryListEntry(
-          new StenoMapDictionary(*definition), definition->defaultEnabled));
+      dictionaries.Add(
+          StenoDictionaryListEntry(new StenoCompactMapDictionary(*definition),
+                                   definition->defaultEnabled));
     }
   }
   dictionaries.Add(
