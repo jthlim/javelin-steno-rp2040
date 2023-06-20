@@ -142,6 +142,7 @@ target_sources(${NAME} PUBLIC
   javelin/stroke.cc
   javelin/stroke_history.cc
   javelin/stroke_list_parser.cc
+  javelin/timer_manager.cc
   javelin/unicode.cc
   javelin/utf8_pointer.cc
   javelin/windows_alt_unicode_data.cc

@@ -13,6 +13,7 @@
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
 #include "javelin/static_allocate.h"
+#include "javelin/timer_manager.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_button_state.h"
 #include "rp2040_crc.h"
@@ -104,7 +105,9 @@ void MasterTask::Update() {
     return;
   }
 
-  ButtonManager::GetInstance().Tick(Clock::GetMilliseconds());
+  uint32_t scriptTime = Clock::GetMilliseconds();
+  ButtonManager::GetInstance().Tick(scriptTime);
+  TimerManager::instance.ProcessTimers(scriptTime);
 
 #if JAVELIN_SPLIT
   Debounced<ButtonState> buttonState =
