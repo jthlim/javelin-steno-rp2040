@@ -145,6 +145,14 @@ private:
 };
 
 void SlaveTask::Update() {
+  if (Flash::IsUpdating()) {
+    return;
+  }
+
+  uint32_t scriptTime = Clock::GetMilliseconds();
+  ButtonManager::GetInstance().Tick(scriptTime);
+  TimerManager::instance.ProcessTimers(scriptTime);
+
   ButtonState newButtonState = Rp2040ButtonState::Read();
   if (newButtonState == buttonState) {
     return;
