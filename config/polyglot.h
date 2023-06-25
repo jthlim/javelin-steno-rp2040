@@ -56,6 +56,4 @@ const char *const MANUFACTURER_NAME = "stenokeyboards";
 const char *const PRODUCT_NAME = "The Polyglot (Javelin)";
 const int VENDOR_ID = 0x9000;
 
-#define JAVELIN_SCRIPT_HEADER "\n\n"
-
 //---------------------------------------------------------------------------

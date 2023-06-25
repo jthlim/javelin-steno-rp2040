@@ -285,7 +285,28 @@ static void GetKeyboardProtocol() {
 }
 #endif
 
-static void GetScriptHeader() { Console::Printf(JAVELIN_SCRIPT_HEADER); }
+// clang-format off
+#define STR(x) #x
+static void GetScriptHeader() {
+  Console::Printf(
+#if JAVELIN_RGB
+  #define HAS_SCRIPT_HEADER 1
+      "const JAVELIN_HAS_RGB = 1;\n"
+#endif
+#if JAVELIN_DISPLAY_DRIVER
+  #define HAS_SCRIPT_HEADER 1
+      "const JAVELIN_HAS_DISPLAY = 1;\n"
+      "const JAVELIN_DISPLAY_WIDTH = " STR(JAVELIN_DISPLAY_WIDTH) ";\n" //
+      "const JAVELIN_DISPLAY_HEIGHT = " STR(JAVELIN_DISPLAY_HEIGHT) ";\n" //
+#endif
+#if HAS_SCRIPT_HEADER
+      "\n"
+#else
+      "\n\n"
+#endif
+  );
+}
+// clang-format on
 
 #if JAVELIN_USE_EMBEDDED_STENO
 static void GetSpacePosition() {
