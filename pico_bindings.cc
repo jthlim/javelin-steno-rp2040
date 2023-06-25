@@ -286,7 +286,8 @@ static void GetKeyboardProtocol() {
 #endif
 
 // clang-format off
-#define STR(x) #x
+#define STR2(x) #x
+#define STR(x) STR2(x)
 static void GetScriptHeader() {
   Console::Printf(
 #if JAVELIN_RGB
