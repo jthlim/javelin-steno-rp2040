@@ -56,6 +56,7 @@ target_sources(${NAME} PUBLIC
   rp2040_crc.cc
   rp2040_flash.cc
   rp2040_gpio.cc
+  rp2040_orthography.cc
   rp2040_random.cc
   rp2040_serial_port.cc
   rp2040_split.cc

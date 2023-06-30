@@ -5,7 +5,6 @@
 #include "javelin/crc.h"
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
-#include "rp2040_spinlock.h"
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 #include "rp2040_split.pio.h"
 #endif
