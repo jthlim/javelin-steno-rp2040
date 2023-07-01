@@ -40,6 +40,7 @@ private:
 
     union {
       uint8_t presenceFlags[32];
+      uint16_t presenceFlags16[16];
       uint32_t presenceFlags32[8];
     };
   };
@@ -49,9 +50,11 @@ private:
   uint8_t maxPressIndex = 0;
   Buffer buffers[2];
 
-  HidReportBuffer<32> reportBuffer;
+  HidReportBuffer<17> reportBuffer;
 
   bool HasData() const;
+  void SendKeyboardPageReportIfRequired();
+  void SendConsumerPageReportIfRequired();
 
   friend class SplitHidReportBuffer;
 };

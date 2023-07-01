@@ -57,13 +57,15 @@ extern "C" const uint8_t *tud_descriptor_device_cb(void) {
 
 // clang-format off
 const uint8_t keyboardReportDescriptor[] = {
-    // Keyboard
+    // Keyboard Page
     HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
     HID_USAGE(HID_USAGE_DESKTOP_KEYBOARD),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
-    // Keyboard
-    HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
-      // Bitmap of modifiers.
+      // Keyboard
+      HID_REPORT_ID(KEYBOARD_PAGE_REPORT_ID)
+      HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
+      
+      // 1 input byte. Bitmap of modifiers.
       HID_USAGE_MIN(224),
       HID_USAGE_MAX(231),
       HID_LOGICAL_MIN(0),
@@ -72,31 +74,28 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
-      // Bitmap of keys.
+      // 13 input bytes. Bitmap of keys.
       HID_USAGE_MIN(0),
-      HID_USAGE_MAX(159),
-      HID_REPORT_COUNT(160),
+      HID_USAGE_MAX(103),
+      HID_REPORT_COUNT(104),
       HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
-    HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
-      HID_USAGE_MIN(0xb0),
-      HID_USAGE_MAX(0xf7),
-      HID_REPORT_COUNT(72),
-      HID_REPORT_SIZE(1),
-      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+      // 2 input bytes. Keyboard page array.
+      HID_USAGE_MIN(0x68),
+      HID_USAGE_MAX(0x9f),
+      HID_LOGICAL_MIN(0x68),
+      HID_LOGICAL_MAX_N(0x9f, 2),
+      HID_REPORT_COUNT(2),
+      HID_REPORT_SIZE(8),
+      HID_INPUT(HID_DATA | HID_ARRAY | HID_ABSOLUTE),
 
-    HID_USAGE_PAGE(0xff), // AppleVendor Page Top Case
-      HID_USAGE_MIN(3),
-      HID_USAGE_MAX(0x12),
-      HID_REPORT_COUNT(16),
-      HID_REPORT_SIZE(1),
-      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
-
-    // LED Indicator
+    // 1 output byte. LED Indicator
     HID_USAGE_PAGE(HID_USAGE_PAGE_LED),
       HID_USAGE_MIN(1),
       HID_USAGE_MAX(5),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(1),
       HID_REPORT_COUNT(5),
       HID_REPORT_SIZE(1),
       HID_OUTPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
@@ -104,6 +103,27 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_REPORT_COUNT(1),
       HID_REPORT_SIZE(3),
       HID_OUTPUT(HID_CONSTANT),
+
+    HID_COLLECTION_END,
+
+    // --------------------------
+
+    // Keyboard Page
+    HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
+    HID_USAGE(HID_USAGE_CONSUMER_CONTROL),
+    HID_COLLECTION(HID_COLLECTION_APPLICATION),
+
+    // 6 input bytes. Consumer Page
+      HID_REPORT_ID(CONSUMER_PAGE_REPORT_ID)
+      HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
+      HID_USAGE_MIN(0x00),
+      HID_USAGE_MAX(0xff),
+      HID_LOGICAL_MIN(0x00),
+      HID_LOGICAL_MAX_N(0xff, 2),
+      HID_REPORT_COUNT(6),
+      HID_REPORT_SIZE(8),
+      HID_INPUT(HID_DATA | HID_ARRAY | HID_ABSOLUTE),
+
     HID_COLLECTION_END,
 };
 

@@ -64,6 +64,7 @@
 
 #define TRACE_RELEASE_PROCESSING_TIME 0
 #define ENABLE_DEBUG_COMMAND 0
+#define ENABLE_EXTRA_INFO 0
 
 //---------------------------------------------------------------------------
 
@@ -150,7 +151,9 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("  ");
   HidKeyboardReportBuilder::instance.PrintInfo();
 
+#if ENABLE_EXTRA_INFO
   Connection::PrintInfo();
+#endif
 
   Console::Printf("Memory\n");
   Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
@@ -165,13 +168,17 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   HidReportBufferBase::PrintInfo();
   Rp2040Split::PrintInfo();
 
+#if ENABLE_EXTRA_INFO
   ButtonManager::GetInstance().PrintInfo();
+#endif
 
   if (Rp2040Split::IsMaster()) {
+#if ENABLE_EXTRA_INFO
     // The slave will always just print "Screen: present, present" here.
     // Rather than print incorrect info, don't print anything on the slave at
     // all.
     Ssd1306::PrintInfo();
+#endif
 
     Console::Printf("Processing chain\n");
     processors->PrintInfo();

@@ -38,34 +38,31 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
       buffers[1].data[MODIFIER_OFFSET] = modifiers;
       buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
     }
-    if (compatibilityMode) {
+  } else {
+
+    int byte = (key >> 3);
+    if (key < 0xe0) {
+      ++byte;
+    }
+    int mask = (1 << (key & 7));
+
+    if (key <= maxPressIndex ||
+        (maxPressIndex != 0 && buffers[0].data[MODIFIER_OFFSET] != modifiers) ||
+        (buffers[0].presenceFlags[byte] & mask)) {
       Flush();
     }
-    return;
-  }
 
-  int byte = (key >> 3);
-  if (key < 0xe0) {
-    ++byte;
-  }
-  int mask = (1 << (key & 7));
+    if (buffers[0].presenceFlags[byte] & mask) {
+      Flush();
+    }
 
-  if (key <= maxPressIndex ||
-      (maxPressIndex != 0 && buffers[0].data[MODIFIER_OFFSET] != modifiers) ||
-      (buffers[0].presenceFlags[byte] & mask)) {
-    Flush();
-  }
-
-  if (buffers[0].presenceFlags[byte] & mask) {
-    Flush();
-  }
-
-  buffers[0].data[MODIFIER_OFFSET] = modifiers;
-  buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
-  buffers[0].data[byte] |= mask;
-  buffers[0].presenceFlags[byte] |= mask;
-  if (key > maxPressIndex) {
-    maxPressIndex = key;
+    buffers[0].data[MODIFIER_OFFSET] = modifiers;
+    buffers[0].presenceFlags[MODIFIER_OFFSET] = 1;
+    buffers[0].data[byte] |= mask;
+    buffers[0].presenceFlags[byte] |= mask;
+    if (key > maxPressIndex) {
+      maxPressIndex = key;
+    }
   }
 
   if (compatibilityMode) {
@@ -86,26 +83,23 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
       buffers[1].data[MODIFIER_OFFSET] = modifiers;
       buffers[1].presenceFlags[MODIFIER_OFFSET] = 0xff;
     }
-    if (compatibilityMode) {
-      Flush();
-    }
-    return;
-  }
-
-  int byte = (key >> 3);
-  if (key < 0xe0) {
-    ++byte;
-  }
-  int mask = (1 << (key & 7));
-
-  if ((buffers[0].presenceFlags[byte] & mask) != 0 &&
-      (buffers[0].data[byte] & mask) != 0) {
-    buffers[1].presenceFlags[byte] |= mask;
-    buffers[1].data[byte] &= ~mask;
   } else {
-    buffers[0].presenceFlags[byte] |= mask;
-    buffers[0].data[byte] &= ~mask;
+    int byte = (key >> 3);
+    if (key < 0xe0) {
+      ++byte;
+    }
+    int mask = (1 << (key & 7));
+
+    if ((buffers[0].presenceFlags[byte] & mask) != 0 &&
+        (buffers[0].data[byte] & mask) != 0) {
+      buffers[1].presenceFlags[byte] |= mask;
+      buffers[1].data[byte] &= ~mask;
+    } else {
+      buffers[0].presenceFlags[byte] |= mask;
+      buffers[0].data[byte] &= ~mask;
+    }
   }
+
   if (compatibilityMode) {
     Flush();
   }
@@ -128,8 +122,84 @@ void HidKeyboardReportBuilder::FlushIfRequired() {
   }
 }
 
+void HidKeyboardReportBuilder::SendKeyboardPageReportIfRequired() {
+  // A keyboard page report is required if there's any presence bits
+  // from 0x0 - 0xa7
+  if ((buffers[0].presenceFlags32[0] | buffers[0].presenceFlags32[1] |
+       buffers[0].presenceFlags32[2] | buffers[0].presenceFlags32[3] |
+       buffers[0].presenceFlags32[4] | buffers[0].presenceFlags[20]) == 0) {
+    return;
+  }
+
+  uint8_t reportData[17];
+  reportData[0] = KEYBOARD_PAGE_REPORT_ID;
+
+  // The first 14 bytes match the internal buffer.
+  memcpy(reportData + 1, buffers[0].data, 14);
+  reportData[15] = 0;
+  reportData[16] = 0;
+
+  // Quick reject test for array data, which resides in 0x70 - 0xa7
+  if (buffers[0].presenceFlags16[7] | buffers[0].presenceFlags32[4] |
+      buffers[0].presenceFlags[20]) {
+
+    size_t offset = 15;
+    for (size_t i = 0x70 / 8; i < 0xa8 / 8; ++i) {
+      uint8_t byte = buffers[0].data[i];
+      if (!byte) {
+        continue;
+      }
+
+      for (size_t bit = 0; bit < 8; bit++) {
+        if (byte & (1 << bit)) {
+          size_t logical = i * 8 + bit - 8;
+          reportData[offset++] = logical;
+          if (offset == 17) {
+            goto done;
+          }
+        }
+      }
+    }
+  }
+done:
+  reportBuffer.SendReport(reportData, sizeof(reportData));
+}
+
+void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
+  // Consumer page bits are 0xa8 - 0xe7
+  if (((buffers[0].presenceFlags32[5] >> 8) | buffers[0].presenceFlags32[6] |
+       buffers[0].presenceFlags[28]) == 0) {
+    return;
+  }
+
+  uint8_t reportData[7];
+  memset(reportData, 0, sizeof(reportData));
+  reportData[0] = CONSUMER_PAGE_REPORT_ID;
+
+  size_t offset = 1;
+  for (size_t i = 0xa8 / 8; i < 0xe8 / 8; ++i) {
+    uint8_t byte = buffers[0].data[i];
+    if (!byte) {
+      continue;
+    }
+
+    for (size_t bit = 0; bit < 8; bit++) {
+      if (byte & (1 << bit)) {
+        size_t logical = i * 8 + bit + 8;
+        reportData[offset++] = logical;
+        if (offset == 7) {
+          goto done;
+        }
+      }
+    }
+  }
+done:
+  reportBuffer.SendReport(reportData, sizeof(reportData));
+}
+
 void HidKeyboardReportBuilder::Flush() {
-  reportBuffer.SendReport(buffers[0].data, 32);
+  SendKeyboardPageReportIfRequired();
+  SendConsumerPageReportIfRequired();
 
   for (int i = 0; i < 8; ++i) {
     buffers[0].data32[i] =

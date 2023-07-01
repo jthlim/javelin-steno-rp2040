@@ -217,10 +217,11 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
                                       uint16_t bufferSize) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    if (reportType != HID_REPORT_TYPE_OUTPUT || bufferSize < 1) {
+    if (reportType != HID_REPORT_TYPE_OUTPUT || bufferSize < 2 ||
+        buffer[0] != KEYBOARD_PAGE_REPORT_ID) {
       return;
     }
-    KeyboardLedStatus::Set(*(KeyboardLedStatusValue *)buffer);
+    KeyboardLedStatus::Set(*(KeyboardLedStatusValue *)&buffer[1]);
     break;
 
   case ITF_NUM_CONSOLE:

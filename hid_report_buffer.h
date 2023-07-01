@@ -29,17 +29,17 @@ public:
   static uint32_t reportsSentCount[];
 
 protected:
-  HidReportBufferBase(uint8_t dataSize, uint8_t instanceNumber,
+  HidReportBufferBase(uint8_t entrySize, uint8_t instanceNumber,
                       uint8_t reportId)
-      : dataSize(dataSize), instanceNumber(instanceNumber), reportId(reportId) {
-  }
+      : entrySize(entrySize), instanceNumber(instanceNumber),
+        reportId(reportId) {}
 
   static const size_t NUMBER_OF_ENTRIES = 16;
 
 private:
   size_t startIndex = 0;
   size_t endIndex = 0;
-  const uint8_t dataSize;
+  const uint8_t entrySize;
   const uint8_t instanceNumber;
   const uint8_t reportId;
 
@@ -53,7 +53,7 @@ template <size_t DATA_SIZE>
 struct HidReportBuffer : public HidReportBufferBase {
 public:
   HidReportBuffer(uint8_t instanceNumber, uint8_t reportId)
-      : HidReportBufferBase(DATA_SIZE, instanceNumber, reportId) {
+      : HidReportBufferBase(DATA_SIZE + 1, instanceNumber, reportId) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static_assert(offsetof(HidReportBuffer, buffers) ==
@@ -63,7 +63,8 @@ public:
   }
 
 private:
-  uint8_t buffers[DATA_SIZE * NUMBER_OF_ENTRIES];
+  // Each entry has one byte prefix which is the length, followed by the data.
+  uint8_t buffers[(DATA_SIZE + 1) * NUMBER_OF_ENTRIES];
 };
 
 //---------------------------------------------------------------------------
