@@ -8,7 +8,7 @@
 
 class HidReportBufferBase {
 public:
-  void SendReport(const uint8_t *data, size_t length);
+  void SendReport(uint8_t reportId, const uint8_t *data, size_t length);
   void SendNextReport();
 
   void Print(const char *p);
@@ -29,19 +29,26 @@ public:
   static uint32_t reportsSentCount[];
 
 protected:
-  HidReportBufferBase(uint8_t entrySize, uint8_t instanceNumber,
-                      uint8_t reportId)
-      : entrySize(entrySize), instanceNumber(instanceNumber),
-        reportId(reportId) {}
+  HidReportBufferBase(uint8_t entrySize, uint8_t instanceNumber)
+      : entrySize(entrySize), instanceNumber(instanceNumber) {}
 
   static const size_t NUMBER_OF_ENTRIES = 16;
 
 private:
-  size_t startIndex = 0;
-  size_t endIndex = 0;
   const uint8_t entrySize;
   const uint8_t instanceNumber;
-  const uint8_t reportId;
+  size_t startIndex = 0;
+  size_t endIndex = 0;
+
+  struct Entry {
+    uint8_t length;
+    uint8_t reportId;
+    uint8_t data[1];
+  };
+
+  Entry *GetEntry(size_t index) {
+    return (Entry *)(entryData + entrySize * index);
+  }
 
 public:
   uint8_t entryData[0];
@@ -52,8 +59,8 @@ public:
 template <size_t DATA_SIZE>
 struct HidReportBuffer : public HidReportBufferBase {
 public:
-  HidReportBuffer(uint8_t instanceNumber, uint8_t reportId)
-      : HidReportBufferBase(DATA_SIZE + 1, instanceNumber, reportId) {
+  HidReportBuffer(uint8_t instanceNumber)
+      : HidReportBufferBase(DATA_SIZE + 2, instanceNumber) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static_assert(offsetof(HidReportBuffer, buffers) ==
@@ -64,7 +71,7 @@ public:
 
 private:
   // Each entry has one byte prefix which is the length, followed by the data.
-  uint8_t buffers[(DATA_SIZE + 1) * NUMBER_OF_ENTRIES];
+  uint8_t buffers[(DATA_SIZE + 2) * NUMBER_OF_ENTRIES];
 };
 
 //---------------------------------------------------------------------------

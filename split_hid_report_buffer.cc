@@ -100,7 +100,8 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.reportId, entry->data.data,
+                            entry->data.length);
     return true;
   }
   case ITF_NUM_CONSOLE: {
@@ -109,7 +110,8 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.reportId, entry->data.data,
+                            entry->data.length);
     return true;
   }
   case ITF_NUM_PLOVER_HID: {
@@ -118,7 +120,8 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
       return false;
     }
 
-    reportBuffer.SendReport(entry->data.data, entry->data.length);
+    reportBuffer.SendReport(entry->data.reportId, entry->data.data,
+                            entry->data.length);
     return true;
   }
   }

@@ -11,7 +11,7 @@ ConsoleReportBuffer ConsoleReportBuffer::instance;
 
 //---------------------------------------------------------------------------
 
-ConsoleReportBuffer::ConsoleReportBuffer() : reportBuffer(ITF_NUM_CONSOLE, 0) {}
+ConsoleReportBuffer::ConsoleReportBuffer() : reportBuffer(ITF_NUM_CONSOLE) {}
 
 void ConsoleReportBuffer::SendData(const uint8_t *data, size_t length) {
   // Fill up the previous buffer if it's not empty.
@@ -25,7 +25,7 @@ void ConsoleReportBuffer::SendData(const uint8_t *data, size_t length) {
     length -= bytesToAdd;
 
     if (bufferSize == MAX_BUFFER_SIZE) {
-      reportBuffer.SendReport(buffer, MAX_BUFFER_SIZE);
+      reportBuffer.SendReport(0, buffer, MAX_BUFFER_SIZE);
       bufferSize = 0;
     }
 
@@ -36,7 +36,7 @@ void ConsoleReportBuffer::SendData(const uint8_t *data, size_t length) {
 
   // Send all full length requests.
   while (length >= MAX_BUFFER_SIZE) {
-    reportBuffer.SendReport(data, MAX_BUFFER_SIZE);
+    reportBuffer.SendReport(0, data, MAX_BUFFER_SIZE);
     data += MAX_BUFFER_SIZE;
     length -= MAX_BUFFER_SIZE;
   }
@@ -53,7 +53,7 @@ void ConsoleReportBuffer::Flush() {
   if (bufferSize > 0) {
     int remaining = MAX_BUFFER_SIZE - bufferSize;
     memset(buffer + bufferSize, 0, remaining);
-    reportBuffer.SendReport(buffer, MAX_BUFFER_SIZE);
+    reportBuffer.SendReport(0, buffer, MAX_BUFFER_SIZE);
     bufferSize = 0;
   }
 }

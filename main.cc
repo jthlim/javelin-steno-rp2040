@@ -51,12 +51,14 @@ extern "C" void tud_mount_cb(void) {
   HidKeyboardReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
   SplitUsbStatus::instance.SetPowered(true);
+  ButtonManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when device is unmounted
 extern "C" void tud_umount_cb(void) {
   SplitUsbStatus::instance.OnUnmount();
   SplitUsbStatus::instance.SetPowered(false);
+  ButtonManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when usb bus is suspended

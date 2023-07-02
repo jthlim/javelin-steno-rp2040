@@ -16,7 +16,7 @@ HidKeyboardReportBuilder HidKeyboardReportBuilder::instance;
 const size_t MODIFIER_OFFSET = 0;
 
 HidKeyboardReportBuilder::HidKeyboardReportBuilder()
-    : reportBuffer(ITF_NUM_KEYBOARD, 0) {
+    : reportBuffer(ITF_NUM_KEYBOARD) {
   memset(&buffers, 0, sizeof(buffers));
 }
 
@@ -131,19 +131,18 @@ void HidKeyboardReportBuilder::SendKeyboardPageReportIfRequired() {
     return;
   }
 
-  uint8_t reportData[17];
-  reportData[0] = KEYBOARD_PAGE_REPORT_ID;
+  uint8_t reportData[16];
 
   // The first 14 bytes match the internal buffer.
-  memcpy(reportData + 1, buffers[0].data, 14);
+  memcpy(reportData, buffers[0].data, 14);
+  reportData[14] = 0;
   reportData[15] = 0;
-  reportData[16] = 0;
 
   // Quick reject test for array data, which resides in 0x70 - 0xa7
   if (buffers[0].presenceFlags16[7] | buffers[0].presenceFlags32[4] |
       buffers[0].presenceFlags[20]) {
 
-    size_t offset = 15;
+    size_t offset = 14;
     for (size_t i = 0x70 / 8; i < 0xa8 / 8; ++i) {
       uint8_t byte = buffers[0].data[i];
       if (!byte) {
@@ -154,7 +153,7 @@ void HidKeyboardReportBuilder::SendKeyboardPageReportIfRequired() {
         if (byte & (1 << bit)) {
           size_t logical = i * 8 + bit - 8;
           reportData[offset++] = logical;
-          if (offset == 17) {
+          if (offset == 16) {
             goto done;
           }
         }
@@ -162,7 +161,8 @@ void HidKeyboardReportBuilder::SendKeyboardPageReportIfRequired() {
     }
   }
 done:
-  reportBuffer.SendReport(reportData, sizeof(reportData));
+  reportBuffer.SendReport(KEYBOARD_PAGE_REPORT_ID, reportData,
+                          sizeof(reportData));
 }
 
 void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
@@ -172,11 +172,10 @@ void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
     return;
   }
 
-  uint8_t reportData[7];
+  uint8_t reportData[6];
   memset(reportData, 0, sizeof(reportData));
-  reportData[0] = CONSUMER_PAGE_REPORT_ID;
 
-  size_t offset = 1;
+  size_t offset = 0;
   for (size_t i = 0xa8 / 8; i < 0xe8 / 8; ++i) {
     uint8_t byte = buffers[0].data[i];
     if (!byte) {
@@ -194,7 +193,8 @@ void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
     }
   }
 done:
-  reportBuffer.SendReport(reportData, sizeof(reportData));
+  reportBuffer.SendReport(CONSUMER_PAGE_REPORT_ID, reportData,
+                          sizeof(reportData));
 }
 
 void HidKeyboardReportBuilder::Flush() {

@@ -11,11 +11,11 @@ PloverHidReportBuffer PloverHidReportBuffer::instance;
 //---------------------------------------------------------------------------
 
 PloverHidReportBuffer::PloverHidReportBuffer()
-    : HidReportBuffer<8>(ITF_NUM_PLOVER_HID, 0x50) {}
+    : HidReportBuffer<8>(ITF_NUM_PLOVER_HID) {}
 
 void StenoPloverHid::SendPacket(const StenoPloverHidPacket &packet) {
-  PloverHidReportBuffer::instance.SendReport((uint8_t *)&packet,
-                                             sizeof(packet));
+  PloverHidReportBuffer::instance.SendReport(
+      PLOVER_HID_REPORT_ID, (uint8_t *)&packet, sizeof(packet));
 }
 
 //---------------------------------------------------------------------------

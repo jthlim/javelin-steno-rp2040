@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_split.h"
+#include "javelin/button_manager.h"
 #include "javelin/console.h"
 #include "javelin/crc.h"
 #include "rp2040_dma.h"
@@ -185,6 +186,7 @@ void Rp2040Split::SplitData::OnReceiveFailed() {
 
     TxBuffer::OnConnectionReset();
     RxBuffer::OnConnectionReset();
+    ButtonManager::ExecuteScript(ScriptId::PAIR_CONNECTION_UPDATE);
   }
 
   if (IsMaster()) {
@@ -202,6 +204,7 @@ void Rp2040Split::SplitData::OnReceiveSucceeded() {
   if (!isConnected) {
     isConnected = true;
     TxBuffer::OnConnect();
+    ButtonManager::ExecuteScript(ScriptId::PAIR_CONNECTION_UPDATE);
   }
 
   // After receiving data, immediately start sending the data here.
