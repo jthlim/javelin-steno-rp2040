@@ -172,29 +172,8 @@ void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
     return;
   }
 
-  uint8_t reportData[6];
-  memset(reportData, 0, sizeof(reportData));
-
-  size_t offset = 0;
-  for (size_t i = 0xa8 / 8; i < 0xe8 / 8; ++i) {
-    uint8_t byte = buffers[0].data[i];
-    if (!byte) {
-      continue;
-    }
-
-    for (size_t bit = 0; bit < 8; bit++) {
-      if (byte & (1 << bit)) {
-        size_t logical = i * 8 + bit + 8;
-        reportData[offset++] = logical;
-        if (offset == 7) {
-          goto done;
-        }
-      }
-    }
-  }
-done:
-  reportBuffer.SendReport(CONSUMER_PAGE_REPORT_ID, reportData,
-                          sizeof(reportData));
+  reportBuffer.SendReport(CONSUMER_PAGE_REPORT_ID, &buffers[0].data[0xa8 / 8],
+                          8);
 }
 
 void HidKeyboardReportBuilder::Flush() {

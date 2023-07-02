@@ -108,21 +108,21 @@ const uint8_t keyboardReportDescriptor[] = {
 
     // --------------------------
 
-    // Keyboard Page
+    // Consumer Page
     HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
     HID_USAGE(HID_USAGE_CONSUMER_CONTROL),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
 
-    // 6 input bytes. Consumer Page
+    // 8 input bytes. Consumer Page
       HID_REPORT_ID(CONSUMER_PAGE_REPORT_ID)
       HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
-      HID_USAGE_MIN(0x00),
+      HID_USAGE_MIN(0xb0),
       HID_USAGE_MAX(0xff),
-      HID_LOGICAL_MIN(0x00),
-      HID_LOGICAL_MAX_N(0xff, 2),
-      HID_REPORT_COUNT(6),
-      HID_REPORT_SIZE(8),
-      HID_INPUT(HID_DATA | HID_ARRAY | HID_ABSOLUTE),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(1),
+      HID_REPORT_COUNT(64),
+      HID_REPORT_SIZE(1),
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
     HID_COLLECTION_END,
 };
