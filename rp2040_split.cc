@@ -188,10 +188,8 @@ void Rp2040Split::SplitData::OnReceiveFailed() {
     retryCount = 0;
     metrics[SplitMetricId::RESET_COUNT]++;
 
-    TxBuffer::OnConnectionReset();
     RxBuffer::OnConnectionReset();
-
-    ButtonManager::ExecuteScript(ScriptId::PAIR_CONNECTION_UPDATE);
+    TxBuffer::OnConnectionReset();
   }
 
   if (IsMaster()) {
@@ -209,7 +207,6 @@ void Rp2040Split::SplitData::OnReceiveSucceeded() {
   if (!isConnected) {
     isConnected = true;
     TxBuffer::OnConnect();
-    ButtonManager::ExecuteScript(ScriptId::PAIR_CONNECTION_UPDATE);
   }
 
   // After receiving data, immediately start sending the data here.
