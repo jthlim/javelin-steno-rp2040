@@ -25,7 +25,7 @@
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/engine.h"
 #include "javelin/font/monochrome/font.h"
-#include "javelin/hal/bootrom.h"
+#include "javelin/hal/bootloader.h"
 #include "javelin/hal/connection.h"
 #include "javelin/hal/display.h"
 #include "javelin/hal/rgb.h"
@@ -488,8 +488,9 @@ void InitJavelinSlave() {
   InitCommonCommands();
 
   Console &console = Console::instance;
-  console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
-                          Bootrom::LaunchBootrom, nullptr);
+  console.RegisterCommand("launch_pair_bootloader",
+                          "Launch pair rp2040 bootloader",
+                          Bootloader::LaunchBootloader, nullptr);
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
                           Watchdog_Binding, nullptr);
@@ -593,11 +594,12 @@ void InitJavelinMaster() {
 
   InitCommonCommands();
   Console &console = Console::instance;
-  console.RegisterCommand("launch_bootrom", "Launch rp2040 bootrom",
-                          Bootrom::LaunchBootrom, nullptr);
+  console.RegisterCommand("launch_bootloader", "Launch rp2040 bootloader",
+                          Bootloader::LaunchBootloader, nullptr);
 #if JAVELIN_SPLIT
-  console.RegisterCommand("launch_pair_bootrom", "Launch pair rp2040 bootrom",
-                          Bootrom::LaunchSlaveBootrom, nullptr);
+  console.RegisterCommand("launch_pair_bootloader",
+                          "Launch pair rp2040 bootloader",
+                          Bootloader::LaunchSlaveBootloader, nullptr);
 #endif
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",

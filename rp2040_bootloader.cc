@@ -1,10 +1,10 @@
 //---------------------------------------------------------------------------
 
-#include "javelin/hal/bootrom.h"
+#include "javelin/hal/bootloader.h"
 
 //---------------------------------------------------------------------------
 
-void Bootrom::Launch() {
+void Bootloader::Launch() {
   const uint16_t *const functionTableAddress = (const uint16_t *)0x14;
   size_t (*LookupMethod)(uint32_t table, uint32_t key) =
       (size_t(*)(uint32_t, uint32_t))(size_t)functionTableAddress[2];

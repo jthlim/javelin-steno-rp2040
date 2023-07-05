@@ -7,7 +7,7 @@
 #include "javelin/console_input_buffer.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
-#include "javelin/hal/bootrom.h"
+#include "javelin/hal/bootloader.h"
 #include "javelin/key.h"
 #include "javelin/keyboard_led_status.h"
 #include "javelin/split/split_serial_buffer.h"
@@ -324,7 +324,7 @@ int main(void) {
     KeyboardLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
-    Bootrom::RegisterTxHandler();
+    Bootloader::RegisterTxHandler();
     SplitSerialBuffer::RegisterTxHandler();
     Ssd1306::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
@@ -342,7 +342,7 @@ int main(void) {
     KeyboardLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();
-    Bootrom::RegisterRxHandler();
+    Bootloader::RegisterRxHandler();
     SplitSerialBuffer::RegisterRxHandler();
     Ssd1306::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();

@@ -49,7 +49,7 @@ target_sources(${NAME} PUBLIC
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
-  rp2040_bootrom.cc
+  rp2040_bootloader.cc
   rp2040_button_state.cc
   rp2040_clock.cc
   rp2040_console.cc
@@ -101,7 +101,7 @@ target_sources(${NAME} PUBLIC
   javelin/font/monochrome/data/large_digits.cc
   javelin/font/monochrome/font.cc
   javelin/hal/ble.cc
-  javelin/hal/bootrom.cc
+  javelin/hal/bootloader.cc
   javelin/hal/connection.cc
   javelin/hal/display.cc
   javelin/hal/power.cc
