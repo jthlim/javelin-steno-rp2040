@@ -41,7 +41,7 @@ private:
     HidBufferSize bufferSize;
 
     virtual void UpdateBuffer(TxBuffer &buffer);
-    virtual void OnTransmitConnectionReset() { dirty = true; }
+    virtual void OnTransmitConnected() { dirty = true; }
     virtual void OnDataReceived(const void *data, size_t length);
   };
 

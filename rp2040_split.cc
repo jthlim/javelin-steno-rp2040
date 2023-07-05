@@ -8,6 +8,8 @@
 #include "rp2040_sniff.h"
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 #include "rp2040_split.pio.h"
+#else
+#error Not implemented
 #endif
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
@@ -44,9 +46,8 @@ const int RX_STATE_MACHINE_INDEX = 0;
 #endif
 
 const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
-const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 8000;
-
-const uint32_t RETRY_COUNT = 5;
+const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 10000;
+const uint32_t RETRY_TIMEOUT_US = 100000;
 
 //---------------------------------------------------------------------------
 
@@ -178,7 +179,10 @@ void Rp2040Split::SplitData::SendTxBuffer() {
 }
 
 void Rp2040Split::SplitData::OnReceiveFailed() {
-  if (++retryCount == RETRY_COUNT) {
+  const uint32_t timeoutCount =
+      Split::IsMaster() ? RETRY_TIMEOUT_US / MASTER_RECEIVE_TIMEOUT_US
+                        : RETRY_TIMEOUT_US / SLAVE_RECEIVE_TIMEOUT_US;
+  if (++retryCount > timeoutCount) {
     isConnected = false;
     updateSendData = true;
     retryCount = 0;
@@ -186,6 +190,7 @@ void Rp2040Split::SplitData::OnReceiveFailed() {
 
     TxBuffer::OnConnectionReset();
     RxBuffer::OnConnectionReset();
+
     ButtonManager::ExecuteScript(ScriptId::PAIR_CONNECTION_UPDATE);
   }
 
@@ -294,6 +299,11 @@ void Rp2040Split::SplitData::PrintInfo() {
   Console::Printf("  Transmit types:");
   for (size_t count : TxBuffer::txPacketTypeCounts) {
     Console::Printf(" %zu", count);
+  }
+  Console::Printf("\n");
+  Console::Printf("  Receive types:");
+  for (uint32_t count : RxBuffer::rxPacketTypeCounts) {
+    Console::Printf(" %u", count);
   }
   Console::Printf("\n");
   Console::Printf("  Metrics:");
