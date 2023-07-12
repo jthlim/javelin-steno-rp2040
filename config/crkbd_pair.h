@@ -7,8 +7,6 @@
 //---------------------------------------------------------------------------
 
 struct StenoConfigBlock;
-struct StenoOrthography;
-struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
@@ -102,15 +100,6 @@ constexpr uint8_t RGB_MAP[54] = {
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
     (const StenoConfigBlock *)0x10040000;
 const uint8_t *const BUTTON_MANAGER_BYTE_CODE = (const uint8_t *)0x10040100;
-const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
-    (const StenoOrthography *)0x10042000;
-const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10044000;
-const StenoMapDictionaryCollection
-    *const STENO_MAP_DICTIONARY_COLLECTION_ADDRESS =
-        (const StenoMapDictionaryCollection *)0x10400000;
-const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
-    (const uint8_t *)0x10fc0000;
-const size_t STENO_USER_DICTIONARY_SIZE = 0x40000;
 
 const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
 const size_t BUTTON_COUNT = 42;

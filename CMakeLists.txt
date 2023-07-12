@@ -78,6 +78,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
   javelin/dictionary/dictionary.cc
+  javelin/dictionary/dictionary_definition.cc
   javelin/dictionary/dictionary_list.cc
   javelin/dictionary/emily_symbols_dictionary.cc
   javelin/dictionary/jeff_numbers_dictionary.cc

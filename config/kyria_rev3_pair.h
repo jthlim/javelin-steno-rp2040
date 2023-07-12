@@ -7,8 +7,6 @@
 //---------------------------------------------------------------------------
 
 struct StenoConfigBlock;
-struct StenoOrthography;
-struct StenoMapDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
