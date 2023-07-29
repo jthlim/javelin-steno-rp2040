@@ -107,6 +107,6 @@ const size_t BUTTON_COUNT = 42;
 const char *const MANUFACTURER_NAME = "foostan";
 const char *const PRODUCT_NAME = "Corne (Javelin)";
 const int VENDOR_ID = 0x4653;
-// const int PRODUCT_ID = 0x0001;
+// const int PRODUCT_ID = 0x0002;
 
 //---------------------------------------------------------------------------
