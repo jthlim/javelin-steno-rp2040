@@ -76,7 +76,7 @@ static StenoGemini gemini;
 static StenoPloverHid ploverHid;
 static StenoProcessorElement *processors;
 
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
 static JavelinStaticAllocate<StenoStrokeCapture> &passthroughContainer =
     StenoStrokeCapture::container;
 #else
@@ -407,7 +407,7 @@ void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
 }
 #endif
 
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
 
 void MeasureText_Binding(void *context, const char *commandLine) {
   const char *p = strchr(commandLine, ' ');
@@ -646,7 +646,7 @@ void InitJavelinMaster() {
                           Rgb::SetRgb_Binding, nullptr);
 #endif
 
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
   console.RegisterCommand("set_auto_draw",
                           "Set a display auto-draw mode [\"none\", "
                           "\"paper_tape\", \"steno_layout\", \"wpm\"]",
@@ -679,7 +679,7 @@ void InitJavelinMaster() {
 #else
   StenoProcessorElement *processorElement = &gemini;
 #endif
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
   processorElement =
       new (passthroughContainer) StenoStrokeCapture(processorElement);
 #else
@@ -751,7 +751,7 @@ void ProcessStenoTick() {
 //---------------------------------------------------------------------------
 
 void Key::PressRaw(KeyCode key) {
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
   if (key.value == KeyCode::BACKSPACE) {
     WpmTracker::instance.Tally(-1);
   } else if (key.IsVisible()) {

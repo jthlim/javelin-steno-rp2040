@@ -12,7 +12,7 @@ enum FontId : int;
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_DRIVER == 1306
+#if JAVELIN_DISPLAY_DRIVER == 1306
 
 class Ssd1306 {
 public:

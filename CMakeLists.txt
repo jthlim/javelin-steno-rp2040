@@ -111,7 +111,6 @@ target_sources(${NAME} PUBLIC
   javelin/key.cc
   javelin/key_code.cc
   javelin/keyboard_layout.cc
-  javelin/keyboard_led_status.cc
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc

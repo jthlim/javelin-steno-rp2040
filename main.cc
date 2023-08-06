@@ -219,11 +219,12 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
                                       uint16_t bufferSize) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    if (reportType != HID_REPORT_TYPE_OUTPUT || bufferSize < 2 ||
-        buffer[0] != KEYBOARD_PAGE_REPORT_ID) {
+    if (reportType != HID_REPORT_TYPE_OUTPUT ||
+        reportId != KEYBOARD_PAGE_REPORT_ID || bufferSize < 1) {
       return;
     }
-    KeyboardLedStatus::Set(*(KeyboardLedStatusValue *)&buffer[1]);
+    SplitUsbStatus::instance.SetKeyboardLedStatus(
+        *(KeyboardLedStatus *)&buffer[0]);
     break;
 
   case ITF_NUM_CONSOLE:
@@ -321,7 +322,6 @@ int main(void) {
     Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
                              &masterTaskContainer.value);
     ConsoleInputBuffer::RegisterRxHandler();
-    KeyboardLedStatus::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
     Bootloader::RegisterTxHandler();
@@ -339,7 +339,6 @@ int main(void) {
 
     Split::RegisterTxHandler(&slaveTaskContainer.value);
     ConsoleInputBuffer::RegisterTxHandler();
-    KeyboardLedStatus::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();
     Bootloader::RegisterRxHandler();

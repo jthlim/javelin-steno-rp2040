@@ -11,9 +11,9 @@
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
 
-#if JAVELIN_OLED_DRIVER == 1306
+#if JAVELIN_DISPLAY_DRIVER == 1306
 #define DisplayDriver Ssd1306
 #endif
 

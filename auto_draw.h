@@ -7,7 +7,7 @@
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_DRIVER
+#if JAVELIN_DISPLAY_DRIVER
 
 enum class AutoDraw : uint8_t {
   NONE,

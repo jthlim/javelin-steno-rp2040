@@ -14,7 +14,7 @@
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_OLED_DRIVER == 1306
+#if JAVELIN_DISPLAY_DRIVER == 1306
 
 //---------------------------------------------------------------------------
 
@@ -704,6 +704,6 @@ void Display::SetDrawColor(int displayId, int color) {
   Ssd1306::instances[displayId].drawColor = color != 0;
 }
 
-#endif // JAVELIN_OLED_DRIVER == 1306
+#endif // JAVELIN_DISPLAY_DRIVER == 1306
 
 //---------------------------------------------------------------------------
