@@ -178,15 +178,8 @@ void StenoStrokeCapture::SetAutoDraw_Binding(void *context,
   if ('a' <= *p && *p <= 'z')
     goto skipDisplayId;
 #endif
-  if (*p < '0' && *p >= '9') {
-    Console::Printf("ERR displayId parameter missing\n\n");
-    return;
-  }
-  while ('0' <= *p && *p <= '9') {
-    displayId = 10 * displayId + *p - '0';
-    ++p;
-  }
-  if (*p != ' ') {
+  p = Str::ParseInteger(&displayId, p, false);
+  if (!p || *p != ' ') {
     Console::Printf("ERR displayId parameter missing\n\n");
     return;
   }

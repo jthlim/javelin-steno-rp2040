@@ -411,22 +411,14 @@ void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
 
 void MeasureText_Binding(void *context, const char *commandLine) {
   const char *p = strchr(commandLine, ' ');
-
   if (!p) {
     Console::Printf("ERR No parameters specified\n\n");
     return;
   }
-  int fontId = 0;
-  ++p;
-  if (*p < '0' && *p >= '9') {
-    Console::Printf("ERR fontId parameter missing\n\n");
-    return;
-  }
-  while ('0' <= *p && *p <= '9') {
-    fontId = 10 * fontId + *p - '0';
-    ++p;
-  }
-  if (*p != ' ') {
+
+  int fontId;
+  p = Str::ParseInteger(&fontId, p + 1, false);
+  if (!p || *p != ' ') {
     Console::Printf("ERR fontId parameter missing\n\n");
     return;
   }
