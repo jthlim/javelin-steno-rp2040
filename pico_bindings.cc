@@ -35,6 +35,7 @@
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
 #include "javelin/script_byte_code.h"
+#include "javelin/split/pair_console.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
@@ -472,23 +473,26 @@ void InitCommonCommands() {
                           &Flash::WriteBinding, nullptr);
   console.RegisterCommand("end_write", "Completes writing to flash",
                           &Flash::EndWriteBinding, nullptr);
-}
 
-void InitJavelinSlave() {
-  InitCommonCommands();
+#if JAVELIN_RGB
+  console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
+                          Rgb::SetRgb_Binding, nullptr);
+#endif
 
-  Console &console = Console::instance;
-  console.RegisterCommand("launch_pair_bootloader",
-                          "Launch pair rp2040 bootloader",
+  console.RegisterCommand("launch_bootloader", "Launch rp2040 bootloader",
                           Bootloader::LaunchBootloader, nullptr);
+
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
                           Watchdog_Binding, nullptr);
 #endif
+
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
 #endif
 }
+
+void InitJavelinSlave() { InitCommonCommands(); }
 
 void InitJavelinMaster() {
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
@@ -559,17 +563,6 @@ void InitJavelinMaster() {
 
   InitCommonCommands();
   Console &console = Console::instance;
-  console.RegisterCommand("launch_bootloader", "Launch rp2040 bootloader",
-                          Bootloader::LaunchBootloader, nullptr);
-#if JAVELIN_SPLIT
-  console.RegisterCommand("launch_pair_bootloader",
-                          "Launch pair rp2040 bootloader",
-                          Bootloader::LaunchSlaveBootloader, nullptr);
-#endif
-#if JAVELIN_USE_WATCHDOG
-  console.RegisterCommand("watchdog", "Show watchdog scratch registers",
-                          Watchdog_Binding, nullptr);
-#endif
 
 #if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("set_steno_mode",
@@ -633,11 +626,6 @@ void InitJavelinMaster() {
                           StenoEngine::LookupStroke_Binding, engine);
 #endif
 
-#if JAVELIN_RGB
-  console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
-                          Rgb::SetRgb_Binding, nullptr);
-#endif
-
 #if JAVELIN_DISPLAY_DRIVER
   console.RegisterCommand("set_auto_draw",
                           "Set a display auto-draw mode [\"none\", "
@@ -646,10 +634,6 @@ void InitJavelinMaster() {
                           &passthroughContainer.value);
   console.RegisterCommand("measure_text", "Measures the width of text",
                           MeasureText_Binding, nullptr);
-#endif
-
-#if ENABLE_DEBUG_COMMAND
-  console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
 #endif
 
 #if JAVELIN_USE_EMBEDDED_STENO
@@ -697,6 +681,11 @@ void InitJavelinMaster() {
   }
 
   processors = processorElement;
+
+#if JAVELIN_SPLIT
+  console.RegisterCommand("pair", "Runs a command on the pair's console",
+                          &PairConsole::PairBinding, nullptr);
+#endif
 }
 
 void Script::OnStenoKeyPressed() {

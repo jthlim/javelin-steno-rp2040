@@ -130,6 +130,7 @@ target_sources(${NAME} PUBLIC
   javelin/script.cc
   javelin/script_byte_code.cc
   javelin/segment.cc
+  javelin/split/pair_console.cc
   javelin/split/split.cc
   javelin/split/split_serial_buffer.cc
   javelin/split/split_usb_status.cc

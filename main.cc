@@ -10,6 +10,7 @@
 #include "javelin/hal/bootloader.h"
 #include "javelin/key.h"
 #include "javelin/keyboard_led_status.h"
+#include "javelin/split/pair_console.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
 #include "javelin/static_allocate.h"
@@ -292,6 +293,7 @@ void DoSlaveRunLoop() {
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
+    PairConsole::Process();
 
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
@@ -324,10 +326,10 @@ int main(void) {
     ConsoleInputBuffer::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
-    Bootloader::RegisterTxHandler();
     SplitSerialBuffer::RegisterTxHandler();
     Ssd1306::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
+    PairConsole::RegisterHandlers();
 
     InitJavelinMaster();
     ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
@@ -341,10 +343,10 @@ int main(void) {
     ConsoleInputBuffer::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();
-    Bootloader::RegisterRxHandler();
     SplitSerialBuffer::RegisterRxHandler();
     Ssd1306::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();
+    PairConsole::RegisterHandlers();
 
     InitJavelinSlave();
     ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
