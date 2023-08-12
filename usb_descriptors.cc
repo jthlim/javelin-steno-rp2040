@@ -78,6 +78,7 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_USAGE_MIN(0),
       HID_USAGE_MAX(103),
       HID_REPORT_COUNT(104),
+      HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
       // 2 input bytes. Keyboard page array.
@@ -99,7 +100,8 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_REPORT_SIZE(1),
       HID_OUTPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
       // Padding
-      HID_REPORT_COUNT(3),
+      HID_REPORT_COUNT(1),
+      HID_REPORT_SIZE(3),
       HID_OUTPUT(HID_CONSTANT),
 
     HID_COLLECTION_END,
@@ -116,7 +118,10 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_USAGE_PAGE(HID_USAGE_PAGE_CONSUMER),
       HID_USAGE_MIN(0xb0),
       HID_USAGE_MAX(0xff),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(1),
       HID_REPORT_COUNT(64),
+      HID_REPORT_SIZE(1),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
     HID_COLLECTION_END,
@@ -128,10 +133,18 @@ const uint8_t consoleReportDescriptor[] = {
     HID_USAGE(0x0074),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
     // Send
+      HID_USAGE(0x75),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(255),
       HID_REPORT_COUNT(64),
       HID_REPORT_SIZE(8),
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     // Receive
+      HID_USAGE(0x76),
+      HID_LOGICAL_MIN(0),
+      HID_LOGICAL_MAX(255),
+      HID_REPORT_COUNT(64),
+      HID_REPORT_SIZE(8),
       HID_OUTPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
     HID_COLLECTION_END,
 };
