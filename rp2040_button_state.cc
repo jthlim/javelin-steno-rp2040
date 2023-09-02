@@ -46,7 +46,7 @@ const size_t COLUMN_PIN_COUNT = sizeof(LEFT_COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(LEFT_ROW_PINS);
 
 #endif // defined(JAVELIN_SPLIT_IS_LEFT)
-#else
+#elif !JAVELIN_BUTTON_PINS
 
 const size_t COLUMN_PIN_COUNT = sizeof(COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
@@ -68,6 +68,19 @@ void Rp2040ButtonState::Initialize() {
 #endif
 #endif
 
+#if JAVELIN_BUTTON_PINS
+  gpio_init_mask(BUTTON_PIN_MASK);
+  gpio_set_dir_masked(BUTTON_PIN_MASK, 0);
+
+  for (uint8_t pinAndPolarity : BUTTON_PINS) {
+    uint8_t pin = pinAndPolarity & 0x7f;
+    if (pinAndPolarity >> 7) {
+      gpio_pull_down(pin);
+    } else {
+      gpio_pull_up(pin);
+    }
+  }
+#else
   gpio_init_mask(COLUMN_PIN_MASK | ROW_PIN_MASK);
   gpio_set_dir_masked(COLUMN_PIN_MASK | ROW_PIN_MASK, ROW_PIN_MASK);
 
@@ -75,6 +88,7 @@ void Rp2040ButtonState::Initialize() {
     gpio_pull_up(COLUMN_PINS[i]);
   }
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+#endif
 }
 
 #if defined(BOOTSEL_BUTTON_INDEX)
@@ -122,6 +136,17 @@ ButtonState Rp2040ButtonState::Read() {
   ButtonState state;
   state.ClearAll();
 
+#if JAVELIN_BUTTON_PINS
+  int buttonMask = gpio_get_all();
+#pragma GCC unroll 1
+  for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
+    uint8_t pinAndPolarity = BUTTON_PINS[b];
+    uint8_t pin = pinAndPolarity & 0x7f;
+    if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
+      state.Set(b);
+    }
+  }
+#else
   for (int r = 0; r < ROW_PIN_COUNT; ++r) {
     gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK & ~(1 << ROW_PINS[r]));
     // Seems to work solidly with 2us wait. Use 10 for safety.
@@ -140,6 +165,7 @@ ButtonState Rp2040ButtonState::Read() {
   }
 
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+#endif
 
 #if defined(BOOTSEL_BUTTON_INDEX)
   if (isBootSelButtonPressed()) {
