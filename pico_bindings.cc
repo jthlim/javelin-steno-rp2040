@@ -143,7 +143,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     Console::Printf("%02x", serialId[i]);
   }
   Console::Printf("\n");
-
+  Console::Printf("  Firmware: " __DATE__ " \n");
   Console::Printf("  ");
   HidKeyboardReportBuilder::instance.PrintInfo();
 
