@@ -34,6 +34,7 @@
 #include "javelin/processor/plover_hid.h"
 #include "javelin/processor/processor_list.h"
 #include "javelin/processor/repeat.h"
+#include "javelin/processor/tx_bolt.h"
 #include "javelin/script_byte_code.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/static_allocate.h"
@@ -74,6 +75,7 @@ static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
 #endif
 
 static StenoGemini gemini;
+static StenoTxBolt txBolt;
 static StenoPloverHid ploverHid;
 static StenoProcessorElement *processors;
 
@@ -220,6 +222,8 @@ void SetStenoMode(void *context, const char *commandLine) {
 #endif
       if (Str::Eq(stenoMode, "gemini")) {
     passthroughContainer->SetNext(&gemini);
+  } else if (Str::Eq(stenoMode, "tx_bolt")) {
+    passthroughContainer->SetNext(&txBolt);
   } else if (Str::Eq(stenoMode, "plover_hid")) {
     passthroughContainer->SetNext(&ploverHid);
   } else {
@@ -340,6 +344,8 @@ static void GetStenoMode() {
 #endif
       if (processor == &gemini) {
     Console::Printf("gemini\n\n");
+  } else if (processor == &txBolt) {
+    Console::Printf("tx_bolt\n\n");
   } else if (processor == &ploverHid) {
     Console::Printf("plover_hid\n\n");
   } else {
@@ -567,12 +573,12 @@ void InitJavelinMaster() {
 #if JAVELIN_USE_EMBEDDED_STENO
   console.RegisterCommand("set_steno_mode",
                           "Sets the current steno mode [\"embedded\", "
-                          "\"gemini\", \"plover_hid\"]",
+                          "\"gemini\", \"tx_bolt\", \"plover_hid\"]",
                           SetStenoMode, nullptr);
 #else
   console.RegisterCommand("set_steno_mode",
                           "Sets the current steno mode ["
-                          "\"gemini\", \"plover_hid\"]",
+                          "\"gemini\", \"tx_bolt\", \"plover_hid\"]",
                           SetStenoMode, nullptr);
 #endif
   console.RegisterCommand("set_keyboard_protocol",
