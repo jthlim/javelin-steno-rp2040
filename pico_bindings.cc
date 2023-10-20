@@ -622,6 +622,7 @@ void InitJavelinMaster() {
   console.RegisterCommand("print_orthography",
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
+  ButtonManager::GetInstance().AddConsoleCommands(console);
   console.RegisterCommand("enable_paper_tape", "Enables paper tape output",
                           StenoEngine::EnablePaperTape_Binding, engine);
   console.RegisterCommand("disable_paper_tape", "Disables paper tape output",
