@@ -476,23 +476,10 @@ void InitCommonCommands() {
   console.RegisterCommand("list_parameters",
                           "Lists all available parameter names",
                           ListParametersBinding, nullptr);
-  console.RegisterCommand("begin_write",
-                          "Begin a flash write to the specified address",
-                          &Flash::BeginWriteBinding, nullptr);
-  console.RegisterCommand("write",
-                          "Writes base64 data to the address specified in "
-                          "begin_write",
-                          &Flash::WriteBinding, nullptr);
-  console.RegisterCommand("end_write", "Completes writing to flash",
-                          &Flash::EndWriteBinding, nullptr);
 
-#if JAVELIN_RGB
-  console.RegisterCommand("set_rgb", "Sets a single RGB (index, r, g, b)",
-                          Rgb::SetRgb_Binding, nullptr);
-#endif
-
-  console.RegisterCommand("launch_bootloader", "Launch rp2040 bootloader",
-                          Bootloader::LaunchBootloader, nullptr);
+  Flash::AddConsoleCommands(console);
+  Rgb::AddConsoleCommands(console);
+  Bootloader::AddConsoleCommands(console);
 
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
@@ -652,19 +639,7 @@ void InitJavelinMaster() {
 #endif
 
 #if JAVELIN_USE_EMBEDDED_STENO
-#if JAVELIN_USE_USER_DICTIONARY
-  console.RegisterCommand(
-      "print_user_dictionary", "Prints the user dictionary in JSON format",
-      StenoUserDictionary::PrintJsonDictionary_Binding, userDictionary);
-  console.RegisterCommand("reset_user_dictionary", "Resets the user dictionary",
-                          StenoUserDictionary::Reset_Binding, userDictionary);
-  console.RegisterCommand(
-      "add_user_entry", "Adds a definition to the user dictionary",
-      StenoUserDictionary::AddEntry_Binding, userDictionary);
-  console.RegisterCommand(
-      "remove_user_entry", "Removes a definition from the user dictionary",
-      StenoUserDictionary::RemoveEntry_Binding, userDictionary);
-#endif
+  userDictionary->AddConsoleCommands(console);
 
   StenoProcessorElement *processorElement = engine;
 #else
