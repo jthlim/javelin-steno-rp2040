@@ -12,6 +12,8 @@
 
 //---------------------------------------------------------------------------
 
+#if JAVELIN_BUTTON_MATRIX
+
 #if JAVELIN_SPLIT
 #if defined(JAVELIN_SPLIT_IS_LEFT)
 #if JAVELIN_SPLIT_IS_LEFT
@@ -46,16 +48,23 @@ const size_t COLUMN_PIN_COUNT = sizeof(LEFT_COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(LEFT_ROW_PINS);
 
 #endif // defined(JAVELIN_SPLIT_IS_LEFT)
-#elif !JAVELIN_BUTTON_PINS
+#else  // JAVELIN_SPLIT
 
 const size_t COLUMN_PIN_COUNT = sizeof(COLUMN_PINS);
 const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 
 #endif
 
+#endif // JAVELIN_BUTTON_MATRIX
+
+#if JAVELIN_BUTTON_TOUCH
+uint32_t touchCounters[sizeof(BUTTON_TOUCH_PINS)][4];
+#endif
+
 //---------------------------------------------------------------------------
 
 void Rp2040ButtonState::Initialize() {
+#if JAVELIN_BUTTON_MATRIX
 #if JAVELIN_SPLIT
 #if !defined(JAVELIN_SPLIT_IS_LEFT)
   if (!Split::IsLeft()) {
@@ -66,6 +75,16 @@ void Rp2040ButtonState::Initialize() {
     KEY_MAP = RIGHT_KEY_MAP;
   }
 #endif
+#endif
+
+  gpio_init_mask(COLUMN_PIN_MASK | ROW_PIN_MASK);
+  gpio_set_dir_masked(COLUMN_PIN_MASK | ROW_PIN_MASK, ROW_PIN_MASK);
+
+  for (size_t i = 0; i < COLUMN_PIN_COUNT; ++i) {
+    gpio_pull_up(COLUMN_PINS[i]);
+  }
+  gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+
 #endif
 
 #if JAVELIN_BUTTON_PINS
@@ -80,14 +99,18 @@ void Rp2040ButtonState::Initialize() {
       gpio_pull_up(pin);
     }
   }
-#else
-  gpio_init_mask(COLUMN_PIN_MASK | ROW_PIN_MASK);
-  gpio_set_dir_masked(COLUMN_PIN_MASK | ROW_PIN_MASK, ROW_PIN_MASK);
+#endif
 
-  for (size_t i = 0; i < COLUMN_PIN_COUNT; ++i) {
-    gpio_pull_up(COLUMN_PINS[i]);
+#if JAVELIN_BUTTON_TOUCH
+  gpio_init_mask(BUTTON_TOUCH_PIN_MASK);
+  for (uint8_t pin : BUTTON_TOUCH_PINS) {
+    gpio_disable_pulls(pin);
+    gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
   }
-  gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+  memset(touchCounters, 0xff, sizeof(touchCounters));
+
+  gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+  gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
 #endif
 }
 
@@ -132,21 +155,31 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 }
 #endif
 
+#if JAVELIN_BUTTON_TOUCH
+void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
+  for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
+    uint8_t pin = BUTTON_TOUCH_PINS[i];
+    gpio_set_dir(pin, false);
+
+    size_t counter = 0;
+    for (; counter < 100000; ++counter) {
+      if (!gpio_get(pin)) {
+        break;
+      }
+    }
+    counters[i] = counter;
+  }
+
+  gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+  gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+}
+#endif
+
 ButtonState Rp2040ButtonState::Read() {
   ButtonState state;
   state.ClearAll();
 
-#if JAVELIN_BUTTON_PINS
-  int buttonMask = gpio_get_all();
-#pragma GCC unroll 1
-  for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
-    uint8_t pinAndPolarity = BUTTON_PINS[b];
-    uint8_t pin = pinAndPolarity & 0x7f;
-    if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
-      state.Set(b);
-    }
-  }
-#else
+#if JAVELIN_BUTTON_MATRIX
   for (int r = 0; r < ROW_PIN_COUNT; ++r) {
     gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK & ~(1 << ROW_PINS[r]));
     // Seems to work solidly with 2us wait. Use 10 for safety.
@@ -165,6 +198,40 @@ ButtonState Rp2040ButtonState::Read() {
   }
 
   gpio_put_masked(ROW_PIN_MASK, ROW_PIN_MASK);
+#endif
+
+#if JAVELIN_BUTTON_PINS
+  int buttonMask = gpio_get_all();
+#pragma GCC unroll 1
+  for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
+    uint8_t pinAndPolarity = BUTTON_PINS[b];
+    uint8_t pin = pinAndPolarity & 0x7f;
+    if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
+      state.Set(b);
+    }
+  }
+#endif
+
+#if JAVELIN_BUTTON_TOUCH
+  uint32_t counters[sizeof(BUTTON_TOUCH_PINS)];
+  ReadTouchCounters(counters);
+
+  for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
+    uint32_t counter = counters[i];
+    touchCounters[i][1] = touchCounters[i][2];
+    touchCounters[i][2] = touchCounters[i][3];
+    touchCounters[i][3] = counter;
+    if (counter < touchCounters[i][0]) {
+      if (touchCounters[i][1] == counter && touchCounters[i][2] == counter) {
+        touchCounters[i][0] = counter;
+      }
+    }
+
+    bool isTouched = 2 * counter > 3 * touchCounters[i][0];
+    if (isTouched) {
+      state.Set(i);
+    }
+  }
 #endif
 
 #if defined(BOOTSEL_BUTTON_INDEX)

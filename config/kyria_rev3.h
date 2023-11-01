@@ -40,6 +40,8 @@ struct StenoDictionaryCollection;
 #define JAVELIN_OLED_I2C_ADDRESS 0x3c
 #define JAVELIN_OLED_ROTATION 180
 
+#define JAVELIN_BUTTON_MATRIX 1
+
 constexpr uint8_t LEFT_COLUMN_PINS[] = {8, 27, 26, 22, 20, 23, 21};
 constexpr uint32_t LEFT_COLUMN_PIN_MASK = 0x0cf00100;
 constexpr uint8_t LEFT_ROW_PINS[] = {4, 5, 6, 7};

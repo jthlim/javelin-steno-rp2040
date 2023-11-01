@@ -20,6 +20,7 @@ struct StenoDictionaryCollection;
 #define JAVELIN_RGB_COUNT 1
 #define JAVELIN_RGB_PIN 23
 
+#define JAVELIN_BUTTON_MATRIX 0
 #define JAVELIN_BUTTON_PINS 1
 
 // clang-format off

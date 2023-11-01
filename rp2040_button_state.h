@@ -10,6 +10,8 @@ public:
   static void Initialize();
 
   static ButtonState Read();
+
+  static void ReadTouchCounters(uint32_t *counters);
 };
 
 //---------------------------------------------------------------------------

@@ -21,6 +21,8 @@ struct StenoDictionaryCollection;
 #define JAVELIN_USB_MILLIAMPS 500
 #define BOOTSEL_BUTTON_INDEX 42
 
+#define JAVELIN_BUTTON_MATRIX 1
+
 constexpr uint8_t COLUMN_PINS[] = {24, 23, 21, 20, 19, 18, 11, 10, 9, 8, 6, 5};
 constexpr uint32_t COLUMN_PIN_MASK = 0x01bc0f60;
 constexpr uint8_t ROW_PINS[] = {26, 25, 17, 16};
