@@ -58,7 +58,17 @@ const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 #endif // JAVELIN_BUTTON_MATRIX
 
 #if JAVELIN_BUTTON_TOUCH
-uint32_t touchCounters[sizeof(BUTTON_TOUCH_PINS)][4];
+struct TouchPadState {
+  uint32_t minimumCounter;
+  uint32_t repeatedCount;
+  uint32_t lastCounter;
+};
+TouchPadState touchPadStates[sizeof(BUTTON_TOUCH_PINS)];
+
+#if !defined(JAVELIN_TOUCH_CALIBRATION_COUNT)
+#define JAVELIN_TOUCH_CALIBRATION_COUNT 8
+#endif
+
 #endif
 
 //---------------------------------------------------------------------------
@@ -107,7 +117,7 @@ void Rp2040ButtonState::Initialize() {
     gpio_disable_pulls(pin);
     gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
   }
-  memset(touchCounters, 0xff, sizeof(touchCounters));
+  memset(touchPadStates, 0xff, sizeof(touchPadStates));
 
   gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
   gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
@@ -218,16 +228,21 @@ ButtonState Rp2040ButtonState::Read() {
 
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
     uint32_t counter = counters[i];
-    touchCounters[i][1] = touchCounters[i][2];
-    touchCounters[i][2] = touchCounters[i][3];
-    touchCounters[i][3] = counter;
-    if (counter < touchCounters[i][0]) {
-      if (touchCounters[i][1] == counter && touchCounters[i][2] == counter) {
-        touchCounters[i][0] = counter;
+    TouchPadState &padState = touchPadStates[i];
+    if (counter == padState.lastCounter) {
+      padState.repeatedCount++;
+      if (padState.repeatedCount == JAVELIN_TOUCH_CALIBRATION_COUNT &&
+          counter < padState.minimumCounter) {
+        padState.minimumCounter = counter;
       }
+    } else {
+      padState.repeatedCount = 0;
     }
+    padState.lastCounter = counter;
 
-    bool isTouched = 2 * counter > 3 * touchCounters[i][0];
+    bool isTouched =
+        256 * counter >
+        uint32_t(256 * BUTTON_TOUCH_THRESHOLD + 0.99) * padState.minimumCounter;
     if (isTouched) {
       state.Set(i);
     }
