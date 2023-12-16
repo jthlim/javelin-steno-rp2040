@@ -4,7 +4,6 @@
 #include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
-#include "javelin/button_manager.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -37,6 +36,7 @@
 #include "javelin/processor/repeat.h"
 #include "javelin/processor/tx_bolt.h"
 #include "javelin/script_byte_code.h"
+#include "javelin/script_manager.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
@@ -169,7 +169,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Rp2040Split::PrintInfo();
 
 #if ENABLE_EXTRA_INFO
-  ButtonManager::GetInstance().PrintInfo();
+  ScriptManager::GetInstance().PrintInfo();
 #endif
 
   if (Rp2040Split::IsMaster()) {
@@ -271,7 +271,7 @@ struct DynamicParameterData {
 
 static const ParameterData PARAMETER_DATA[] = {
     {"button_count", (void *)BUTTON_COUNT},
-    {"button_script_address", BUTTON_MANAGER_BYTE_CODE},
+    {"button_script_address", SCRIPT_BYTE_CODE},
     {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
@@ -609,7 +609,7 @@ void InitJavelinMaster() {
   console.RegisterCommand("print_orthography",
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
-  ButtonManager::GetInstance().AddConsoleCommands(console);
+  ScriptManager::GetInstance().AddConsoleCommands(console);
   console.RegisterCommand("enable_paper_tape", "Enables paper tape output",
                           StenoEngine::EnablePaperTape_Binding, engine);
   console.RegisterCommand("disable_paper_tape", "Disables paper tape output",

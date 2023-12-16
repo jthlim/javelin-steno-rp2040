@@ -103,7 +103,7 @@ constexpr uint8_t RGB_MAP[54] = {
 
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
     (const StenoConfigBlock *)0x10040000;
-const uint8_t *const BUTTON_MANAGER_BYTE_CODE = (const uint8_t *)0x10040100;
+const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
 const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
     (const StenoOrthography *)0x10042000;
 const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10044000;

@@ -1,11 +1,11 @@
 //---------------------------------------------------------------------------
 
 #include "ssd1306.h"
-#include "javelin/button_manager.h"
 #include "javelin/clock.h"
 #include "javelin/console.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
+#include "javelin/script_manager.h"
 #include "javelin/utf8_pointer.h"
 #include "rp2040_dma.h"
 #include <hardware/gpio.h>
@@ -395,7 +395,7 @@ void Ssd1306::Ssd1306Data::Update() {
     return;
   }
 
-  ButtonManager::GetInstance().ExecuteScript(ScriptId::DISPLAY_OVERLAY);
+  ScriptManager::GetInstance().ExecuteScript(ScriptId::DISPLAY_OVERLAY);
 
   dirty = false;
 

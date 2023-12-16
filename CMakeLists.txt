@@ -69,7 +69,6 @@ target_sources(${NAME} PUBLIC
 
   javelin/base64.cc
   javelin/bit.cc
-  javelin/button_manager.cc
   javelin/console.cc
   javelin/console_input_buffer.cc
   javelin/crc.cc
@@ -131,6 +130,7 @@ target_sources(${NAME} PUBLIC
   javelin/random.cc
   javelin/script.cc
   javelin/script_byte_code.cc
+  javelin/script_manager.cc
   javelin/segment.cc
   javelin/split/pair_console.cc
   javelin/split/split.cc

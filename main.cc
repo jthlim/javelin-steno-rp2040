@@ -52,14 +52,14 @@ extern "C" void tud_mount_cb(void) {
   HidKeyboardReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
   SplitUsbStatus::instance.SetPowered(true);
-  ButtonManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
+  ScriptManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when device is unmounted
 extern "C" void tud_umount_cb(void) {
   SplitUsbStatus::instance.OnUnmount();
   SplitUsbStatus::instance.SetPowered(false);
-  ButtonManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
+  ScriptManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when usb bus is suspended
@@ -109,7 +109,7 @@ void MasterTask::Update() {
   }
 
   uint32_t scriptTime = Clock::GetMilliseconds();
-  ButtonManager::GetInstance().Tick(scriptTime);
+  ScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 
 #if JAVELIN_SPLIT
@@ -131,7 +131,7 @@ void MasterTask::Update() {
     }
   }
 
-  ButtonManager::GetInstance().Update(buttonState.value,
+  ScriptManager::GetInstance().Update(buttonState.value,
                                       Clock::GetMilliseconds());
 }
 
@@ -153,7 +153,7 @@ void SlaveTask::Update() {
   }
 
   uint32_t scriptTime = Clock::GetMilliseconds();
-  ButtonManager::GetInstance().Tick(scriptTime);
+  ScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 
   ButtonState newButtonState = Rp2040ButtonState::Read();
@@ -332,7 +332,7 @@ int main(void) {
     PairConsole::RegisterHandlers();
 
     InitJavelinMaster();
-    ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
+    ScriptManager::Initialize(SCRIPT_BYTE_CODE);
     tusb_init();
 
     DoMasterRunLoop();
@@ -349,7 +349,7 @@ int main(void) {
     PairConsole::RegisterHandlers();
 
     InitJavelinSlave();
-    ButtonManager::Initialize(BUTTON_MANAGER_BYTE_CODE);
+    ScriptManager::Initialize(SCRIPT_BYTE_CODE);
 
     tusb_init();
     DoSlaveRunLoop();

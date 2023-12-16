@@ -1,9 +1,9 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_split.h"
-#include "javelin/button_manager.h"
 #include "javelin/console.h"
 #include "javelin/crc.h"
+#include "javelin/script_manager.h"
 #include "rp2040_dma.h"
 #include "rp2040_sniff.h"
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
