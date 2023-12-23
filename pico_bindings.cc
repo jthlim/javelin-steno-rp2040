@@ -333,10 +333,6 @@ static void GetStrokeCount() {
 static void GetUnicodeMode() {
   Console::Printf("%s\n\n", StenoKeyCodeEmitter::GetUnicodeModeName());
 }
-
-void StenoDictionary::InvalidateMaximumOutlineLengthCache() {
-  engineContainer->UpdateMaximumStrokeLengthCache();
-}
 #endif
 
 static void GetStenoMode() {
