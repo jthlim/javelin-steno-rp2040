@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.28)
 cmake_policy(SET CMP0076 NEW)
 
 set(NAME javelin-steno-rp2040)
@@ -45,6 +45,7 @@ target_sources(${NAME} PUBLIC
   console_report_buffer.cc
   hid_keyboard_report_builder.cc
   hid_report_buffer.cc
+  libc_overrides.cc
   libc_stubs.cc
   pico_bindings.cc
   pico_thread.cc
