@@ -280,7 +280,6 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
   if (y + height <= 0) {
     return;
   }
-  dirty = true;
 
   size_t bytesPerColumn = (height + 7) >> 3;
 
@@ -292,6 +291,8 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
     data -= bytesPerColumn * x;
     x = 0;
   }
+
+  dirty = true;
 
   int startY = y >> 3;
   int yShift = y & 7;
@@ -339,6 +340,66 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
         pixels &= ~bits;
       }
       p[yy] = pixels;
+    }
+
+    p += JAVELIN_DISPLAY_HEIGHT / 8;
+    --width;
+  }
+}
+
+void Ssd1306::Ssd1306Data::DrawGrayscaleRange(int x, int y, int width,
+                                              int height, const uint8_t *data,
+                                              int min, int max) {
+  // It's all off the screen.
+  if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
+    return;
+  }
+
+  if (y < 0) {
+    height += y;
+    if (height <= 0) {
+      return;
+    }
+    data -= y;
+    y = 0;
+  }
+
+  size_t bytesPerColumn = height;
+
+  if (x < 0) {
+    width += x;
+    if (width <= 0) {
+      return;
+    }
+    data -= bytesPerColumn * x;
+    x = 0;
+  }
+
+  dirty = true;
+
+  uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
+
+  int endX = x + width;
+  if (endX > JAVELIN_DISPLAY_WIDTH) {
+    width = JAVELIN_DISPLAY_WIDTH - x;
+  }
+  int endY = y + height;
+  if (endY > JAVELIN_DISPLAY_HEIGHT) {
+    height = JAVELIN_DISPLAY_HEIGHT - y;
+  }
+
+  while (width > 0) {
+    const uint8_t *column = data;
+    data += bytesPerColumn;
+
+    for (int yy = 0; yy < height; ++yy) {
+      if (min <= column[yy] && column[yy] < max) {
+        if (drawColor) {
+          p[(yy + y) >> 3] |= 1 << ((yy + y) & 7);
+        } else {
+          p[(yy + y) >> 3] &= ~(1 << ((yy + y) & 7));
+        }
+      }
     }
 
     p += JAVELIN_DISPLAY_HEIGHT / 8;
@@ -665,6 +726,21 @@ void Display::DrawImage(int displayId, int x, int y, int width, int height,
 #endif
 
   Ssd1306::instances[displayId].DrawImage(x, y, width, height, data);
+}
+
+void Display::DrawGrayscaleRange(int displayId, int x, int y, int width,
+                                 int height, const uint8_t *data, int min,
+                                 int max) {
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+
+  Ssd1306::instances[displayId].DrawGrayscaleRange(x, y, width, height, data,
+                                                   min, max);
 }
 
 void Display::DrawText(int displayId, int x, int y, FontId fontId,

@@ -119,6 +119,8 @@ private:
     void DrawLine(int x0, int y0, int x1, int y1);
     void DrawRect(int left, int top, int right, int bottom);
     void DrawImage(int x, int y, int width, int height, const uint8_t *data);
+    void DrawGrayscaleRange(int x, int y, int width, int height,
+                            const uint8_t *data, int min, int max);
     void DrawText(int x, int y, const Font *font, TextAlignment alignment,
                   const char *text);
     void SetPixel(uint32_t x, uint32_t y);
