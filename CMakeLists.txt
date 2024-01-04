@@ -169,6 +169,7 @@ target_link_libraries(${NAME}
   hardware_gpio
   hardware_i2c
   hardware_pio
+  hardware_pwm
   pico_multicore
   pico_printf
   pico_stdlib
