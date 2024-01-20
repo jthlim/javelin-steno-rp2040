@@ -28,7 +28,7 @@ constexpr uint8_t BUTTON_TOUCH_PINS[26] = {
               10, 11, /**/ 15, 14,
 };
 constexpr uint32_t BUTTON_TOUCH_PIN_MASK = 0x03ffffff;
-constexpr float BUTTON_TOUCH_THRESHOLD = 1.25f;
+constexpr float BUTTON_TOUCH_THRESHOLD = 1.20f;
 // clang-format on
 
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =

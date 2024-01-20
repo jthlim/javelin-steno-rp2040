@@ -66,7 +66,7 @@ struct TouchPadState {
 TouchPadState touchPadStates[sizeof(BUTTON_TOUCH_PINS)];
 
 #if !defined(JAVELIN_TOUCH_CALIBRATION_COUNT)
-#define JAVELIN_TOUCH_CALIBRATION_COUNT 8
+#define JAVELIN_TOUCH_CALIBRATION_COUNT 5
 #endif
 
 #endif
@@ -231,8 +231,7 @@ ButtonState Rp2040ButtonState::Read() {
     TouchPadState &padState = touchPadStates[i];
     if (counter == padState.lastCounter) {
       padState.repeatedCount++;
-      if (padState.repeatedCount == JAVELIN_TOUCH_CALIBRATION_COUNT &&
-          counter < padState.minimumCounter) {
+      if (padState.repeatedCount == JAVELIN_TOUCH_CALIBRATION_COUNT) {
         padState.minimumCounter = counter;
       }
     } else {
