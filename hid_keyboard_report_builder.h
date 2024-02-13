@@ -50,7 +50,8 @@ private:
   uint8_t maxPressIndex = 0;
   Buffer buffers[2];
 
-  HidReportBuffer<17> reportBuffer;
+  static const size_t MAXIMUM_REPORT_DATA_SIZE = 17;
+  HidReportBuffer<MAXIMUM_REPORT_DATA_SIZE> reportBuffer;
 
   bool HasData() const;
   void SendKeyboardPageReportIfRequired();

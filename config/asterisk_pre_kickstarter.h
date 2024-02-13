@@ -23,9 +23,9 @@ struct StenoDictionaryCollection;
 // clang-format off
 constexpr uint8_t BUTTON_TOUCH_PINS[26] = {
            0,         /**/           25,
-   5,  4,  3,  2,  1, /**/ 15, 24, 23, 22, 21, 20,
-   9,  8,  7,  6,     /**/     14, 19, 18, 17, 16,
-              10, 11, /**/ 12, 13,
+   8,  6,  2,  3,  1, /**/ 24, 22, 23, 19, 17, 12,
+   9,  7,  5,  4,     /**/     21, 20, 18, 16, 13,
+              10, 11, /**/ 15, 14,
 };
 constexpr uint32_t BUTTON_TOUCH_PIN_MASK = 0x03ffffff;
 constexpr float BUTTON_TOUCH_THRESHOLD = 1.20f;
