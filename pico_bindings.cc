@@ -108,6 +108,7 @@ static List<StenoDictionaryListEntry> dictionaries;
 static JavelinStaticAllocate<StenoFirstUp> firstUpContainer;
 static JavelinStaticAllocate<StenoAllUp> allUpContainer;
 static JavelinStaticAllocate<StenoRepeat> repeatContainer;
+static JavelinStaticAllocate<StenoPassthrough> triggerContainer;
 
 extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
@@ -212,7 +213,7 @@ void SetUnicodeMode(void *context, const char *commandLine) {
 void SetStenoMode(void *context, const char *commandLine) {
   const char *stenoMode = strchr(commandLine, ' ');
   if (!stenoMode) {
-    Console::Printf("ERR No steno mode layout specified\n\n");
+    Console::Printf("ERR No steno mode specified\n\n");
     return;
   }
 
@@ -232,6 +233,27 @@ void SetStenoMode(void *context, const char *commandLine) {
     passthroughContainer->SetNext(&ploverHid);
   } else {
     Console::Printf("ERR Unable to set steno mode: \"%s\"\n\n", stenoMode);
+    return;
+  }
+
+  Console::SendOk();
+  ScriptManager::ExecuteScript(ScriptId::STENO_MODE_UPDATE);
+}
+
+void SetStenoTrigger(void *context, const char *commandLine) {
+  const char *trigger = strchr(commandLine, ' ');
+  if (!trigger) {
+    Console::Printf("ERR No trigger specified\n\n");
+    return;
+  }
+
+  ++trigger;
+  if (Str::Eq(trigger, "all_up")) {
+    triggerContainer->SetNext(&allUpContainer.value);
+  } else if (Str::Eq(trigger, "first_up")) {
+    triggerContainer->SetNext(&firstUpContainer.value);
+  } else {
+    Console::Printf("ERR Unable to set trigger mode: \"%s\"\n\n", trigger);
     return;
   }
 
@@ -297,6 +319,12 @@ static void GetKeyboardProtocol() {
 }
 #endif
 
+#if defined(JAVELIN_SCRIPT_CONFIGURATION)
+static void GetScriptConfiguration() {
+  Console::Printf("%s\n\n", JAVELIN_SCRIPT_CONFIGURATION);
+}
+#endif
+
 // clang-format off
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -356,16 +384,31 @@ static void GetStenoMode() {
   }
 }
 
+static void GetStenoTrigger() {
+  const StenoProcessorElement *trigger = triggerContainer->GetNext();
+  if (trigger == &allUpContainer.value) {
+    Console::Printf("all_up\n\n");
+  } else if (trigger == &firstUpContainer.value) {
+    Console::Printf("first_up\n\n");
+  } else {
+    Console::Printf("ERR Internal consistency error\n\n");
+  }
+}
+
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
     {"keyboard_layout", GetKeyboardLayout},
     {"keyboard_protocol", GetKeyboardProtocol},
+#endif
+#if defined(JAVELIN_SCRIPT_CONFIGURATION)
+    {"script_configuration", GetScriptConfiguration},
 #endif
     {"script_header", GetScriptHeader},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"space_position", GetSpacePosition},
 #endif
     {"steno_mode", GetStenoMode},
+    {"steno_trigger", GetStenoTrigger},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"stroke_count", GetStrokeCount},
     {"unicode_mode", GetUnicodeMode},
@@ -573,6 +616,10 @@ void InitJavelinMaster() {
       "\"gemini\", \"tx_bolt\", \"procat\", \"plover_hid\"]",
       SetStenoMode, nullptr);
 #endif
+  console.RegisterCommand(
+      "set_steno_trigger",
+      "Sets the current steno trigger [\"first_up\", \"all_up\"]",
+      SetStenoTrigger, nullptr);
   console.RegisterCommand("set_keyboard_protocol",
                           "Sets the current keyboard protocol "
                           "[\"default\", \"compatibility\"]",
@@ -623,6 +670,8 @@ void InitJavelinMaster() {
                           StenoEngine::Lookup_Binding, engine);
   console.RegisterCommand("lookup_stroke", "Looks up a stroke",
                           StenoEngine::LookupStroke_Binding, engine);
+  console.RegisterCommand("process_strokes", "Processes a stroke list",
+                          StenoEngine::ProcessStrokes_Binding, engine);
 #endif
 
 #if JAVELIN_DISPLAY_DRIVER
@@ -657,11 +706,12 @@ void InitJavelinMaster() {
   }
 #endif
 
-  if (config->useFirstUp) {
-    processorElement = new (firstUpContainer) StenoFirstUp(*processorElement);
-  } else {
-    processorElement = new (allUpContainer) StenoAllUp(*processorElement);
-  }
+  new (firstUpContainer) StenoFirstUp(*processorElement);
+  new (allUpContainer) StenoAllUp(*processorElement);
+  processorElement = config->useFirstUp
+                         ? (StenoProcessorElement *)&firstUpContainer.value
+                         : (StenoProcessorElement *)&allUpContainer.value;
+  processorElement = new (triggerContainer) StenoPassthrough(processorElement);
 
   if (config->useRepeat) {
     processorElement = new (repeatContainer) StenoRepeat(*processorElement);

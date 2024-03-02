@@ -31,6 +31,9 @@ constexpr uint32_t BUTTON_TOUCH_PIN_MASK = 0x03ffffff;
 constexpr float BUTTON_TOUCH_THRESHOLD = 1.20f;
 // clang-format on
 
+#define JAVELIN_SCRIPT_CONFIGURATION                                           \
+  R"({"name":"Asterisk","layout":[{"x":0,"y":-0.5,"w":4,"h":0.5},{"x":8,"y":-0.5,"w":4,"h":0.5},{"x":0,"y":0},{"x":1,"y":0},{"x":2,"y":0},{"x":3,"y":0},{"x":4,"y":0,"w":1,"h":2},{"x":7,"y":0,"w":1,"h":2},{"x":8,"y":0},{"x":9,"y":0},{"x":10,"y":0},{"x":11,"y":0},{"x":12,"y":0},{"x":0,"y":1},{"x":1,"y":1},{"x":2,"y":1},{"x":3,"y":1},{"x":8,"y":1},{"x":9,"y":1},{"x":10,"y":1},{"x":11,"y":1},{"x":12,"y":1},{"x":2.5,"y":3},{"x":3.5,"y":3},{"x":7.5,"y":3},{"x":8.5,"y":3},{"x":5.75,"y":2.5,"s":0.5}]})"
+
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
     (const StenoConfigBlock *)0x10040000;
 const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
