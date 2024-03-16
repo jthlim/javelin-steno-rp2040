@@ -89,6 +89,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/reverse_auto_suffix_dictionary.cc
   javelin/dictionary/reverse_map_dictionary.cc
   javelin/dictionary/reverse_prefix_dictionary.cc
+  javelin/dictionary/reverse_suffix_dictionary.cc
   javelin/dictionary/unicode_dictionary.cc
   javelin/dictionary/user_dictionary.cc
   javelin/dictionary/wrapped_dictionary.cc

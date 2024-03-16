@@ -15,6 +15,7 @@
 #include "javelin/dictionary/reverse_auto_suffix_dictionary.h"
 #include "javelin/dictionary/reverse_map_dictionary.h"
 #include "javelin/dictionary/reverse_prefix_dictionary.h"
+#include "javelin/dictionary/reverse_suffix_dictionary.h"
 #include "javelin/dictionary/unicode_dictionary.h"
 #include "javelin/dictionary/user_dictionary.h"
 #include "javelin/engine.h"
@@ -99,6 +100,10 @@ static JavelinStaticAllocate<StenoReverseMapDictionary>
     reverseMapDictionaryContainer;
 static JavelinStaticAllocate<StenoReversePrefixDictionary>
     reversePrefixDictionaryContainer;
+static JavelinStaticAllocate<StenoReverseSuffixDictionary>
+    reverseSuffixDictionaryContainer;
+static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
+    reverseAutoSuffixForSuffixDictionaryContainer;
 static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
     reverseAutoSuffixDictionaryContainer;
 
@@ -574,6 +579,19 @@ void InitJavelinMaster() {
         dictionary, (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
         STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
         STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+
+    new (reverseAutoSuffixForSuffixDictionaryContainer)
+        StenoReverseAutoSuffixDictionary(dictionary,
+                                         compiledOrthographyContainer);
+
+    dictionary =
+        new (reverseSuffixDictionaryContainer) StenoReverseSuffixDictionary(
+            dictionary,
+            (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength,
+            compiledOrthographyContainer,
+            &reverseAutoSuffixForSuffixDictionaryContainer.value);
 
     dictionary = new (reverseAutoSuffixDictionaryContainer)
         StenoReverseAutoSuffixDictionary(dictionary,
