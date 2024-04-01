@@ -190,7 +190,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     processors->PrintInfo();
 #if JAVELIN_USE_EMBEDDED_STENO
     Console::Printf("Text block: %zu bytes\n",
-                    STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+                    STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock.count);
 #endif
   }
   Console::Write("\n", 1);
@@ -577,21 +577,29 @@ void InitJavelinMaster() {
   if (STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->hasReverseLookup) {
     dictionary = new (reverseMapDictionaryContainer) StenoReverseMapDictionary(
         dictionary, (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
-        STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
-        STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+        STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock);
 
     new (reverseAutoSuffixForSuffixDictionaryContainer)
         StenoReverseAutoSuffixDictionary(dictionary,
                                          compiledOrthographyContainer);
 
+    List<const uint8_t *> ignoreSuffixes;
+    for (const StenoOrthographyAutoSuffix &autoSuffix :
+         ORTHOGRAPHY_ADDRESS->autoSuffixes) {
+      const uint8_t *p =
+          reverseMapDictionaryContainer->FindMapDataLookup(autoSuffix.text + 1);
+      if (p) {
+        ignoreSuffixes.AddIfUnique(p - 3);
+      }
+    }
+
     dictionary =
         new (reverseSuffixDictionaryContainer) StenoReverseSuffixDictionary(
             dictionary,
             (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
-            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
-            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength,
             compiledOrthographyContainer,
-            &reverseAutoSuffixForSuffixDictionaryContainer.value);
+            &reverseAutoSuffixForSuffixDictionaryContainer.value,
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->suffixes, ignoreSuffixes);
 
     dictionary = new (reverseAutoSuffixDictionaryContainer)
         StenoReverseAutoSuffixDictionary(dictionary,
@@ -601,8 +609,7 @@ void InitJavelinMaster() {
         new (reversePrefixDictionaryContainer) StenoReversePrefixDictionary(
             dictionary,
             (const uint8_t *)STENO_MAP_DICTIONARY_COLLECTION_ADDRESS,
-            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlock,
-            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->textBlockLength);
+            STENO_MAP_DICTIONARY_COLLECTION_ADDRESS->prefixes);
   }
 
   // Set up processors.
