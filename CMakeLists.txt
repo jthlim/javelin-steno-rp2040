@@ -76,12 +76,12 @@ target_sources(${NAME} PUBLIC
   javelin/crc.cc
   javelin/dictionary/compact_map_dictionary.cc
   javelin/dictionary/compact_test_dictionary.cc
-  javelin/dictionary/corrupted_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
   javelin/dictionary/dictionary.cc
   javelin/dictionary/dictionary_definition.cc
   javelin/dictionary/dictionary_list.cc
   javelin/dictionary/emily_symbols_dictionary.cc
+  javelin/dictionary/invalid_dictionary.cc
   javelin/dictionary/jeff_numbers_dictionary.cc
   javelin/dictionary/jeff_phrasing_dictionary.cc
   javelin/dictionary/jeff_phrasing_dictionary_data.cc

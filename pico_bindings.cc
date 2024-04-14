@@ -7,7 +7,6 @@
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
-#include "javelin/dictionary/corrupted_dictionary.h"
 #include "javelin/dictionary/debug_dictionary.h"
 #include "javelin/dictionary/dictionary.h"
 #include "javelin/dictionary/dictionary_definition.h"
