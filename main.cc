@@ -108,15 +108,15 @@ void MasterTask::Update() {
     return;
   }
 
-  uint32_t scriptTime = Clock::GetMilliseconds();
+  const uint32_t scriptTime = Clock::GetMilliseconds();
   ScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 
 #if JAVELIN_SPLIT
-  Debounced<ButtonState> buttonState =
+  const Debounced<ButtonState> buttonState =
       debouncer.Update(Rp2040ButtonState::Read() | splitState);
 #else
-  Debounced<ButtonState> buttonState =
+  const Debounced<ButtonState> buttonState =
       debouncer.Update(Rp2040ButtonState::Read());
 #endif
   if (!buttonState.isUpdated) {
@@ -152,11 +152,11 @@ void SlaveTask::Update() {
     return;
   }
 
-  uint32_t scriptTime = Clock::GetMilliseconds();
+  const uint32_t scriptTime = Clock::GetMilliseconds();
   ScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 
-  ButtonState newButtonState = Rp2040ButtonState::Read();
+  const ButtonState newButtonState = Rp2040ButtonState::Read();
   if (newButtonState == buttonState) {
     return;
   }
@@ -237,12 +237,10 @@ extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t reportId,
 //---------------------------------------------------------------------------
 
 static void cdc_task() {
-  uint8_t itf;
-
-  for (itf = 0; itf < CFG_TUD_CDC; itf++) {
+  for (uint8_t itf = 0; itf < CFG_TUD_CDC; itf++) {
     if (tud_cdc_n_available(itf)) {
       uint8_t buf[64];
-      uint32_t count = tud_cdc_n_read(itf, buf, sizeof(buf));
+      const uint32_t count = tud_cdc_n_read(itf, buf, sizeof(buf));
       // Do nothing with it.
     }
   }

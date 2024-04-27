@@ -16,8 +16,8 @@ ConsoleReportBuffer::ConsoleReportBuffer() : reportBuffer(ITF_NUM_CONSOLE) {}
 void ConsoleReportBuffer::SendData(const uint8_t *data, size_t length) {
   // Fill up the previous buffer if it's not empty.
   if (bufferSize != 0) {
-    int remaining = MAX_BUFFER_SIZE - bufferSize;
-    int bytesToAdd = length > remaining ? remaining : length;
+    const int remaining = MAX_BUFFER_SIZE - bufferSize;
+    const int bytesToAdd = length > remaining ? remaining : length;
     memcpy(buffer + bufferSize, data, bytesToAdd);
     bufferSize += bytesToAdd;
 
@@ -51,7 +51,7 @@ void ConsoleReportBuffer::SendData(const uint8_t *data, size_t length) {
 
 void ConsoleReportBuffer::Flush() {
   if (bufferSize > 0) {
-    int remaining = MAX_BUFFER_SIZE - bufferSize;
+    const int remaining = MAX_BUFFER_SIZE - bufferSize;
     memset(buffer + bufferSize, 0, remaining);
     reportBuffer.SendReport(0, buffer, MAX_BUFFER_SIZE);
     bufferSize = 0;

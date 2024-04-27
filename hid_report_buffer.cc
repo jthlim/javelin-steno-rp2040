@@ -20,7 +20,7 @@ void HidReportBufferBase::SendReport(uint8_t reportId, const uint8_t *data,
     tud_task();
   } while (IsFull());
 
-  bool triggerSend = startIndex == endIndex;
+  const bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
     if (!tud_hid_n_ready(instanceNumber)) {
 #if JAVELIN_SPLIT
@@ -40,7 +40,7 @@ void HidReportBufferBase::SendReport(uint8_t reportId, const uint8_t *data,
     return;
   }
 
-  size_t entryIndex = endIndex++ & (NUMBER_OF_ENTRIES - 1);
+  const size_t entryIndex = endIndex++ & (NUMBER_OF_ENTRIES - 1);
   Entry *entry = GetEntry(entryIndex);
   entry->length = length;
   entry->reportId = reportId;
@@ -61,7 +61,7 @@ void HidReportBufferBase::SendNextReport() {
       return;
     }
 
-    size_t entryIndex = startIndex & (NUMBER_OF_ENTRIES - 1);
+    const size_t entryIndex = startIndex & (NUMBER_OF_ENTRIES - 1);
     const Entry *entry = GetEntry(entryIndex);
 
     reportsSentCount[instanceNumber]++;

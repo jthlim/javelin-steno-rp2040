@@ -34,11 +34,11 @@ void Flash::Erase(const void *target, size_t size) {
     }
   }
 
-  size_t eraseSize = eraseEnd - eraseStart;
+  const size_t eraseSize = eraseEnd - eraseStart;
   if (eraseSize != 0) {
     instance.erasedBytes += eraseSize;
 
-    uint32_t interrupts = save_and_disable_interrupts();
+    const uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t + eraseStart - XIP_BASE, eraseSize);
     restore_interrupts(interrupts);
   }
@@ -66,11 +66,11 @@ void Flash::Write(const void *target, const void *data, size_t size) {
     }
   }
 
-  size_t eraseSize = eraseEnd - eraseStart;
+  const size_t eraseSize = eraseEnd - eraseStart;
   if (eraseSize != 0) {
     instance.erasedBytes += eraseSize;
 
-    uint32_t interrupts = save_and_disable_interrupts();
+    const uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t + eraseStart - XIP_BASE, eraseSize);
     restore_interrupts(interrupts);
   }
@@ -88,11 +88,11 @@ void Flash::Write(const void *target, const void *data, size_t size) {
     }
   }
 
-  size_t programSize = programEnd - programStart;
+  const size_t programSize = programEnd - programStart;
   if (programSize) {
     instance.programmedBytes += programSize;
 
-    uint32_t interrupts = save_and_disable_interrupts();
+    const uint32_t interrupts = save_and_disable_interrupts();
     flash_range_program((intptr_t)t + programStart - XIP_BASE, d + programStart,
                         programSize);
     restore_interrupts(interrupts);
@@ -105,7 +105,7 @@ void Flash::Write(const void *target, const void *data, size_t size) {
     instance.programmedBytes += size;
     instance.reprogrammedBytes += size;
 
-    uint32_t interrupts = save_and_disable_interrupts();
+    const uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase((intptr_t)t - XIP_BASE, size);
     flash_range_program((intptr_t)t - XIP_BASE, d, size);
     restore_interrupts(interrupts);

@@ -101,8 +101,8 @@ void Rp2040ButtonState::Initialize() {
   gpio_init_mask(BUTTON_PIN_MASK);
   gpio_set_dir_masked(BUTTON_PIN_MASK, 0);
 
-  for (uint8_t pinAndPolarity : BUTTON_PINS) {
-    uint8_t pin = pinAndPolarity & 0x7f;
+  for (const uint8_t pinAndPolarity : BUTTON_PINS) {
+    const uint8_t pin = pinAndPolarity & 0x7f;
     if (pinAndPolarity >> 7) {
       gpio_pull_down(pin);
     } else {
@@ -113,7 +113,7 @@ void Rp2040ButtonState::Initialize() {
 
 #if JAVELIN_BUTTON_TOUCH
   gpio_init_mask(BUTTON_TOUCH_PIN_MASK);
-  for (uint8_t pin : BUTTON_TOUCH_PINS) {
+  for (const uint8_t pin : BUTTON_TOUCH_PINS) {
     gpio_disable_pulls(pin);
     gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
   }
@@ -138,7 +138,7 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 
   // Must disable interrupts, as interrupt handlers may be in flash, and flash
   // access it about to be disabled temporarily.
-  uint32_t flags = save_and_disable_interrupts();
+  const uint32_t flags = save_and_disable_interrupts();
 
   // Set chip select to Hi-Z
   hw_write_masked(&ioqspi_hw->io[CS_PIN_INDEX].ctrl,
@@ -152,7 +152,7 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 
   // The HI GPIO registers in SIO can observe and control the 6 QSPI pins.
   // Note the button pulls the pin *low* when pressed.
-  bool buttonState = (sio_hw->gpio_hi_in & (1u << CS_PIN_INDEX)) == 0;
+  const bool buttonState = (sio_hw->gpio_hi_in & (1u << CS_PIN_INDEX)) == 0;
 
   // Restore the state of chip select
   hw_write_masked(&ioqspi_hw->io[CS_PIN_INDEX].ctrl,
@@ -168,7 +168,7 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 #if JAVELIN_BUTTON_TOUCH
 void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
-    uint8_t pin = BUTTON_TOUCH_PINS[i];
+    const uint8_t pin = BUTTON_TOUCH_PINS[i];
     gpio_set_dir(pin, false);
 
     size_t counter = 0;
@@ -195,11 +195,11 @@ ButtonState Rp2040ButtonState::Read() {
     // Seems to work solidly with 2us wait. Use 10 for safety.
     busy_wait_us_32(10);
 
-    int columnMask = gpio_get_all();
+    const int columnMask = gpio_get_all();
 #pragma GCC unroll 1
     for (int c = 0; c < COLUMN_PIN_COUNT; ++c) {
       if (((columnMask >> COLUMN_PINS[c]) & 1) == 0) {
-        int buttonIndex = KEY_MAP[r][c];
+        const int buttonIndex = KEY_MAP[r][c];
         if (buttonIndex >= 0) {
           state.Set(buttonIndex);
         }
@@ -211,11 +211,11 @@ ButtonState Rp2040ButtonState::Read() {
 #endif
 
 #if JAVELIN_BUTTON_PINS
-  int buttonMask = gpio_get_all();
+  const int buttonMask = gpio_get_all();
 #pragma GCC unroll 1
   for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
-    uint8_t pinAndPolarity = BUTTON_PINS[b];
-    uint8_t pin = pinAndPolarity & 0x7f;
+    const uint8_t pinAndPolarity = BUTTON_PINS[b];
+    const uint8_t pin = pinAndPolarity & 0x7f;
     if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
       state.Set(b);
     }
@@ -227,7 +227,7 @@ ButtonState Rp2040ButtonState::Read() {
   ReadTouchCounters(counters);
 
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
-    uint32_t counter = counters[i];
+    const uint32_t counter = counters[i];
     TouchPadState &padState = touchPadStates[i];
     if (counter == padState.lastCounter) {
       padState.repeatedCount++;
@@ -239,7 +239,7 @@ ButtonState Rp2040ButtonState::Read() {
     }
     padState.lastCounter = counter;
 
-    bool isTouched =
+    const bool isTouched =
         256 * counter >
         uint32_t(256 * BUTTON_TOUCH_THRESHOLD + 0.99) * padState.minimumCounter;
     if (isTouched) {

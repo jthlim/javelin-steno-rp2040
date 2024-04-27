@@ -3,7 +3,6 @@
 #include "auto_draw.h"
 #include "console_report_buffer.h"
 #include "hid_keyboard_report_builder.h"
-#include "hid_report_buffer.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -43,11 +42,9 @@
 #include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
 #include "javelin/wpm_tracker.h"
-#include "plover_hid_report_buffer.h"
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
 #include "ssd1306.h"
-#include "usb_descriptors.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
@@ -118,23 +115,24 @@ extern "C" char __data_start__[], __data_end__[];
 extern "C" char __bss_start__[], __bss_end__[];
 
 static void PrintInfo_Binding(void *context, const char *commandLine) {
-  uint32_t uptime = Clock::GetMilliseconds();
+  const uint32_t uptime = Clock::GetMilliseconds();
   auto &uptimeDivider = divider->Divide(uptime, 1000);
-  uint32_t microseconds = uptimeDivider.remainder;
-  uint32_t totalSeconds = uptimeDivider.quotient;
+  const uint32_t microseconds = uptimeDivider.remainder;
+  const uint32_t totalSeconds = uptimeDivider.quotient;
   auto &totalSecondsDivider = divider->Divide(totalSeconds, 60);
-  uint32_t seconds = totalSecondsDivider.remainder;
-  uint32_t totalMinutes = totalSecondsDivider.quotient;
+  const uint32_t seconds = totalSecondsDivider.remainder;
+  const uint32_t totalMinutes = totalSecondsDivider.quotient;
   auto &totalMinutesDivider = divider->Divide(totalMinutes, 60);
-  uint32_t minutes = totalMinutesDivider.remainder;
-  uint32_t totalHours = totalMinutesDivider.quotient;
+  const uint32_t minutes = totalMinutesDivider.remainder;
+  const uint32_t totalHours = totalMinutesDivider.quotient;
   auto &totalHoursDivider = divider->Divide(totalHours, 24);
-  uint32_t hours = totalHoursDivider.remainder;
-  uint32_t days = totalHoursDivider.quotient;
+  const uint32_t hours = totalHoursDivider.remainder;
+  const uint32_t days = totalHoursDivider.quotient;
 
   Console::Printf("System\n");
-  uint32_t systemClockKhz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
-  uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
+  const uint32_t systemClockKhz =
+      frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
+  const uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
   Console::Printf("  Clock: %u MHz\n", systemMhz);
   Console::Printf("  Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
@@ -144,7 +142,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("  Serial number: ");
   uint8_t serialId[8];
 
-  uint32_t interrupts = save_and_disable_interrupts();
+  const uint32_t interrupts = save_and_disable_interrupts();
   flash_get_unique_id(serialId);
   restore_interrupts(interrupts);
 
@@ -163,7 +161,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("Memory\n");
   Console::Printf("  Data: %zu\n", __data_end__ - __data_start__);
   Console::Printf("  BSS: %zu\n", __bss_end__ - __bss_start__);
-  struct mallinfo info = mallinfo();
+  const struct mallinfo info = mallinfo();
   Console::Printf("  Arena: %zu\n", info.arena);
   Console::Printf("  Free chunks: %zu\n", info.ordblks);
   Console::Printf("  Used: %zu\n", info.uordblks);
@@ -768,7 +766,7 @@ void Script::OnStenoStateCancelled() {
   processors->Process(StenoKeyState(0), StenoAction::CANCEL);
 }
 
-void Script::SendText(const uint8_t *text) const {
+void Script::SendText(const uint8_t *text) {
 #if JAVELIN_USE_EMBEDDED_STENO
   engineContainer->SendText(text);
 #endif
@@ -776,8 +774,9 @@ void Script::SendText(const uint8_t *text) const {
 
 bool Script::ProcessScanCode(int scanCode, ScanCodeAction action) {
 #if JAVELIN_USE_EMBEDDED_STENO
-  uint32_t modifiers = keyState.GetRange(KeyCode::L_CTRL, KeyCode::L_CTRL + 8)
-                       << MODIFIER_BIT_SHIFT;
+  const uint32_t modifiers =
+      keyState.GetRange(KeyCode::L_CTRL, KeyCode::L_CTRL + 8)
+      << MODIFIER_BIT_SHIFT;
   return engineContainer->ProcessScanCode(scanCode | modifiers, action);
 #else
   return false;

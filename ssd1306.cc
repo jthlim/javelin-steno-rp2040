@@ -163,7 +163,7 @@ void Ssd1306::Ssd1306Data::SetPixel(uint32_t x, uint32_t y) {
     return;
   }
 
-  size_t bitIndex = x * JAVELIN_DISPLAY_HEIGHT + y;
+  const size_t bitIndex = x * JAVELIN_DISPLAY_HEIGHT + y;
   uint8_t *p = &buffer8[bitIndex / 8];
   if (drawColor) {
     *p |= 1 << (bitIndex & 7);
@@ -188,10 +188,10 @@ void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1) {
 
   // Use balanced Bresenham's line algorithm:
   // https://en.wikipedia.org/wiki/Bresenham's_line_algorithm
-  int dx = abs(x1 - x0);
-  int sx = x0 < x1 ? 1 : -1;
-  int dy = -abs(y1 - y0);
-  int sy = y0 < y1 ? 1 : -1;
+  const int dx = abs(x1 - x0);
+  const int sx = x0 < x1 ? 1 : -1;
+  const int dy = -abs(y1 - y0);
+  const int sy = y0 < y1 ? 1 : -1;
   int error = dx + dy;
 
   while (true) {
@@ -200,7 +200,7 @@ void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1) {
       return;
     }
 
-    int e2 = 2 * error;
+    const int e2 = 2 * error;
     if (e2 >= dy) {
       error += dy;
       x0 += sx;
@@ -240,8 +240,8 @@ void Ssd1306::Ssd1306Data::DrawRect(int left, int top, int right, int bottom) {
 
   uint8_t *p = &buffer8[left * (JAVELIN_DISPLAY_HEIGHT / 8) + (top >> 3)];
 
-  int startY = top & -8;
-  int endY = (bottom + 7) & -8;
+  const int startY = top & -8;
+  const int endY = (bottom + 7) & -8;
 
   for (int y = startY; y < endY; y += 8) {
     int mask = 0xff;
@@ -294,13 +294,13 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
 
   dirty = true;
 
-  int startY = y >> 3;
-  int yShift = y & 7;
-  int endY = (y + height + 7) >> 3;
+  const int startY = y >> 3;
+  const int yShift = y & 7;
+  const int endY = (y + height + 7) >> 3;
 
   uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
 
-  int endX = x + width;
+  const int endX = x + width;
   if (endX > JAVELIN_DISPLAY_WIDTH) {
     width = JAVELIN_DISPLAY_WIDTH - x;
   }
@@ -310,7 +310,7 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
     data += bytesPerColumn;
 
     if (startY >= 0) {
-      int bits = column[0] << yShift;
+      const int bits = column[0] << yShift;
       int pixels = p[startY];
       if (drawColor) {
         pixels |= bits;
@@ -364,7 +364,7 @@ void Ssd1306::Ssd1306Data::DrawGrayscaleRange(int x, int y, int width,
     y = 0;
   }
 
-  size_t bytesPerColumn = height;
+  const size_t bytesPerColumn = height;
 
   if (x < 0) {
     width += x;
@@ -379,11 +379,11 @@ void Ssd1306::Ssd1306Data::DrawGrayscaleRange(int x, int y, int width,
 
   uint8_t *p = &buffer8[x * (JAVELIN_DISPLAY_HEIGHT / 8)];
 
-  int endX = x + width;
+  const int endX = x + width;
   if (endX > JAVELIN_DISPLAY_WIDTH) {
     width = JAVELIN_DISPLAY_WIDTH - x;
   }
-  int endY = y + height;
+  const int endY = y + height;
   if (endY > JAVELIN_DISPLAY_HEIGHT) {
     height = JAVELIN_DISPLAY_HEIGHT - y;
   }
@@ -428,7 +428,7 @@ void Ssd1306::Ssd1306Data::DrawText(int x, int y, const Font *font,
   }
 
   for (;;) {
-    uint32_t c = *utf8p;
+    const uint32_t c = *utf8p;
     ++utf8p;
 
     if (c == 0) {
@@ -477,7 +477,7 @@ void Ssd1306::Ssd1306Data::Update() {
 #elif JAVELIN_OLED_ROTATION == 90 || JAVELIN_OLED_ROTATION == 270
   for (int frameBufferY = JAVELIN_DISPLAY_HEIGHT - 1; frameBufferY >= 0;
        --frameBufferY) {
-    int shift = ~frameBufferY & 7;
+    const int shift = ~frameBufferY & 7;
 
     const uint8_t *s = &buffer8[frameBufferY / 8];
 
