@@ -762,8 +762,12 @@ void Script::OnStenoKeyReleased() {
 #endif
 }
 
-void Script::OnStenoStateCancelled() {
-  processors->Process(StenoKeyState(0), StenoAction::CANCEL);
+void Script::CancelStenoKeys(StenoKeyState state) {
+  processors->Process(state, StenoAction::CANCEL_ALL);
+}
+
+void Script::CancelAllStenoKeys() {
+  processors->Process(StenoKeyState(0), StenoAction::CANCEL_ALL);
 }
 
 void Script::SendText(const uint8_t *text) {

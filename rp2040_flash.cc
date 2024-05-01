@@ -13,7 +13,7 @@ static bool IsWritableRange(const void *p) {
   return p >= STENO_CONFIG_BLOCK_ADDRESS;
 }
 
-void Flash::Erase(const void *target, size_t size) {
+void Flash::EraseBlock(const void *target, size_t size) {
   if (!IsWritableRange(target)) {
     return;
   }
@@ -44,7 +44,7 @@ void Flash::Erase(const void *target, size_t size) {
   }
 }
 
-void Flash::Write(const void *target, const void *data, size_t size) {
+void Flash::WriteBlock(const void *target, const void *data, size_t size) {
   if (!IsWritableRange(target)) {
     return;
   }
