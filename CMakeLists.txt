@@ -95,6 +95,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/wrapped_dictionary.cc
   javelin/engine_add_translation_mode.cc
   javelin/engine_binding.cc
+  javelin/engine_console_mode.cc
   javelin/engine_normal_mode.cc
   javelin/engine.cc
   javelin/flash.cc

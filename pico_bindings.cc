@@ -692,6 +692,9 @@ void InitJavelinMaster() {
                           StenoEngine::Lookup_Binding, engine);
   console.RegisterCommand("lookup_stroke", "Looks up a stroke",
                           StenoEngine::LookupStroke_Binding, engine);
+  console.RegisterCommand("remove_stroke",
+                          "Removes a stroke from specified dictionary",
+                          StenoEngine::RemoveStroke_Binding, engine);
   console.RegisterCommand("process_strokes", "Processes a stroke list",
                           StenoEngine::ProcessStrokes_Binding, engine);
 #endif
@@ -741,10 +744,7 @@ void InitJavelinMaster() {
 
   processors = processorElement;
 
-#if JAVELIN_SPLIT
-  console.RegisterCommand("pair", "Runs a command on the pair's console",
-                          &PairConsole::PairBinding, nullptr);
-#endif
+  PairConsole::AddConsoleCommands(console);
 }
 
 void Script::OnStenoKeyPressed() {
