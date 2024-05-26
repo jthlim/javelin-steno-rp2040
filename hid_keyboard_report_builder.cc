@@ -3,6 +3,7 @@
 #include "hid_keyboard_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/console.h"
+#include "javelin/mem.h"
 #include "usb_descriptors.h"
 
 #include <string.h>
@@ -17,12 +18,12 @@ const size_t MODIFIER_OFFSET = 0;
 
 HidKeyboardReportBuilder::HidKeyboardReportBuilder()
     : reportBuffer(ITF_NUM_KEYBOARD) {
-  memset(&buffers, 0, sizeof(buffers));
+  Mem::Clear(buffers);
 }
 
 void HidKeyboardReportBuilder::Reset() {
   reportBuffer.Reset();
-  memset(&buffers, 0, sizeof(buffers));
+  Mem::Clear(buffers);
 }
 
 void HidKeyboardReportBuilder::Press(uint8_t key) {
@@ -186,9 +187,9 @@ void HidKeyboardReportBuilder::Flush() {
         (~buffers[1].presenceFlags32[i] & buffers[0].data32[i]);
   }
 
-  memcpy(buffers[0].presenceFlags, buffers[1].presenceFlags,
-         sizeof(buffers[0].presenceFlags));
-  memset(&buffers[1], 0, sizeof(buffers[1]));
+  Mem::Copy(buffers[0].presenceFlags, buffers[1].presenceFlags,
+            sizeof(buffers[0].presenceFlags));
+  Mem::Clear(buffers[1]);
   maxPressIndex = 0;
 }
 

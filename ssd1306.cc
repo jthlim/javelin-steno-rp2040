@@ -177,7 +177,7 @@ void Ssd1306::Ssd1306Data::Clear() {
     return;
   }
   dirty = true;
-  memset(buffer8, 0, sizeof(buffer8));
+  Mem::Clear(buffer32);
 }
 
 void Ssd1306::Ssd1306Data::DrawLine(int x0, int y0, int x1, int y1) {

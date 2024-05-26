@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_button_state.h"
+#include "javelin/mem.h"
 #include "javelin/split/split.h"
 #include <hardware/gpio.h>
 #include <hardware/structs/ioqspi.h>
@@ -117,7 +118,7 @@ void Rp2040ButtonState::Initialize() {
     gpio_disable_pulls(pin);
     gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
   }
-  memset(touchPadStates, 0xff, sizeof(touchPadStates));
+  Mem::Fill(touchPadStates);
 
   gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
   gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);

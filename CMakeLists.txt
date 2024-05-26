@@ -117,6 +117,7 @@ target_sources(${NAME} PUBLIC
   javelin/key_press_parser.cc
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
+  javelin/mem.cc
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
