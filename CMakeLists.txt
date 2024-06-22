@@ -110,6 +110,7 @@ target_sources(${NAME} PUBLIC
   javelin/hal/display.cc
   javelin/hal/power.cc
   javelin/hal/rgb.cc
+  javelin/hal/sound.cc
   javelin/hal/usb_status.cc
   javelin/key.cc
   javelin/key_code.cc
