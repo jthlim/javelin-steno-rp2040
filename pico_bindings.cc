@@ -501,11 +501,6 @@ void Watchdog_Binding(void *context, const char *commandLine) {
 }
 #endif
 
-struct WordListData {
-  uint32_t length;
-  uint8_t data[1];
-};
-
 void InitCommonCommands() {
   Console &console = Console::instance;
   console.RegisterCommand("info", "System information", PrintInfo_Binding,
@@ -543,10 +538,7 @@ void InitJavelinMaster() {
       config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   KeyboardLayout::SetActiveLayout(config->keyboardLayout);
-
-  const WordListData *const wordListData =
-      (const WordListData *)STENO_WORD_LIST_ADDRESS;
-  WordList::SetData(wordListData->data, wordListData->length);
+  WordList::SetData(*(const WordListData *)STENO_WORD_LIST_ADDRESS);
 
   memcpy(StenoKeyState::STROKE_BIT_INDEX_LOOKUP, config->keyMap,
          sizeof(config->keyMap));
