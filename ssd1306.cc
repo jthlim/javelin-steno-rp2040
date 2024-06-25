@@ -428,9 +428,7 @@ void Ssd1306::Ssd1306Data::DrawText(int x, int y, const Font *font,
   }
 
   for (;;) {
-    const uint32_t c = *utf8p;
-    ++utf8p;
-
+    const uint32_t c = *utf8p++;
     if (c == 0) {
       return;
     }
