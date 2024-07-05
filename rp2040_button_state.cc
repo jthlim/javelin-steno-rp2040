@@ -59,13 +59,7 @@ const size_t ROW_PIN_COUNT = sizeof(ROW_PINS);
 #endif // JAVELIN_BUTTON_MATRIX
 
 #if JAVELIN_BUTTON_TOUCH
-struct TouchPadState {
-  uint32_t minimumCounter;
-  uint32_t repeatedCount;
-  uint32_t lastCounter;
-};
-TouchPadState touchPadStates[sizeof(BUTTON_TOUCH_PINS)];
-
+uint32_t touchPadThreshold[sizeof(BUTTON_TOUCH_PINS)];
 #if !defined(JAVELIN_TOUCH_CALIBRATION_COUNT)
 #define JAVELIN_TOUCH_CALIBRATION_COUNT 5
 #endif
@@ -118,10 +112,27 @@ void Rp2040ButtonState::Initialize() {
     gpio_disable_pulls(pin);
     gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
   }
-  Mem::Fill(touchPadStates);
 
   gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
   gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+#endif
+
+#if JAVELIN_BUTTON_TOUCH
+
+  for (size_t i = 0; i < 4; ++i) {
+    uint32_t counters[sizeof(BUTTON_TOUCH_PINS)];
+    ReadTouchCounters(counters);
+
+    for (size_t j = 0; j < sizeof(BUTTON_TOUCH_PINS); ++j) {
+      touchPadThreshold[j] += counters[j];
+    }
+  }
+
+  for (size_t j = 0; j < sizeof(BUTTON_TOUCH_PINS); ++j) {
+    touchPadThreshold[j] =
+        touchPadThreshold[j] * (int)(BUTTON_TOUCH_THRESHOLD * 256) >> 10;
+  }
+
 #endif
 }
 
@@ -168,6 +179,13 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 
 #if JAVELIN_BUTTON_TOUCH
 void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
+  gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+  gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
+
+  // This is a ~100us wait.
+  for (volatile int i = 0; i < 1250; ++i) {
+  }
+
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
     const uint8_t pin = BUTTON_TOUCH_PINS[i];
     gpio_set_dir(pin, false);
@@ -180,9 +198,6 @@ void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
     }
     counters[i] = counter;
   }
-
-  gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
-  gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
 }
 #endif
 
@@ -228,21 +243,7 @@ ButtonState Rp2040ButtonState::Read() {
   ReadTouchCounters(counters);
 
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {
-    const uint32_t counter = counters[i];
-    TouchPadState &padState = touchPadStates[i];
-    if (counter == padState.lastCounter) {
-      padState.repeatedCount++;
-      if (padState.repeatedCount == JAVELIN_TOUCH_CALIBRATION_COUNT) {
-        padState.minimumCounter = counter;
-      }
-    } else {
-      padState.repeatedCount = 0;
-    }
-    padState.lastCounter = counter;
-
-    const bool isTouched =
-        256 * counter >
-        uint32_t(256 * BUTTON_TOUCH_THRESHOLD + 0.99) * padState.minimumCounter;
+    const bool isTouched = counters[i] > touchPadThreshold[i];
     if (isTouched) {
       state.Set(i);
     }

@@ -91,8 +91,8 @@ void StenoStrokeCapture::SetAutoDraw(int displayId, AutoDraw autoDrawId) {
 void StenoStrokeCapture::Tick() {
   StenoPassthrough::Tick();
 
-  uint32_t now = Clock::GetMicroseconds();
-  if (now - lastUpdateTime < 1000000) {
+  const uint32_t now = Clock::GetMicroseconds();
+  if (now - lastUpdateTime < 1'000'000) {
     return;
   }
   lastUpdateTime = now;

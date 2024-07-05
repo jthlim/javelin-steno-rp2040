@@ -65,7 +65,7 @@
 
 #if JAVELIN_USE_EMBEDDED_STENO
 #if JAVELIN_USE_USER_DICTIONARY
-StenoUserDictionaryData
+static StenoUserDictionaryData
     userDictionaryLayout((const uint8_t *)STENO_USER_DICTIONARY_ADDRESS,
                          STENO_USER_DICTIONARY_SIZE);
 static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;

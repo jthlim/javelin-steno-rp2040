@@ -28,7 +28,7 @@ constexpr uint8_t BUTTON_TOUCH_PINS[26] = {
               10, 11, /**/ 12, 13,
 };
 constexpr uint32_t BUTTON_TOUCH_PIN_MASK = 0x03ffffff;
-constexpr float BUTTON_TOUCH_THRESHOLD = 1.20f;
+constexpr float BUTTON_TOUCH_THRESHOLD = 1.30f;
 // clang-format on
 
 #define JAVELIN_SCRIPT_CONFIGURATION                                           \
