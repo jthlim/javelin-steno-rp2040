@@ -113,3 +113,13 @@ void Flash::WriteBlock(const void *target, const void *data, size_t size) {
 }
 
 //---------------------------------------------------------------------------
+
+bool Flash::IsScriptMemory(const void *start, const void *end) {
+  const void *byteCodeStart = SCRIPT_BYTE_CODE;
+  const void *byteCodeEnd = SCRIPT_BYTE_CODE + MAXIMUM_BUTTON_SCRIPT_SIZE;
+
+  // Intersect if Max(start, byteCodeStart) < Min(end, byteCodeEnd)
+  return start < byteCodeEnd && byteCodeStart < end;
+}
+
+//---------------------------------------------------------------------------

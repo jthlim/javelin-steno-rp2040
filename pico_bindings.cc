@@ -87,7 +87,6 @@ static JavelinStaticAllocate<StenoPassthrough> passthroughContainer;
 
 #if JAVELIN_USE_EMBEDDED_STENO
 static JavelinStaticAllocate<StenoDictionaryList> dictionaryListContainer;
-static JavelinStaticAllocate<StenoEngine> engineContainer;
 static JavelinStaticAllocate<StenoJeffModifiers> jeffModifiersContainer;
 
 static JavelinStaticAllocate<StenoCompiledOrthography>
@@ -222,7 +221,7 @@ void SetStenoMode(void *context, const char *commandLine) {
   ++stenoMode;
 #if JAVELIN_USE_EMBEDDED_STENO
   if (Str::Eq(stenoMode, "embedded")) {
-    passthroughContainer->SetNext(&engineContainer.value);
+    passthroughContainer->SetNext(&StenoEngine::GetInstance());
   } else
 #endif
       if (Str::Eq(stenoMode, "gemini")) {
@@ -353,12 +352,12 @@ static void GetScriptHeader() {
 
 #if JAVELIN_USE_EMBEDDED_STENO
 static void GetSpacePosition() {
-  Console::Printf("%s\n\n",
-                  engineContainer->IsSpaceAfter() ? "after" : "before");
+  Console::Printf(
+      "%s\n\n", StenoEngine::GetInstance().IsSpaceAfter() ? "after" : "before");
 }
 
 static void GetStrokeCount() {
-  Console::Printf("%zu\n\n", engineContainer->GetStrokeCount());
+  Console::Printf("%zu\n\n", StenoEngine::GetInstance().GetStrokeCount());
 }
 
 static void GetUnicodeMode() {
@@ -369,7 +368,7 @@ static void GetUnicodeMode() {
 static void GetStenoMode() {
   const StenoProcessorElement *processor = passthroughContainer->GetNext();
 #if JAVELIN_USE_EMBEDDED_STENO
-  if (processor == &engineContainer.value) {
+  if (processor == &StenoEngine::GetInstance()) {
     Console::Printf("embedded\n\n");
   } else
 #endif
@@ -602,7 +601,7 @@ void InitJavelinMaster() {
   }
 
   // Set up processors.
-  StenoEngine *engine = new (engineContainer)
+  StenoEngine *engine = new (StenoEngine::container)
       StenoEngine(*dictionary, compiledOrthographyContainer,
 #if JAVELIN_USE_USER_DICTIONARY
                   userDictionary
@@ -644,51 +643,11 @@ void InitJavelinMaster() {
                           "Sets the current keyboard layout",
                           &KeyboardLayout::SetKeyboardLayout_Binding, nullptr);
 #if JAVELIN_USE_EMBEDDED_STENO
-  console.RegisterCommand("set_space_position",
-                          "Controls space position before or after",
-                          StenoEngine::SetSpacePosition_Binding, engine);
-  console.RegisterCommand("list_dictionaries", "Lists dictionaries",
-                          StenoEngine::ListDictionaries_Binding, engine);
-  console.RegisterCommand("enable_dictionary", "Enables a dictionary",
-                          StenoEngine::EnableDictionary_Binding, engine);
-  console.RegisterCommand("disable_dictionary", "Disable a dictionary",
-                          StenoEngine::DisableDictionary_Binding, engine);
-  console.RegisterCommand("toggle_dictionary", "Toggle a dictionary",
-                          StenoEngine::ToggleDictionary_Binding, engine);
-  console.RegisterCommand(
-      "enable_dictionary_status", "Enable sending dictionary status updates",
-      StenoDictionaryList::EnableDictionaryStatus_Binding, nullptr);
-  console.RegisterCommand(
-      "disable_dictionary_status", "Disable sending dictionary status updates",
-      StenoDictionaryList::DisableDictionaryStatus_Binding, nullptr);
-  console.RegisterCommand("print_dictionary",
-                          "Prints all dictionaries in JSON format",
-                          StenoEngine::PrintDictionary_Binding, engine);
+  engine->AddConsoleCommands(console);
   console.RegisterCommand("print_orthography",
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
   ScriptManager::GetInstance().AddConsoleCommands(console);
-  console.RegisterCommand("enable_paper_tape", "Enables paper tape output",
-                          StenoEngine::EnablePaperTape_Binding, engine);
-  console.RegisterCommand("disable_paper_tape", "Disables paper tape output",
-                          StenoEngine::DisablePaperTape_Binding, engine);
-  console.RegisterCommand("enable_suggestions", "Enables suggestions output",
-                          StenoEngine::EnableSuggestions_Binding, engine);
-  console.RegisterCommand("disable_suggestions", "Disables suggestions output",
-                          StenoEngine::DisableSuggestions_Binding, engine);
-  console.RegisterCommand("enable_text_log", "Enables text log output",
-                          StenoEngine::EnableTextLog_Binding, engine);
-  console.RegisterCommand("disable_text_log", "Disables text log output",
-                          StenoEngine::DisableTextLog_Binding, engine);
-  console.RegisterCommand("lookup", "Looks up a word",
-                          StenoEngine::Lookup_Binding, engine);
-  console.RegisterCommand("lookup_stroke", "Looks up a stroke",
-                          StenoEngine::LookupStroke_Binding, engine);
-  console.RegisterCommand("remove_stroke",
-                          "Removes a stroke from specified dictionary",
-                          StenoEngine::RemoveStroke_Binding, engine);
-  console.RegisterCommand("process_strokes", "Processes a stroke list",
-                          StenoEngine::ProcessStrokes_Binding, engine);
 #endif
 
 #if JAVELIN_DISPLAY_DRIVER
@@ -760,23 +719,6 @@ void Script::CancelStenoKeys(StenoKeyState state) {
 
 void Script::CancelAllStenoKeys() {
   processors->Process(StenoKeyState(0), StenoAction::CANCEL_ALL);
-}
-
-void Script::SendText(const uint8_t *text) {
-#if JAVELIN_USE_EMBEDDED_STENO
-  engineContainer->SendText(text);
-#endif
-}
-
-bool Script::ProcessScanCode(int scanCode, ScanCodeAction action) {
-#if JAVELIN_USE_EMBEDDED_STENO
-  const uint32_t modifiers =
-      keyState.GetRange(KeyCode::L_CTRL, KeyCode::L_CTRL + 8)
-      << MODIFIER_BIT_SHIFT;
-  return engineContainer->ProcessScanCode(scanCode | modifiers, action);
-#else
-  return false;
-#endif
 }
 
 void ProcessStenoTick() {
