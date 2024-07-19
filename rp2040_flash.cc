@@ -9,9 +9,9 @@
 
 //---------------------------------------------------------------------------
 
-static bool IsWritableRange(const void *p) {
-  return p >= STENO_CONFIG_BLOCK_ADDRESS;
-}
+extern "C" char __flash_binary_end[];
+
+static bool IsWritableRange(const void *p) { return p >= __flash_binary_end; }
 
 void Flash::EraseBlock(const void *target, size_t size) {
   if (!IsWritableRange(target)) {

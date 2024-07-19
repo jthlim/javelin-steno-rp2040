@@ -137,6 +137,7 @@ target_sources(${NAME} PUBLIC
   javelin/script.cc
   javelin/script_byte_code.cc
   javelin/script_manager.cc
+  javelin/script_storage.cc
   javelin/segment.cc
   javelin/segment_builder.cc
   javelin/split/pair_console.cc

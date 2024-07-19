@@ -14,6 +14,7 @@ struct StenoDictionaryCollection;
 
 #define JAVELIN_USE_EMBEDDED_STENO 1
 #define JAVELIN_USE_USER_DICTIONARY 1
+#define JAVELIN_USE_SCRIPT_STORAGE 1
 #define JAVELIN_USB_MILLIAMPS 100
 #define BOOTSEL_BUTTON_INDEX 28
 
@@ -38,6 +39,9 @@ constexpr int8_t KEY_MAP[3][16] = {
 const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
     (const StenoOrthography *)0x1003e000;
 const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10040000;
+static const struct ScriptStorageData *const SCRIPT_STORAGE_ADDRESS =
+    (struct ScriptStorageData *)0x103df000;
+static const size_t MAXIMUM_SCRIPT_STORAGE_SIZE = 0x20000;
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
     (const StenoConfigBlock *)0x103ff000;
 const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x103ff100;

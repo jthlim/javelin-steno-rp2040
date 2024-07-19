@@ -36,6 +36,7 @@
 #include "javelin/processor/tx_bolt.h"
 #include "javelin/script_byte_code.h"
 #include "javelin/script_manager.h"
+#include "javelin/script_storage.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/static_allocate.h"
 #include "javelin/steno_key_code.h"
@@ -305,6 +306,10 @@ static const ParameterData PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
     {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
 #endif
+#if JAVELIN_USE_SCRIPT_STORAGE
+    {"maximum_script_storage_size", (void *)MAXIMUM_SCRIPT_STORAGE_SIZE},
+    {"script_storage_address", SCRIPT_STORAGE_ADDRESS},
+#endif
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
@@ -404,7 +409,14 @@ static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if defined(JAVELIN_SCRIPT_CONFIGURATION)
     {"script_configuration", GetScriptConfiguration},
 #endif
+    {
+        "script_event_history",
+        []() { ScriptManager::GetInstance().PrintScriptHistory(); },
+    },
     {"script_header", GetScriptHeader},
+#if JAVELIN_USE_SCRIPT_STORAGE
+    {"script_storage", &ScriptStorageData::HandleGetScriptStorageParameter},
+#endif
 #if JAVELIN_USE_EMBEDDED_STENO
     {"space_position", GetSpacePosition},
 #endif
