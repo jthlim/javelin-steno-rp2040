@@ -544,6 +544,9 @@ void InitJavelinSlave() { InitCommonCommands(); }
 void InitJavelinMaster() {
   const StenoConfigBlock *config = STENO_CONFIG_BLOCK_ADDRESS;
 
+  ScriptManager::GetInstance().SetAllowButtonStateUpdates(
+      config->allowButtonStateUpdates);
+
 #if JAVELIN_USE_EMBEDDED_STENO
   HidKeyboardReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
