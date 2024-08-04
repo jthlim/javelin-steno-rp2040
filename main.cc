@@ -3,7 +3,6 @@
 #include JAVELIN_BOARD_CONFIG
 
 #include "console_report_buffer.h"
-#include "hid_keyboard_report_builder.h"
 #include "javelin/console_input_buffer.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
@@ -15,6 +14,7 @@
 #include "javelin/split/split_usb_status.h"
 #include "javelin/static_allocate.h"
 #include "javelin/timer_manager.h"
+#include "main_report_builder.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_button_state.h"
 #include "rp2040_crc.h"
@@ -49,7 +49,7 @@ extern uint32_t watchdogData[8];
 extern "C" void tud_mount_cb(void) {
   ConsoleReportBuffer::instance.Reset();
   PloverHidReportBuffer::instance.Reset();
-  HidKeyboardReportBuilder::instance.Reset();
+  MainReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
   SplitUsbStatus::instance.SetPowered(true);
   ScriptManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
@@ -192,7 +192,7 @@ extern "C" void tud_hid_report_complete_cb(uint8_t instance,
                                            uint16_t length) {
   switch (instance) {
   case ITF_NUM_KEYBOARD:
-    HidKeyboardReportBuilder::instance.SendNextReport();
+    MainReportBuilder::instance.SendNextReport();
     break;
   case ITF_NUM_PLOVER_HID:
     PloverHidReportBuffer::instance.SendNextReport();
@@ -286,7 +286,7 @@ void DoSlaveRunLoop() {
     cdc_task();
 
     SplitHidReportBuffer::Update();
-    HidKeyboardReportBuilder::instance.FlushIfRequired();
+    MainReportBuilder::instance.FlushAllIfRequired();
     ConsoleReportBuffer::instance.Flush();
     ConsoleInputBuffer::Process();
     Ws2812::Update();

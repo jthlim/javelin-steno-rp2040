@@ -2,8 +2,8 @@
 
 #include "split_hid_report_buffer.h"
 #include "console_report_buffer.h"
-#include "hid_keyboard_report_builder.h"
 #include "javelin/console.h"
+#include "main_report_builder.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_split.h"
 #include "usb_descriptors.h"
@@ -26,7 +26,7 @@ void SplitHidReportBuffer::SplitHidReportBufferSize::UpdateBuffer(
   HidBufferSize newBufferSize;
   newBufferSize.value = 0;
   newBufferSize.available[ITF_NUM_KEYBOARD] =
-      HidKeyboardReportBuilder::instance.GetAvailableBufferCount();
+      MainReportBuilder::instance.GetAvailableBufferCount();
   newBufferSize.available[ITF_NUM_CONSOLE] =
       ConsoleReportBuffer::instance.GetAvailableBufferCount();
   newBufferSize.available[ITF_NUM_PLOVER_HID] =
@@ -95,7 +95,7 @@ bool SplitHidReportBuffer::SplitHidReportBufferData::ProcessEntry(
     const QueueEntry<EntryData> *entry) {
   switch (entry->data.interface) {
   case ITF_NUM_KEYBOARD: {
-    auto &reportBuffer = HidKeyboardReportBuilder::instance.reportBuffer;
+    auto &reportBuffer = MainReportBuilder::instance.reportBuffer;
     if (reportBuffer.IsFull()) {
       return false;
     }

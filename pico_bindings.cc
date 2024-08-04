@@ -2,7 +2,6 @@
 
 #include "auto_draw.h"
 #include "console_report_buffer.h"
-#include "hid_keyboard_report_builder.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -22,7 +21,6 @@
 #include "javelin/hal/connection.h"
 #include "javelin/hal/display.h"
 #include "javelin/hal/rgb.h"
-#include "javelin/key.h"
 #include "javelin/orthography.h"
 #include "javelin/processor/all_up.h"
 #include "javelin/processor/first_up.h"
@@ -42,7 +40,7 @@
 #include "javelin/steno_key_code.h"
 #include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
-#include "javelin/wpm_tracker.h"
+#include "main_report_builder.h"
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
 #include "ssd1306.h"
@@ -152,7 +150,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("\n");
   Console::Printf("  Firmware: " __DATE__ " \n");
   Console::Printf("  ");
-  HidKeyboardReportBuilder::instance.PrintInfo();
+  MainReportBuilder::instance.PrintInfo();
 
 #if ENABLE_EXTRA_INFO
   Connection::PrintInfo();
@@ -272,9 +270,9 @@ void SetKeyboardProtocol(void *context, const char *commandLine) {
 
   ++keyboardProtocol;
   if (Str::Eq(keyboardProtocol, "default")) {
-    HidKeyboardReportBuilder::instance.SetCompatibilityMode(false);
+    MainReportBuilder::instance.SetCompatibilityMode(false);
   } else if (Str::Eq(keyboardProtocol, "compatibility")) {
-    HidKeyboardReportBuilder::instance.SetCompatibilityMode(true);
+    MainReportBuilder::instance.SetCompatibilityMode(true);
   } else {
     Console::Printf("ERR Unable to set keyboard protocol: \"%s\"\n\n",
                     keyboardProtocol);
@@ -318,10 +316,9 @@ static void GetKeyboardLayout() {
 }
 
 static void GetKeyboardProtocol() {
-  Console::Printf("%s\n\n",
-                  HidKeyboardReportBuilder::instance.IsCompatibilityMode()
-                      ? "compatibility"
-                      : "default");
+  Console::Printf("%s\n\n", MainReportBuilder::instance.IsCompatibilityMode()
+                                ? "compatibility"
+                                : "default");
 }
 #endif
 
@@ -548,7 +545,7 @@ void InitJavelinMaster() {
       config->allowButtonStateUpdates);
 
 #if JAVELIN_USE_EMBEDDED_STENO
-  HidKeyboardReportBuilder::instance.SetCompatibilityMode(
+  MainReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
   StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
   KeyboardLayout::SetActiveLayout(config->keyboardLayout);
@@ -738,28 +735,8 @@ void Script::CancelAllStenoKeys() {
 
 void ProcessStenoTick() {
   processors->Tick();
-  HidKeyboardReportBuilder::instance.FlushIfRequired();
+  MainReportBuilder::instance.FlushAllIfRequired();
   ConsoleReportBuffer::instance.Flush();
 }
-
-//---------------------------------------------------------------------------
-
-void Key::PressRaw(KeyCode key) {
-#if JAVELIN_DISPLAY_DRIVER
-  if (key.value == KeyCode::BACKSPACE) {
-    WpmTracker::instance.Tally(-1);
-  } else if (key.IsVisible()) {
-    WpmTracker::instance.Tally(1);
-  }
-#endif
-
-  HidKeyboardReportBuilder::instance.Press(key.value);
-}
-
-void Key::ReleaseRaw(KeyCode key) {
-  HidKeyboardReportBuilder::instance.Release(key.value);
-}
-
-void Key::Flush() { HidKeyboardReportBuilder::instance.Flush(); }
 
 //---------------------------------------------------------------------------

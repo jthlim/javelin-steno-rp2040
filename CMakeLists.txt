@@ -44,10 +44,10 @@ target_sources(${NAME} PUBLIC
   main.cc
   auto_draw.cc
   console_report_buffer.cc
-  hid_keyboard_report_builder.cc
   hid_report_buffer.cc
   libc_overrides.cc
   libc_stubs.cc
+  main_report_builder.cc
   pico_bindings.cc
   pico_thread.cc
   plover_hid_report_buffer.cc
@@ -80,6 +80,7 @@ target_sources(${NAME} PUBLIC
   javelin/dictionary/dictionary_definition.cc
   javelin/dictionary/dictionary_list.cc
   javelin/dictionary/emily_symbols_dictionary.cc
+  javelin/dictionary/full_map_dictionary.cc
   javelin/dictionary/invalid_dictionary.cc
   javelin/dictionary/jeff_numbers_dictionary.cc
   javelin/dictionary/jeff_phrasing_dictionary.cc
@@ -120,6 +121,7 @@ target_sources(${NAME} PUBLIC
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
   javelin/mem.cc
+  javelin/mouse.cc
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc

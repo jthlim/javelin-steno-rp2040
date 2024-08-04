@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "usb_descriptors.h"
+#include "class/hid/hid.h"
 #include <hardware/flash.h>
 
 #include <tusb.h>
@@ -64,7 +65,7 @@ const uint8_t keyboardReportDescriptor[] = {
       // Keyboard
       HID_REPORT_ID(KEYBOARD_PAGE_REPORT_ID)
       HID_USAGE_PAGE(HID_USAGE_PAGE_KEYBOARD),
-      
+
       // 1 input byte. Bitmap of modifiers.
       HID_USAGE_MIN(224),
       HID_USAGE_MAX(231),
@@ -131,7 +132,41 @@ const uint8_t keyboardReportDescriptor[] = {
       HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
 
     HID_COLLECTION_END,
+
+    // --------------------------
+
+    HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
+    HID_USAGE(HID_USAGE_DESKTOP_MOUSE),
+    HID_COLLECTION(HID_COLLECTION_APPLICATION),
+
+      HID_REPORT_ID(MOUSE_PAGE_REPORT_ID)
+      HID_USAGE_PAGE(HID_USAGE_DESKTOP_POINTER),
+      HID_COLLECTION(HID_COLLECTION_PHYSICAL),
+
+        HID_USAGE_PAGE(HID_USAGE_PAGE_BUTTON),
+        HID_USAGE_MIN(1),
+        HID_USAGE_MAX(0x20),
+        HID_LOGICAL_MIN(0),
+        HID_LOGICAL_MAX(1),
+        HID_REPORT_COUNT(32),
+        HID_REPORT_SIZE(1),
+        HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),
+
+        HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),
+        HID_USAGE(HID_USAGE_DESKTOP_X),
+        HID_USAGE(HID_USAGE_DESKTOP_Y),
+        HID_USAGE(HID_USAGE_DESKTOP_WHEEL),
+        HID_LOGICAL_MIN(uint8_t(-127)),
+        HID_LOGICAL_MAX(127),
+        HID_REPORT_COUNT(3),
+        HID_REPORT_SIZE(8),
+        HID_INPUT(HID_DATA | HID_VARIABLE | HID_RELATIVE),
+
+      HID_COLLECTION_END,
+    HID_COLLECTION_END,
 };
+
+
 
 const uint8_t consoleReportDescriptor[] = {
     // Console

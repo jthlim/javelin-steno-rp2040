@@ -1,32 +1,33 @@
 //---------------------------------------------------------------------------
 
-#include "hid_keyboard_report_builder.h"
+#include "main_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/console.h"
+#include "javelin/key.h"
 #include "javelin/mem.h"
+#include "javelin/mouse.h"
+#include "javelin/wpm_tracker.h"
 #include "usb_descriptors.h"
 
 #include <string.h>
 
 //---------------------------------------------------------------------------
 
-HidKeyboardReportBuilder HidKeyboardReportBuilder::instance;
+MainReportBuilder MainReportBuilder::instance;
 
 //---------------------------------------------------------------------------
 
 const size_t MODIFIER_OFFSET = 0;
 
-HidKeyboardReportBuilder::HidKeyboardReportBuilder()
-    : reportBuffer(ITF_NUM_KEYBOARD) {
-  Mem::Clear(buffers);
-}
+MainReportBuilder::MainReportBuilder() : reportBuffer(ITF_NUM_KEYBOARD) {}
 
-void HidKeyboardReportBuilder::Reset() {
+void MainReportBuilder::Reset() {
   reportBuffer.Reset();
   Mem::Clear(buffers);
+  Mem::Clear(mouseBuffers);
 }
 
-void HidKeyboardReportBuilder::Press(uint8_t key) {
+void MainReportBuilder::Press(uint8_t key) {
   if (key == 0) {
     return;
   }
@@ -71,7 +72,7 @@ void HidKeyboardReportBuilder::Press(uint8_t key) {
   }
 }
 
-void HidKeyboardReportBuilder::Release(uint8_t key) {
+void MainReportBuilder::Release(uint8_t key) {
   if (key == 0) {
     return;
   }
@@ -106,7 +107,7 @@ void HidKeyboardReportBuilder::Release(uint8_t key) {
   }
 }
 
-bool HidKeyboardReportBuilder::HasData() const {
+bool MainReportBuilder::HasData() const {
   for (size_t i = 0; i < 8; ++i) {
     if (buffers[0].presenceFlags32[i] != 0)
       return true;
@@ -114,16 +115,22 @@ bool HidKeyboardReportBuilder::HasData() const {
   return false;
 }
 
-void HidKeyboardReportBuilder::FlushIfRequired() {
+void MainReportBuilder::FlushAllIfRequired() {
   if (HasData()) {
     Flush();
     if (HasData()) {
       Flush();
     }
   }
+  if (HasMouseData()) {
+    FlushMouse();
+    if (HasMouseData()) {
+      FlushMouse();
+    }
+  }
 }
 
-void HidKeyboardReportBuilder::SendKeyboardPageReportIfRequired() {
+void MainReportBuilder::SendKeyboardPageReportIfRequired() {
   // A keyboard page report is required if there's any presence bits
   // from 0x0 - 0xa7
   if ((buffers[0].presenceFlags32[0] | buffers[0].presenceFlags32[1] |
@@ -166,7 +173,7 @@ done:
                           sizeof(reportData));
 }
 
-void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
+void MainReportBuilder::SendConsumerPageReportIfRequired() {
   // Consumer page bits are 0xa8 - 0xe7
   if (((buffers[0].presenceFlags32[5] >> 8) | buffers[0].presenceFlags32[6] |
        buffers[0].presenceFlags[28]) == 0) {
@@ -177,7 +184,16 @@ void HidKeyboardReportBuilder::SendConsumerPageReportIfRequired() {
                           8);
 }
 
-void HidKeyboardReportBuilder::Flush() {
+void MainReportBuilder::SendMousePageReportIfRequired() {
+  if (!mouseBuffers[0].HasData()) {
+    return;
+  }
+
+  reportBuffer.SendReport(MOUSE_PAGE_REPORT_ID,
+                          (const uint8_t *)&mouseBuffers[0], 7);
+}
+
+void MainReportBuilder::Flush() {
   SendKeyboardPageReportIfRequired();
   SendConsumerPageReportIfRequired();
 
@@ -193,11 +209,116 @@ void HidKeyboardReportBuilder::Flush() {
   maxPressIndex = 0;
 }
 
+void MainReportBuilder::FlushMouse() {
+  SendMousePageReportIfRequired();
+
+  mouseBuffers[0].buttonData =
+      (mouseBuffers[1].buttonPresence & mouseBuffers[1].buttonData) |
+      (~mouseBuffers[1].buttonPresence & mouseBuffers[0].buttonData);
+  mouseBuffers[0].buttonPresence = mouseBuffers[1].buttonPresence;
+
+  mouseBuffers[0].movementMask = mouseBuffers[1].movementMask;
+  mouseBuffers[0].dx = mouseBuffers[1].dx;
+  mouseBuffers[0].dy = mouseBuffers[1].dy;
+  mouseBuffers[0].wheel = mouseBuffers[1].wheel;
+
+  mouseBuffers[1].Reset();
+}
+
 //---------------------------------------------------------------------------
 
-void HidKeyboardReportBuilder::PrintInfo() const {
+void MainReportBuilder::PressMouseButton(size_t buttonIndex) {
+  const size_t buttonMask = 1 << buttonIndex;
+  const size_t previousButtonMask = buttonMask - 1;
+  if (mouseBuffers[0].buttonPresence & (buttonMask | previousButtonMask)) {
+    FlushMouse();
+  }
+  if (mouseBuffers[0].buttonPresence & previousButtonMask) {
+    mouseBuffers[1].buttonPresence |= buttonMask;
+    mouseBuffers[1].buttonData |= buttonMask;
+  } else {
+    mouseBuffers[0].buttonPresence |= buttonMask;
+    mouseBuffers[0].buttonData |= buttonMask;
+  }
+}
+
+void MainReportBuilder::ReleaseMouseButton(size_t buttonIndex) {
+  const size_t buttonMask = 1 << buttonIndex;
+  if (mouseBuffers[0].buttonPresence & mouseBuffers[0].buttonData &
+      buttonMask) {
+    mouseBuffers[1].buttonPresence |= buttonMask;
+    mouseBuffers[1].buttonData &= ~buttonMask;
+  } else {
+    mouseBuffers[0].buttonPresence |= buttonMask;
+    mouseBuffers[0].buttonData &= ~buttonMask;
+  }
+}
+
+void MainReportBuilder::MoveMouse(int dx, int dy) {
+  if (!mouseBuffers[0].HasMovement()) {
+    mouseBuffers[0].SetMove(dx, dy);
+    return;
+  }
+
+  if (mouseBuffers[1].HasMovement()) {
+    FlushMouse();
+  }
+
+  mouseBuffers[1].SetMove(dx, dy);
+}
+
+void MainReportBuilder::WheelMouse(int delta) {
+  if (!mouseBuffers[0].HasWheel()) {
+    mouseBuffers[0].SetWheel(delta);
+    return;
+  }
+
+  if (mouseBuffers[1].HasWheel()) {
+    FlushMouse();
+  }
+
+  mouseBuffers[1].SetWheel(delta);
+}
+
+//---------------------------------------------------------------------------
+
+void MainReportBuilder::PrintInfo() const {
   Console::Printf("Keyboard protocol: %s\n",
                   compatibilityMode ? "compatibility" : "default");
 }
+
+void Key::PressRaw(KeyCode key) {
+#if JAVELIN_DISPLAY_DRIVER
+  if (key.value == KeyCode::BACKSPACE) {
+    WpmTracker::instance.Tally(-1);
+  } else if (key.IsVisible()) {
+    WpmTracker::instance.Tally(1);
+  }
+#endif
+
+  MainReportBuilder::instance.Press(key.value);
+}
+
+void Key::ReleaseRaw(KeyCode key) {
+  MainReportBuilder::instance.Release(key.value);
+}
+
+void Key::Flush() { MainReportBuilder::instance.Flush(); }
+
+//---------------------------------------------------------------------------
+
+void Mouse::PressButton(size_t index) {
+  MainReportBuilder::instance.PressMouseButton(index);
+}
+
+void Mouse::ReleaseButton(size_t index) {
+  MainReportBuilder::instance.ReleaseMouseButton(index);
+}
+
+void Mouse::Move(int dx, int dy) {
+  MainReportBuilder::instance.MoveMouse(dx, dy);
+}
+
+void Mouse::Wheel(int delta) { MainReportBuilder::instance.WheelMouse(delta); }
 
 //---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ enum {
 
 const int KEYBOARD_PAGE_REPORT_ID = 1;
 const int CONSUMER_PAGE_REPORT_ID = 2;
+const int MOUSE_PAGE_REPORT_ID = 3;
 const int PLOVER_HID_REPORT_ID = 0x50;
 
 //---------------------------------------------------------------------------
