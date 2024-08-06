@@ -3,9 +3,9 @@
 #include "main_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/console.h"
+#include "javelin/hal/mouse.h"
 #include "javelin/key.h"
 #include "javelin/mem.h"
-#include "javelin/mouse.h"
 #include "javelin/wpm_tracker.h"
 #include "usb_descriptors.h"
 

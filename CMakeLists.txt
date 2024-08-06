@@ -110,6 +110,7 @@ target_sources(${NAME} PUBLIC
   javelin/hal/bootloader.cc
   javelin/hal/connection.cc
   javelin/hal/display.cc
+  javelin/hal/mouse.cc
   javelin/hal/power.cc
   javelin/hal/rgb.cc
   javelin/hal/sound.cc
@@ -121,7 +122,6 @@ target_sources(${NAME} PUBLIC
   javelin/list.cc
   javelin/macos_us_unicode_data.cc
   javelin/mem.cc
-  javelin/mouse.cc
   javelin/orthography.cc
   javelin/pattern.cc
   javelin/pattern_component.cc
