@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 
-#include "javelin/serial_port.h"
+#include "javelin/hal/serial_port.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "usb_descriptors.h"
 #include <tusb.h>
