@@ -1,6 +1,9 @@
-#include "javelin/thread.h"
+//---------------------------------------------------------------------------
 
+#include "javelin/thread.h"
 #include <pico/multicore.h>
+
+//---------------------------------------------------------------------------
 
 void RunParallel(void (*func1)(void *context), void *context1,
                  void (*func2)(void *context), void *context2) {
@@ -13,6 +16,8 @@ void RunParallel(void (*func1)(void *context), void *context1,
   multicore_fifo_pop_blocking();
 }
 
+//---------------------------------------------------------------------------
+
 static void MultiCoreEntryPoint() {
   while (1) {
     void (*func)(void *) = (void (*)(void *))multicore_fifo_pop_blocking();
@@ -24,7 +29,11 @@ static void MultiCoreEntryPoint() {
   }
 }
 
+//---------------------------------------------------------------------------
+
 void InitMulticore() {
   multicore_reset_core1();
   multicore_launch_core1(MultiCoreEntryPoint);
 }
+
+//---------------------------------------------------------------------------

@@ -659,8 +659,8 @@ void InitJavelinMaster() {
   console.RegisterCommand("print_orthography",
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
-  ScriptManager::GetInstance().AddConsoleCommands(console);
 #endif
+  ScriptManager::GetInstance().AddConsoleCommands(console);
 
 #if JAVELIN_DISPLAY_DRIVER
   console.RegisterCommand("set_auto_draw",
