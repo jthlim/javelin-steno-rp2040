@@ -134,8 +134,8 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Console::Printf("  Clock: %u MHz\n", systemMhz);
   Console::Printf("  Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
-  Console::Printf("  Chip version: %u\n", rp2040_chip_version());
-  Console::Printf("  ROM version: %u\n", rp2040_rom_version());
+  // Console::Printf("  Chip version: %u\n", rp2040_chip_version());
+  // Console::Printf("  ROM version: %u\n", rp2040_rom_version());
 
   Console::Printf("  Serial number: ");
   uint8_t serialId[8];

@@ -19,8 +19,6 @@ add_definitions(
   -DPICO_FLASH_SPI_CLKDIV=14
   -DPICO_MALLOC_PANIC=0
   -DPICO_NO_FPGA_CHECK=1
-  -DPICO_PRINTF_SUPPORT_FLOAT=0
-  -DPICO_PRINTF_SUPPORT_PTRDIFF_T=0
   -DPICO_XOSC_STARTUP_DELAY_MULTIPLIER=128
 )
 
@@ -180,7 +178,6 @@ target_link_libraries(${NAME}
   hardware_pio
   hardware_pwm
   pico_multicore
-  pico_printf
   pico_stdlib
   tinyusb_device
 )
