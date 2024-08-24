@@ -98,6 +98,9 @@ void Rp2040ButtonState::Initialize() {
 
   for (const uint8_t pinAndPolarity : BUTTON_PINS) {
     const uint8_t pin = pinAndPolarity & 0x7f;
+    if (pin == 0x7f) {
+      continue;
+    }
     if (pinAndPolarity >> 7) {
       gpio_pull_down(pin);
     } else {
@@ -232,6 +235,9 @@ ButtonState Rp2040ButtonState::Read() {
   for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
     const uint8_t pinAndPolarity = BUTTON_PINS[b];
     const uint8_t pin = pinAndPolarity & 0x7f;
+    if (pin == 0x7f) {
+      continue;
+    }
     if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
       state.Set(b);
     }
