@@ -1,20 +1,14 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "main_flash_layout.h"
 #include <stddef.h>
 #include <stdint.h>
 
 //---------------------------------------------------------------------------
 
-struct StenoConfigBlock;
-struct StenoOrthography;
-struct StenoDictionaryCollection;
-
-//---------------------------------------------------------------------------
-
 #define JAVELIN_USE_EMBEDDED_STENO 1
 #define JAVELIN_USE_USER_DICTIONARY 1
-#define JAVELIN_USE_SCRIPT_STORAGE 1
 #define JAVELIN_USB_MILLIAMPS 100
 #define BOOTSEL_BUTTON_INDEX 28
 
@@ -36,23 +30,6 @@ constexpr int8_t KEY_MAP[3][16] = {
 #define JAVELIN_SCRIPT_CONFIGURATION                                           \
   R"({"name":"Uni v4","layout":[{"x":0,"y":0},{"x":1,"y":0},{"x":2,"y":0},{"x":3,"y":0},{"x":4,"y":0},{"x":7,"y":0},{"x":8,"y":0},{"x":9,"y":0},{"x":10,"y":0},{"x":11,"y":0},{"x":12,"y":0},{"x":0,"y":1},{"x":1,"y":1},{"x":2,"y":1},{"x":3,"y":1},{"x":4,"y":1},{"x":7,"y":1},{"x":8,"y":1},{"x":9,"y":1},{"x":10,"y":1},{"x":11,"y":1},{"x":12,"y":1},{"x":2,"y":3},{"x":3,"y":3},{"x":4,"y":3},{"x":7,"y":3},{"x":8,"y":3},{"x":9,"y":3},{"x":12.5,"y":3.5,"s":0.5}]})"
 
-const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
-    (const StenoOrthography *)0x1003e000;
-const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10040000;
-static const struct ScriptStorageData *const SCRIPT_STORAGE_ADDRESS =
-    (struct ScriptStorageData *)0x103df000;
-static const size_t MAXIMUM_SCRIPT_STORAGE_SIZE = 0x20000;
-const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
-    (const StenoConfigBlock *)0x103ff000;
-const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x103ff100;
-const StenoDictionaryCollection *const STENO_MAP_DICTIONARY_COLLECTION_ADDRESS =
-    (const StenoDictionaryCollection *)0x10400000;
-const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
-    (const uint8_t *)0x10f70000;
-const size_t STENO_USER_DICTIONARY_SIZE = 0x80000;
-
-const size_t MAXIMUM_MAP_DICTIONARY_SIZE = 0xb70000;
-const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0xf00;
 const size_t BUTTON_COUNT = 29;
 
 const char *const MANUFACTURER_NAME = "stenokeyboards";

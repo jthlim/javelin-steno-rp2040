@@ -21,6 +21,7 @@
 #include "javelin/hal/connection.h"
 #include "javelin/hal/display.h"
 #include "javelin/hal/rgb.h"
+#include "javelin/host_layout.h"
 #include "javelin/orthography.h"
 #include "javelin/processor/all_up.h"
 #include "javelin/processor/first_up.h"
@@ -195,21 +196,6 @@ void Restart_Binding(void *context, const char *commandLine) {
   watchdog_reboot(0, 0, 0);
 }
 
-void SetUnicodeMode(void *context, const char *commandLine) {
-  const char *mode = strchr(commandLine, ' ');
-  if (!mode) {
-    Console::Printf("ERR No mode specified\n\n");
-    return;
-  }
-  ++mode;
-
-  if (StenoKeyCodeEmitter::SetUnicodeMode(mode)) {
-    Console::SendOk();
-  } else {
-    Console::Printf("ERR Unable to set mode: \"%s\"\n\n", mode);
-  }
-}
-
 void SetStenoMode(void *context, const char *commandLine) {
   const char *stenoMode = strchr(commandLine, ' ');
   if (!stenoMode) {
@@ -311,8 +297,8 @@ static const ParameterData PARAMETER_DATA[] = {
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
-static void GetKeyboardLayout() {
-  Console::Printf("%s\n\n", KeyboardLayout::GetActiveLayout().GetName());
+static void GetHostLayout() {
+  Console::Printf("%s\n\n", HostLayouts::GetActiveLayout().GetName());
 }
 
 static void GetKeyboardProtocol() {
@@ -361,10 +347,6 @@ static void GetSpacePosition() {
 static void GetStrokeCount() {
   Console::Printf("%zu\n\n", StenoEngine::GetInstance().GetStrokeCount());
 }
-
-static void GetUnicodeMode() {
-  Console::Printf("%s\n\n", StenoKeyCodeEmitter::GetUnicodeModeName());
-}
 #endif
 
 static void GetStenoMode() {
@@ -400,7 +382,8 @@ static void GetStenoTrigger() {
 
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
-    {"keyboard_layout", GetKeyboardLayout},
+    {"available_host_layouts", &HostLayouts::ListHostLayouts},
+    {"host_layout", GetHostLayout},
     {"keyboard_protocol", GetKeyboardProtocol},
 #endif
 #if defined(JAVELIN_SCRIPT_CONFIGURATION)
@@ -421,7 +404,6 @@ static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
     {"steno_trigger", GetStenoTrigger},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"stroke_count", GetStrokeCount},
-    {"unicode_mode", GetUnicodeMode},
 #endif
 };
 
@@ -547,8 +529,7 @@ void InitJavelinMaster() {
 #if JAVELIN_USE_EMBEDDED_STENO
   MainReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
-  StenoKeyCodeEmitter::SetUnicodeMode(config->unicodeMode);
-  KeyboardLayout::SetActiveLayout(config->keyboardLayout);
+  HostLayouts::SetData(*HOST_LAYOUTS_ADDRESS);
   WordList::SetData(*(const WordListData *)STENO_WORD_LIST_ADDRESS);
 
   memcpy(StenoKeyState::STROKE_BIT_INDEX_LOOKUP, config->keyMap,
@@ -649,11 +630,8 @@ void InitJavelinMaster() {
                           "Sets the current keyboard protocol "
                           "[\"default\", \"compatibility\"]",
                           SetKeyboardProtocol, nullptr);
-  console.RegisterCommand("set_unicode_mode", "Sets the current unicode mode",
-                          SetUnicodeMode, nullptr);
-  console.RegisterCommand("set_keyboard_layout",
-                          "Sets the current keyboard layout",
-                          &KeyboardLayout::SetKeyboardLayout_Binding, nullptr);
+  console.RegisterCommand("set_host_layout", "Sets the current host layout",
+                          &HostLayouts::SetHostLayout_Binding, nullptr);
 #if JAVELIN_USE_EMBEDDED_STENO
   engine->AddConsoleCommands(console);
   console.RegisterCommand("print_orthography",

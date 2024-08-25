@@ -113,12 +113,11 @@ target_sources(${NAME} PUBLIC
   javelin/hal/rgb.cc
   javelin/hal/sound.cc
   javelin/hal/usb_status.cc
+  javelin/host_layout.cc
   javelin/key.cc
   javelin/key_code.cc
-  javelin/keyboard_layout.cc
   javelin/key_press_parser.cc
   javelin/list.cc
-  javelin/macos_us_unicode_data.cc
   javelin/mem.cc
   javelin/orthography.cc
   javelin/pattern.cc
@@ -158,7 +157,6 @@ target_sources(${NAME} PUBLIC
   javelin/timer_manager.cc
   javelin/unicode.cc
   javelin/utf8_pointer.cc
-  javelin/windows_alt_unicode_data.cc
   javelin/word_list.cc
   javelin/word_list_data.cc
   javelin/wpm_tracker.cc

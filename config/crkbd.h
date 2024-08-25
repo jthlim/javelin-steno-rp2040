@@ -1,20 +1,14 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "main_flash_layout.h"
 #include <stddef.h>
 #include <stdint.h>
 
 //---------------------------------------------------------------------------
 
-struct StenoConfigBlock;
-struct StenoOrthography;
-struct StenoDictionaryCollection;
-
-//---------------------------------------------------------------------------
-
 #define JAVELIN_USE_EMBEDDED_STENO 1
 #define JAVELIN_USE_USER_DICTIONARY 1
-#define JAVELIN_USE_SCRIPT_STORAGE 1
 #define JAVELIN_USB_MILLIAMPS 500
 
 #define JAVELIN_RGB 1
@@ -105,23 +99,6 @@ constexpr uint8_t RGB_MAP[54] = {
 #define JAVELIN_SCRIPT_CONFIGURATION                                           \
   R"({"name":"Corne","layout":[{"x":0,"y":0.3},{"x":1,"y":0.3},{"x":2,"y":0.1},{"x":3,"y":0},{"x":4,"y":0.1},{"x":5,"y":0.2},{"x":9,"y":0.2},{"x":10,"y":0.1},{"x":11,"y":0},{"x":12,"y":0.1},{"x":13,"y":0.3},{"x":14,"y":0.3},{"x":0,"y":1.3},{"x":1,"y":1.3},{"x":2,"y":1.1},{"x":3,"y":1},{"x":4,"y":1.1},{"x":5,"y":1.2},{"x":9,"y":1.2},{"x":10,"y":1.1},{"x":11,"y":1},{"x":12,"y":1.1},{"x":13,"y":1.3},{"x":14,"y":1.3},{"x":0,"y":2.3},{"x":1,"y":2.3},{"x":2,"y":2.1},{"x":3,"y":2},{"x":4,"y":2.1},{"x":5,"y":2.2},{"x":9,"y":2.2},{"x":10,"y":2.1},{"x":11,"y":2},{"x":12,"y":2.1},{"x":13,"y":2.3},{"x":14,"y":2.3},{"x":3.5,"y":3.4},{"x":4.7,"y":3.58,"r":0.26},{"x":5.95,"y":3.6,"w":1,"h":1.5,"r":0.52},{"x":8.05,"y":3.6,"w":1,"h":1.5,"r":-0.52},{"x":9.3,"y":3.58,"r":-0.26},{"x":10.5,"y":3.4}]})"
 
-const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
-    (const StenoConfigBlock *)0x10040000;
-const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
-const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
-    (const StenoOrthography *)0x10042000;
-const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10044000;
-static const struct ScriptStorageData *const SCRIPT_STORAGE_ADDRESS =
-    (struct ScriptStorageData *)0x103e0000;
-static const size_t MAXIMUM_SCRIPT_STORAGE_SIZE = 0x20000;
-const StenoDictionaryCollection *const STENO_MAP_DICTIONARY_COLLECTION_ADDRESS =
-    (const StenoDictionaryCollection *)0x10400000;
-const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
-    (const uint8_t *)0x10fc0000;
-const size_t STENO_USER_DICTIONARY_SIZE = 0x40000;
-
-const size_t MAXIMUM_MAP_DICTIONARY_SIZE = 0xbc0000;
-const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
 const size_t BUTTON_COUNT = 42;
 
 const char *const MANUFACTURER_NAME = "foostan";

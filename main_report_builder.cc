@@ -287,7 +287,7 @@ void MainReportBuilder::PrintInfo() const {
                   compatibilityMode ? "compatibility" : "default");
 }
 
-void Key::PressRaw(KeyCode key) {
+void Key::Press(KeyCode key) {
 #if JAVELIN_DISPLAY_DRIVER
   if (key.value == KeyCode::BACKSPACE) {
     WpmTracker::instance.Tally(-1);
@@ -299,7 +299,7 @@ void Key::PressRaw(KeyCode key) {
   MainReportBuilder::instance.Press(key.value);
 }
 
-void Key::ReleaseRaw(KeyCode key) {
+void Key::Release(KeyCode key) {
   MainReportBuilder::instance.Release(key.value);
 }
 
