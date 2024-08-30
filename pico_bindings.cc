@@ -689,10 +689,13 @@ void InitJavelinMaster() {
 }
 
 void Script::OnStenoKeyPressed() {
+#if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(stenoState, StenoAction::PRESS);
+#endif
 }
 
 void Script::OnStenoKeyReleased() {
+#if JAVELIN_USE_EMBEDDED_STENO
 #if TRACE_RELEASE_PROCESSING_TIME
   uint32_t t0 = Clock::GetMicroseconds();
 #endif
@@ -701,18 +704,25 @@ void Script::OnStenoKeyReleased() {
   uint32_t t1 = Clock::GetMicroseconds();
   Console::Printf("Release processing time: %u\n\n", t1 - t0);
 #endif
+#endif
 }
 
 void Script::CancelStenoKeys(StenoKeyState state) {
+#if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(state, StenoAction::CANCEL_ALL);
+#endif
 }
 
 void Script::CancelAllStenoKeys() {
+#if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(StenoKeyState(0), StenoAction::CANCEL_ALL);
+#endif
 }
 
 void ProcessStenoTick() {
+#if JAVELIN_USE_EMBEDDED_STENO
   processors->Tick();
+#endif
   MainReportBuilder::instance.FlushAllIfRequired();
   ConsoleReportBuffer::instance.Flush();
 }
