@@ -6,11 +6,8 @@
 
 //---------------------------------------------------------------------------
 
-struct HostLayouts;
 struct ScriptStorageData;
 struct StenoConfigBlock;
-struct StenoOrthography;
-struct StenoDictionaryCollection;
 
 //---------------------------------------------------------------------------
 
