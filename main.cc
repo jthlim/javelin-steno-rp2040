@@ -6,9 +6,8 @@
 #include "javelin/console_input_buffer.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
-#include "javelin/hal/bootloader.h"
-#include "javelin/key.h"
 #include "javelin/keyboard_led_status.h"
+#include "javelin/script_manager.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
@@ -52,14 +51,14 @@ extern "C" void tud_mount_cb(void) {
   MainReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
   SplitUsbStatus::instance.SetPowered(true);
-  ScriptManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
+  ScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when device is unmounted
 extern "C" void tud_umount_cb(void) {
   SplitUsbStatus::instance.OnUnmount();
   SplitUsbStatus::instance.SetPowered(false);
-  ScriptManager::ExecuteScript(ScriptId::CONNECTION_UPDATE);
+  ScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when usb bus is suspended

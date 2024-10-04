@@ -2,7 +2,6 @@
 
 #include "split_hid_report_buffer.h"
 #include "console_report_buffer.h"
-#include "javelin/console.h"
 #include "main_report_builder.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_split.h"

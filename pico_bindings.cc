@@ -223,7 +223,7 @@ void SetStenoMode(void *context, const char *commandLine) {
   }
 
   Console::SendOk();
-  ScriptManager::ExecuteScript(ScriptId::STENO_MODE_UPDATE);
+  ScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
 }
 
 void SetStenoTrigger(void *context, const char *commandLine) {
@@ -244,7 +244,7 @@ void SetStenoTrigger(void *context, const char *commandLine) {
   }
 
   Console::SendOk();
-  ScriptManager::ExecuteScript(ScriptId::STENO_MODE_UPDATE);
+  ScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
 }
 
 void SetKeyboardProtocol(void *context, const char *commandLine) {
@@ -685,13 +685,13 @@ void InitJavelinMaster() {
   PairConsole::AddConsoleCommands(console);
 }
 
-void Script::OnStenoKeyPressed() {
+void ButtonScript::OnStenoKeyPressed() {
 #if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(stenoState, StenoAction::PRESS);
 #endif
 }
 
-void Script::OnStenoKeyReleased() {
+void ButtonScript::OnStenoKeyReleased() {
 #if JAVELIN_USE_EMBEDDED_STENO
 #if TRACE_RELEASE_PROCESSING_TIME
   uint32_t t0 = Clock::GetMicroseconds();
@@ -704,13 +704,13 @@ void Script::OnStenoKeyReleased() {
 #endif
 }
 
-void Script::CancelStenoKeys(StenoKeyState state) {
+void ButtonScript::CancelStenoKeys(StenoKeyState state) {
 #if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(state, StenoAction::CANCEL_ALL);
 #endif
 }
 
-void Script::CancelAllStenoKeys() {
+void ButtonScript::CancelAllStenoKeys() {
 #if JAVELIN_USE_EMBEDDED_STENO
   processors->Process(StenoKeyState(0), StenoAction::CANCEL_ALL);
 #endif

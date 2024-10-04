@@ -69,6 +69,7 @@ target_sources(${NAME} PUBLIC
 
   javelin/base64.cc
   javelin/bit.cc
+  javelin/button_script.cc
   javelin/console.cc
   javelin/console_input_buffer.cc
   javelin/crc.cc
