@@ -108,8 +108,6 @@ void MasterTask::Update() {
   }
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
-  ScriptManager::GetInstance().Tick(scriptTime);
-  TimerManager::instance.ProcessTimers(scriptTime);
 
 #if JAVELIN_SPLIT
   const Debounced<ButtonState> buttonState =
@@ -118,20 +116,21 @@ void MasterTask::Update() {
   const Debounced<ButtonState> buttonState =
       debouncer.Update(Rp2040ButtonState::Read());
 #endif
-  if (!buttonState.isUpdated) {
-    return;
-  }
-
-  if (tud_suspended()) {
-    if (buttonState.value.IsAnySet()) {
-      // Wake up host if we are in suspend mode
-      // and REMOTE_WAKEUP feature is enabled by host
-      tud_remote_wakeup();
+  if (buttonState.isUpdated) {
+    if (tud_suspended()) {
+      if (buttonState.value.IsAnySet()) {
+        // Wake up host if we are in suspend mode
+        // and REMOTE_WAKEUP feature is enabled by host
+        tud_remote_wakeup();
+      }
     }
+
+    ScriptManager::GetInstance().Update(buttonState.value,
+                                        Clock::GetMilliseconds());
   }
 
-  ScriptManager::GetInstance().Update(buttonState.value,
-                                      Clock::GetMilliseconds());
+  ScriptManager::GetInstance().Tick(scriptTime);
+  TimerManager::instance.ProcessTimers(scriptTime);
 }
 
 class SlaveTask final : public SplitTxHandler {
