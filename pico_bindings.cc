@@ -2,6 +2,7 @@
 
 #include "auto_draw.h"
 #include "console_report_buffer.h"
+#include "javelin/button_script_manager.h"
 #include "javelin/clock.h"
 #include "javelin/config_block.h"
 #include "javelin/console.h"
@@ -34,7 +35,6 @@
 #include "javelin/processor/repeat.h"
 #include "javelin/processor/tx_bolt.h"
 #include "javelin/script_byte_code.h"
-#include "javelin/script_manager.h"
 #include "javelin/script_storage.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/static_allocate.h"
@@ -171,7 +171,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   Rp2040Split::PrintInfo();
 
 #if ENABLE_EXTRA_INFO
-  ScriptManager::GetInstance().PrintInfo();
+  ButtonScriptManager::GetInstance().PrintInfo();
 #endif
 
   if (Rp2040Split::IsMaster()) {
@@ -223,7 +223,7 @@ void SetStenoMode(void *context, const char *commandLine) {
   }
 
   Console::SendOk();
-  ScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
 }
 
 void SetStenoTrigger(void *context, const char *commandLine) {
@@ -244,7 +244,7 @@ void SetStenoTrigger(void *context, const char *commandLine) {
   }
 
   Console::SendOk();
-  ScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::STENO_MODE_UPDATE);
 }
 
 void SetKeyboardProtocol(void *context, const char *commandLine) {
@@ -389,10 +389,7 @@ static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if defined(JAVELIN_SCRIPT_CONFIGURATION)
     {"script_configuration", GetScriptConfiguration},
 #endif
-    {
-        "script_event_history",
-        []() { ScriptManager::GetInstance().PrintScriptHistory(); },
-    },
+    {"script_event_history", &ButtonScriptManager::PrintEventHistory},
     {"script_header", GetScriptHeader},
 #if JAVELIN_USE_SCRIPT_STORAGE
     {"script_storage", &ScriptStorageData::HandleGetScriptStorageParameter},
@@ -635,7 +632,7 @@ void InitJavelinMaster() {
                           "Prints all orthography rules in JSON format",
                           StenoOrthography_Print_Binding, nullptr);
 #endif
-  ScriptManager::GetInstance().AddConsoleCommands(console);
+  ButtonScriptManager::GetInstance().AddConsoleCommands(console);
 
 #if JAVELIN_DISPLAY_DRIVER
   console.RegisterCommand("set_auto_draw",

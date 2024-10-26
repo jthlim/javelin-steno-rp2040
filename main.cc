@@ -3,11 +3,11 @@
 #include JAVELIN_BOARD_CONFIG
 
 #include "console_report_buffer.h"
+#include "javelin/button_script_manager.h"
 #include "javelin/console_input_buffer.h"
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
 #include "javelin/keyboard_led_status.h"
-#include "javelin/script_manager.h"
 #include "javelin/split/pair_console.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
@@ -51,14 +51,14 @@ extern "C" void tud_mount_cb(void) {
   MainReportBuilder::instance.Reset();
   SplitUsbStatus::instance.OnMount();
   SplitUsbStatus::instance.SetPowered(true);
-  ScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when device is unmounted
 extern "C" void tud_umount_cb(void) {
   SplitUsbStatus::instance.OnUnmount();
   SplitUsbStatus::instance.SetPowered(false);
-  ScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when usb bus is suspended
@@ -125,11 +125,11 @@ void MasterTask::Update() {
       }
     }
 
-    ScriptManager::GetInstance().Update(buttonState.value,
-                                        Clock::GetMilliseconds());
+    ButtonScriptManager::GetInstance().Update(buttonState.value,
+                                              Clock::GetMilliseconds());
   }
 
-  ScriptManager::GetInstance().Tick(scriptTime);
+  ButtonScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 }
 
@@ -151,7 +151,7 @@ void SlaveTask::Update() {
   }
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
-  ScriptManager::GetInstance().Tick(scriptTime);
+  ButtonScriptManager::GetInstance().Tick(scriptTime);
   TimerManager::instance.ProcessTimers(scriptTime);
 
   const ButtonState newButtonState = Rp2040ButtonState::Read();
@@ -328,7 +328,7 @@ int main(void) {
     PairConsole::RegisterHandlers();
 
     InitJavelinMaster();
-    ScriptManager::Initialize(SCRIPT_BYTE_CODE);
+    ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);
     tusb_init();
 
     DoMasterRunLoop();
@@ -345,7 +345,7 @@ int main(void) {
     PairConsole::RegisterHandlers();
 
     InitJavelinSlave();
-    ScriptManager::Initialize(SCRIPT_BYTE_CODE);
+    ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);
 
     tusb_init();
     DoSlaveRunLoop();

@@ -1,8 +1,8 @@
 //---------------------------------------------------------------------------
 
 #include "rp2040_split.h"
+#include "javelin/button_script_manager.h"
 #include "javelin/console.h"
-#include "javelin/script_manager.h"
 #include "rp2040_dma.h"
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
 #include "rp2040_split.pio.h"
