@@ -281,7 +281,7 @@ struct DynamicParameterData {
 static const ParameterData PARAMETER_DATA[] = {
     {"button_count", (void *)BUTTON_COUNT},
     {"button_script_address", SCRIPT_BYTE_CODE},
-    {"button_script_byte_code_revision", (void *)SCRIPT_BYTE_CODE_REVISION},
+    {"button_script_byte_code_version", (void *)SCRIPT_BYTE_CODE_VERSION},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
 #endif
@@ -443,36 +443,6 @@ void ListParametersBinding(void *context, const char *commandLine) {
   Console::Printf("\n");
 }
 
-#if JAVELIN_USE_EMBEDDED_STENO
-void StenoOrthography_Print_Binding(void *context, const char *commandLine) {
-  ORTHOGRAPHY_ADDRESS->Print();
-}
-#endif
-
-#if JAVELIN_DISPLAY_DRIVER
-
-void MeasureText_Binding(void *context, const char *commandLine) {
-  const char *p = strchr(commandLine, ' ');
-  if (!p) {
-    Console::Printf("ERR No parameters specified\n\n");
-    return;
-  }
-
-  int fontId;
-  p = Str::ParseInteger(&fontId, p + 1, false);
-  if (!p || *p != ' ') {
-    Console::Printf("ERR fontId parameter missing\n\n");
-    return;
-  }
-  ++p;
-
-  const Font *font = Font::GetFont(fontId);
-  uint32_t width = font->GetStringWidth(p);
-  Console::Printf("Width: %u\n\n", width);
-}
-
-#endif
-
 #if ENABLE_DEBUG_COMMAND
 void Debug_Binding(void *context, const char *commandLine) {}
 #endif
@@ -628,9 +598,9 @@ void InitJavelinMaster() {
                           &HostLayouts::SetHostLayout_Binding, nullptr);
 #if JAVELIN_USE_EMBEDDED_STENO
   engine->AddConsoleCommands(console);
-  console.RegisterCommand("print_orthography",
-                          "Prints all orthography rules in JSON format",
-                          StenoOrthography_Print_Binding, nullptr);
+  console.RegisterCommand(
+      "print_orthography", "Prints all orthography rules in JSON format",
+      &StenoOrthography::Print_Binding, (void *)ORTHOGRAPHY_ADDRESS);
 #endif
   ButtonScriptManager::GetInstance().AddConsoleCommands(console);
 
@@ -641,7 +611,7 @@ void InitJavelinMaster() {
                           StenoStrokeCapture::SetAutoDraw_Binding,
                           &passthroughContainer.value);
   console.RegisterCommand("measure_text", "Measures the width of text",
-                          MeasureText_Binding, nullptr);
+                          &Font::MeasureText_Binding, nullptr);
 #endif
 
 #if JAVELIN_USE_EMBEDDED_STENO
