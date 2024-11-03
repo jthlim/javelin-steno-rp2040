@@ -280,18 +280,20 @@ struct DynamicParameterData {
 
 static const ParameterData PARAMETER_DATA[] = {
     {"button_count", (void *)BUTTON_COUNT},
-    {"button_script_address", SCRIPT_BYTE_CODE},
-    {"button_script_byte_code_version", (void *)SCRIPT_BYTE_CODE_VERSION},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
 #endif
     {"flash_memory_address", (void *)0x10000000},
-    {"maximum_button_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},
 #endif
+    {"maximum_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
 #if JAVELIN_USE_SCRIPT_STORAGE
     {"maximum_script_storage_size", (void *)MAXIMUM_SCRIPT_STORAGE_SIZE},
+#endif
+    {"script_address", SCRIPT_BYTE_CODE},
+    {"script_byte_code_version", (void *)SCRIPT_BYTE_CODE_VERSION},
+#if JAVELIN_USE_SCRIPT_STORAGE
     {"script_storage_address", SCRIPT_STORAGE_ADDRESS},
 #endif
 };

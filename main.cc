@@ -67,12 +67,14 @@ extern "C" void tud_umount_cb(void) {
 extern "C" void tud_suspend_cb(bool remoteWakeupEnabled) {
   // set_sys_clock_khz(25000, true);
   SplitUsbStatus::instance.OnSuspend();
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 // Invoked when usb bus is resumed
 extern "C" void tud_resume_cb(void) {
   // set_sys_clock_khz(125000, true);
   SplitUsbStatus::instance.OnResume();
+  ButtonScriptManager::ExecuteScript(ButtonScriptId::CONNECTION_UPDATE);
 }
 
 //---------------------------------------------------------------------------
