@@ -6,6 +6,7 @@
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
 #include "javelin/str.h"
+#include "javelin/timer_manager.h"
 #include "javelin/wpm_tracker.h"
 #include "ssd1306.h"
 
@@ -25,7 +26,7 @@ JavelinStaticAllocate<StenoStrokeCapture> StenoStrokeCapture::container;
 
 void StenoStrokeCapture::Process(const StenoKeyState &value,
                                  StenoAction action) {
-  StenoPassthrough::Process(value, action);
+  super::Process(value, action);
   if (action == StenoAction::TRIGGER) {
     if (strokeCount < MAXIMUM_STROKE_COUNT) {
       strokes[strokeCount] = value.ToStroke();
@@ -84,19 +85,29 @@ void StenoStrokeCapture::SetAutoDraw(int displayId, AutoDraw autoDrawId) {
 #else
   displayId = 0;
 #endif
+  if (autoDrawId != AutoDraw::WPM) {
+    lastWpm[displayId] = -1;
+  }
   autoDraw[displayId] = autoDrawId;
   Update(false);
+#if JAVELIN_SPLIT
+  SetWpmTimer(autoDraw[0] == AutoDraw::WPM || autoDraw[1] == AutoDraw::WPM);
+#else
+  SetWpmTimer(autoDraw[0] == AutoDraw::WPM);
+#endif
 }
 
-void StenoStrokeCapture::Tick() {
-  StenoPassthrough::Tick();
-
-  const uint32_t now = Clock::GetMicroseconds();
-  if (now - lastUpdateTime < 1'000'000) {
-    return;
+void StenoStrokeCapture::SetWpmTimer(bool enable) {
+  const intptr_t timerId = -('A' * 256 + 'D');
+  if (enable) {
+    TimerManager::instance.StartTimer(timerId, 1000, true, this,
+                                      Clock::GetMilliseconds());
+  } else {
+    TimerManager::instance.StopTimer(timerId, Clock::GetMilliseconds());
   }
-  lastUpdateTime = now;
+}
 
+void StenoStrokeCapture::WpmTimerHandler() {
 #if JAVELIN_SPLIT
   for (int displayId = 0; displayId < 2; ++displayId) {
 #else
@@ -118,6 +129,12 @@ void StenoStrokeCapture::Tick() {
 }
 
 void StenoStrokeCapture::DrawWpm(int displayId) {
+  const int newWpm = WpmTracker::instance.Get5sWpm();
+  if (newWpm == lastWpm[displayId]) {
+    return;
+  }
+  lastWpm[displayId] = newWpm;
+
   Display::Clear(displayId);
 
   char buffer[16];
@@ -167,6 +184,7 @@ void StenoStrokeCapture::DrawStrokes(int displayId) {
 void StenoStrokeCapture::SetAutoDraw_Binding(void *context,
                                              const char *commandLine) {
   StenoStrokeCapture *capture = (StenoStrokeCapture *)context;
+
   const char *p = strchr(commandLine, ' ');
   if (!p) {
     Console::Printf("ERR No parameters specified\n\n");

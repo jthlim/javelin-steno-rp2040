@@ -31,7 +31,7 @@
 
 void InitJavelinMaster();
 void InitJavelinSlave();
-void ProcessStenoTick();
+void FlushBuffers();
 void InitMulticore();
 
 //---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ void DoMasterRunLoop() {
     Rp2040Split::Update();
     cdc_task();
 
-    ProcessStenoTick();
+    FlushBuffers();
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();

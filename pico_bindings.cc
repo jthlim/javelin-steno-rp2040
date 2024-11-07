@@ -685,10 +685,7 @@ void ButtonScript::CancelAllStenoKeys() {
 #endif
 }
 
-void ProcessStenoTick() {
-#if JAVELIN_USE_EMBEDDED_STENO
-  processors->Tick();
-#endif
+void FlushBuffers() {
   MainReportBuilder::instance.FlushAllIfRequired();
   ConsoleReportBuffer::instance.Flush();
 }

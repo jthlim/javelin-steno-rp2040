@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------
 
+#include JAVELIN_BOARD_CONFIG
 #include "main_report_builder.h"
 #include "hid_report_buffer.h"
 #include "javelin/console.h"
