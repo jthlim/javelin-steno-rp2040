@@ -2,8 +2,6 @@
 
 #pragma once
 #include "main_flash_layout.h"
-#include <stddef.h>
-#include <stdint.h>
 
 //---------------------------------------------------------------------------
 

@@ -1,8 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
+#include "pair_flash_layout.h"
 
 //---------------------------------------------------------------------------
 
@@ -104,11 +103,6 @@ constexpr uint8_t RGB_MAP[62] = {
 
 // clang-format on
 
-const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
-    (const StenoConfigBlock *)0x10040000;
-const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
-
-const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
 const size_t BUTTON_COUNT = 50;
 
 const char *const MANUFACTURER_NAME = "splitkb";

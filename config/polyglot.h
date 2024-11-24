@@ -2,8 +2,6 @@
 
 #pragma once
 #include "main_flash_layout.h"
-#include <stddef.h>
-#include <stdint.h>
 
 //---------------------------------------------------------------------------
 
@@ -17,6 +15,7 @@
 
 #define BOOTSEL_BUTTON_INDEX 42
 
+#define JAVELIN_DEBOUNCE_MS 10
 #define JAVELIN_BUTTON_MATRIX 1
 
 constexpr uint8_t COLUMN_PINS[] = {24, 23, 21, 20, 19, 18, 11, 10, 9, 8, 6, 5};

@@ -299,10 +299,6 @@ static const ParameterData PARAMETER_DATA[] = {
 };
 
 #if JAVELIN_USE_EMBEDDED_STENO
-static void GetHostLayout() {
-  Console::Printf("%s\n\n", HostLayouts::GetActiveLayout().GetName());
-}
-
 static void GetKeyboardProtocol() {
   Console::Printf("%s\n\n", MainReportBuilder::instance.IsCompatibilityMode()
                                 ? "compatibility"
@@ -385,7 +381,7 @@ static void GetStenoTrigger() {
 static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
     {"available_host_layouts", &HostLayouts::ListHostLayouts},
-    {"host_layout", GetHostLayout},
+    {"host_layout", &HostLayouts::GetHostLayout},
     {"keyboard_protocol", GetKeyboardProtocol},
 #endif
 #if defined(JAVELIN_SCRIPT_CONFIGURATION)
@@ -476,6 +472,7 @@ void InitCommonCommands() {
   Flash::AddConsoleCommands(console);
   Rgb::AddConsoleCommands(console);
   Bootloader::AddConsoleCommands(console);
+  ButtonScriptManager::GetInstance().AddConsoleCommands(console);
 
 #if JAVELIN_USE_WATCHDOG
   console.RegisterCommand("watchdog", "Show watchdog scratch registers",
@@ -604,7 +601,6 @@ void InitJavelinMaster() {
       "print_orthography", "Prints all orthography rules in JSON format",
       &StenoOrthography::Print_Binding, (void *)ORTHOGRAPHY_ADDRESS);
 #endif
-  ButtonScriptManager::GetInstance().AddConsoleCommands(console);
 
 #if JAVELIN_DISPLAY_DRIVER
   console.RegisterCommand("set_auto_draw",

@@ -19,8 +19,8 @@ struct StenoDictionaryCollection;
 //---------------------------------------------------------------------------
 
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
-    (const StenoConfigBlock *)0x10040000;
-const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
+    (const StenoConfigBlock *)0x1003a000;
+const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x1003a100;
 const StenoOrthography *const ORTHOGRAPHY_ADDRESS =
     (const StenoOrthography *)0x10042000;
 const uint8_t *const STENO_WORD_LIST_ADDRESS = (const uint8_t *)0x10044000;
@@ -36,6 +36,6 @@ const uint8_t *const STENO_USER_DICTIONARY_ADDRESS =
 const size_t STENO_USER_DICTIONARY_SIZE = 0x40000;
 
 const size_t MAXIMUM_MAP_DICTIONARY_SIZE = 0xbc0000;
-const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
+const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x7f00;
 
 //---------------------------------------------------------------------------

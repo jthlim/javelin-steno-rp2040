@@ -16,9 +16,9 @@ struct StenoConfigBlock;
 //---------------------------------------------------------------------------
 
 const StenoConfigBlock *const STENO_CONFIG_BLOCK_ADDRESS =
-    (const StenoConfigBlock *)0x10040000;
-const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x10040100;
-const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x1f00;
+    (const StenoConfigBlock *)0x1003a000;
+const uint8_t *const SCRIPT_BYTE_CODE = (const uint8_t *)0x1003a100;
+const size_t MAXIMUM_BUTTON_SCRIPT_SIZE = 0x7f00;
 
 static const struct ScriptStorageData *const SCRIPT_STORAGE_ADDRESS =
     (struct ScriptStorageData *)0x10050000;
