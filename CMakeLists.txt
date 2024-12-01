@@ -158,6 +158,7 @@ target_sources(${NAME} PUBLIC
   javelin/timer_manager.cc
   javelin/unicode.cc
   javelin/utf8_pointer.cc
+  javelin/varint_writer.cc
   javelin/word_list.cc
   javelin/word_list_data.cc
   javelin/wpm_tracker.cc
