@@ -9,7 +9,7 @@
 
 //---------------------------------------------------------------------------
 
-extern "C" __attribute((naked)) size_t strlen(const char *p) {
+extern "C" [[gnu::naked]] size_t strlen(const char *p) {
   // spell-checker: disable
   asm volatile(R"(
     push  {r0, r4}

@@ -32,6 +32,13 @@ void MainReportBuilder::Press(uint8_t key) {
   if (key == 0) {
     return;
   }
+
+  if (key == KeyCode::BACKSPACE) {
+    --wpmTally;
+  } else if (KeyCode(key).IsVisible()) {
+    ++wpmTally;
+  }
+
   if (0xe0 <= key && key < 0xe8) {
     modifiers |= (1 << (key - 0xe0));
     if (maxPressIndex == 0) {
@@ -122,6 +129,8 @@ void MainReportBuilder::FlushAllIfRequired() {
     if (HasData()) {
       Flush();
     }
+    WpmTracker::instance.Tally(wpmTally);
+    wpmTally = 0;
   }
   if (HasMouseData()) {
     FlushMouse();
@@ -288,17 +297,7 @@ void MainReportBuilder::PrintInfo() const {
                   compatibilityMode ? "compatibility" : "default");
 }
 
-void Key::Press(KeyCode key) {
-#if JAVELIN_DISPLAY_DRIVER
-  if (key.value == KeyCode::BACKSPACE) {
-    WpmTracker::instance.Tally(-1);
-  } else if (key.IsVisible()) {
-    WpmTracker::instance.Tally(1);
-  }
-#endif
-
-  MainReportBuilder::instance.Press(key.value);
-}
+void Key::Press(KeyCode key) { MainReportBuilder::instance.Press(key.value); }
 
 void Key::Release(KeyCode key) {
   MainReportBuilder::instance.Release(key.value);

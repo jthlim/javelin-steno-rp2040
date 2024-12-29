@@ -8,10 +8,10 @@ extern "C" {
 
 //---------------------------------------------------------------------------
 
-__attribute__((weak)) void _close(void) {}
-__attribute__((weak)) void _fstat(void) {}
-__attribute__((weak)) void _isatty(void) {}
-__attribute__((weak)) void _lseek(void) {}
+void _close(void) {}
+void _fstat(void) {}
+void _isatty(void) {}
+void _lseek(void) {}
 
 //---------------------------------------------------------------------------
 }

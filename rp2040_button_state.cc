@@ -162,7 +162,8 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 
   // Note that no sleep function in flash can be called right now.
   // This is a ~10us wait.
-  for (volatile int i = 0; i < 125; ++i) {
+  for (int i = 0; i < 125; ++i) {
+    asm volatile("" ::: "memory");
   }
 
   // The HI GPIO registers in SIO can observe and control the 6 QSPI pins.
@@ -186,7 +187,8 @@ void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
   gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
 
   // This is a ~100us wait.
-  for (volatile int i = 0; i < 1250; ++i) {
+  for (int i = 0; i < 1250; ++i) {
+    asm volatile("" ::: "memory");
   }
 
   for (size_t i = 0; i < sizeof(BUTTON_TOUCH_PINS); ++i) {

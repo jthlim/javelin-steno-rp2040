@@ -85,6 +85,7 @@ private:
   bool compatibilityMode = false;
   uint8_t modifiers = 0;
   uint8_t maxPressIndex = 0;
+  int wpmTally = 0;
   Buffer buffers[2];
   MouseBuffer mouseBuffers[2];
 

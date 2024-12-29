@@ -412,7 +412,7 @@ void GetParameterBinding(void *context, const char *commandLine) {
 
   for (const ParameterData &data : PARAMETER_DATA) {
     if (Str::Eq(parameterName, data.name)) {
-      Console::Printf("%p\n\n", data.value);
+      Console::Printf("0x%p\n\n", data.value);
       return;
     }
   }
@@ -493,7 +493,7 @@ void InitJavelinMaster() {
   MainReportBuilder::instance.SetCompatibilityMode(
       config->hidCompatibilityMode);
   HostLayouts::SetData(*HOST_LAYOUTS_ADDRESS);
-  WordList::SetData(*(const WordListData *)STENO_WORD_LIST_ADDRESS);
+  WordList::instance.SetData(*(const WordListData *)STENO_WORD_LIST_ADDRESS);
 
   memcpy(StenoKeyState::STROKE_BIT_INDEX_LOOKUP, config->keyMap,
          sizeof(config->keyMap));
@@ -671,7 +671,7 @@ void ButtonScript::OnStenoKeyReleased() {
 
 void ButtonScript::CancelStenoKeys(StenoKeyState state) {
 #if JAVELIN_USE_EMBEDDED_STENO
-  processors->Process(state, StenoAction::CANCEL_ALL);
+  processors->Process(state, StenoAction::CANCEL_KEY);
 #endif
 }
 
