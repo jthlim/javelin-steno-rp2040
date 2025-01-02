@@ -17,6 +17,7 @@
 #include "plover_hid_report_buffer.h"
 #include "rp2040_button_state.h"
 #include "rp2040_crc.h"
+#include "rp2040_encoder_state.h"
 #include "rp2040_split.h"
 #include "rp2040_ws2812.h"
 #include "split_hid_report_buffer.h"
@@ -109,6 +110,8 @@ void MasterTask::Update() {
     return;
   }
 
+  Rp2040EncoderState::Update();
+
   const uint32_t scriptTime = Clock::GetMilliseconds();
 
 #if JAVELIN_SPLIT
@@ -151,6 +154,8 @@ void SlaveTask::Update() {
   if (Flash::IsUpdating()) {
     return;
   }
+
+  Rp2040EncoderState::Update();
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
   ButtonScriptManager::GetInstance().Tick(scriptTime);
@@ -311,6 +316,7 @@ int main(void) {
   InitMulticore();
 #endif
   Rp2040ButtonState::Initialize();
+  Rp2040EncoderState::Initialize();
   Rp2040Crc::Initialize();
   Ws2812::Initialize();
   Rp2040Split::Initialize();
@@ -328,6 +334,7 @@ int main(void) {
     Ssd1306::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
     PairConsole::RegisterHandlers();
+    Rp2040EncoderState::RegisterRxHandler();
 
     InitJavelinMaster();
     ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);
@@ -345,6 +352,7 @@ int main(void) {
     Ssd1306::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();
     PairConsole::RegisterHandlers();
+    Rp2040EncoderState::RegisterTxHandler();
 
     InitJavelinSlave();
     ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);

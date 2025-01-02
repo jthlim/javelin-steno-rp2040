@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "encoder_pins.h"
 #include "pair_flash_layout.h"
 
 //---------------------------------------------------------------------------
@@ -104,6 +105,13 @@ constexpr uint8_t RGB_MAP[62] = {
 // clang-format on
 
 const size_t BUTTON_COUNT = 50;
+
+#define JAVELIN_ENCODER 1
+#define JAVELIN_ENCODER_COUNT 2
+#define JAVELIN_ENCODER_LOCAL_OFFSET 1
+#define JAVELIN_ENCODER_TRIGGER_ON_HIGH_ONLY 1
+
+constexpr EncoderPins ENCODER_PINS[] = {{29, 28}};
 
 const char *const MANUFACTURER_NAME = "splitkb";
 const char *const PRODUCT_NAME = "Kyria (Javelin)";

@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "encoder_pins.h"
 #include "pair_flash_layout.h"
 
 //---------------------------------------------------------------------------
@@ -63,6 +64,13 @@ constexpr uint8_t RGB_MAP[JAVELIN_RGB_COUNT] = {
 // clang-format on
 
 const size_t BUTTON_COUNT = 46;
+
+#define JAVELIN_ENCODER 1
+#define JAVELIN_ENCODER_COUNT 4
+#define JAVELIN_ENCODER_LOCAL_OFFSET 2
+#define JAVELIN_ENCODER_TRIGGER_ON_HIGH_ONLY 1
+
+constexpr EncoderPins ENCODER_PINS[] = {{24, 7}, {6, 7}};
 
 const char *const MANUFACTURER_NAME = "foostan";
 const char *const PRODUCT_NAME = "Corne (Javelin)";

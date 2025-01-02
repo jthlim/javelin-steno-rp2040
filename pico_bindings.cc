@@ -283,6 +283,9 @@ static const ParameterData PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
     {"dictionary_address", STENO_MAP_DICTIONARY_COLLECTION_ADDRESS},
 #endif
+#if JAVELIN_ENCODER
+    {"encoder_count", (void *)JAVELIN_ENCODER_COUNT},
+#endif
     {"flash_memory_address", (void *)0x10000000},
 #if JAVELIN_USE_EMBEDDED_STENO
     {"maximum_dictionary_size", (void *)MAXIMUM_MAP_DICTIONARY_SIZE},

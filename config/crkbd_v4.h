@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #pragma once
+#include "encoder_pins.h"
 #include "main_flash_layout.h"
 
 //---------------------------------------------------------------------------
@@ -68,6 +69,13 @@ constexpr uint8_t RGB_MAP[JAVELIN_RGB_COUNT] = {
   R"({"name":"CorneV4","layout":[{"x":0,"y":0.3},{"x":1,"y":0.3},{"x":2,"y":0.1},{"x":3,"y":0},{"x":4,"y":0.1},{"x":5,"y":0.2},{"x":6,"y":0.7},{"x":8,"y":0.7},{"x":9,"y":0.2},{"x":10,"y":0.1},{"x":11,"y":0},{"x":12,"y":0.1},{"x":13,"y":0.3},{"x":14,"y":0.3},{"x":0,"y":1.3},{"x":1,"y":1.3},{"x":2,"y":1.1},{"x":3,"y":1},{"x":4,"y":1.1},{"x":5,"y":1.2},{"x":6,"y":1.7},{"x":8,"y":1.7},{"x":9,"y":1.2},{"x":10,"y":1.1},{"x":11,"y":1},{"x":12,"y":1.1},{"x":13,"y":1.3},{"x":14,"y":1.3},{"x":0,"y":2.3},{"x":1,"y":2.3},{"x":2,"y":2.1},{"x":3,"y":2},{"x":4,"y":2.1},{"x":5,"y":2.2},{"x":9,"y":2.2},{"x":10,"y":2.1},{"x":11,"y":2},{"x":12,"y":2.1},{"x":13,"y":2.3},{"x":14,"y":2.3},{"x":3.5,"y":3.4},{"x":4.7,"y":3.58,"r":0.26},{"x":5.95,"y":3.6,"w":1,"h":1.5,"r":0.52},{"x":8.05,"y":3.6,"w":1,"h":1.5,"r":-0.52},{"x":9.3,"y":3.58,"r":-0.26},{"x":10.5,"y":3.4}]})"
 
 const size_t BUTTON_COUNT = 46;
+
+#define JAVELIN_ENCODER 1
+#define JAVELIN_ENCODER_COUNT 4
+#define JAVELIN_ENCODER_LOCAL_OFFSET 0
+#define JAVELIN_ENCODER_TRIGGER_ON_HIGH_ONLY 1
+
+constexpr EncoderPins ENCODER_PINS[] = {{5, 7}, {6, 7}};
 
 const char *const MANUFACTURER_NAME = "foostan";
 const char *const PRODUCT_NAME = "Corne (Javelin)";

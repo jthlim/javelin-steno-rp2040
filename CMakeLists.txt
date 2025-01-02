@@ -54,6 +54,7 @@ target_sources(${NAME} PUBLIC
   rp2040_clock.cc
   rp2040_console.cc
   rp2040_crc.cc
+  rp2040_encoder_state.cc
   rp2040_flash.cc
   rp2040_gpio.cc
   rp2040_orthography.cc

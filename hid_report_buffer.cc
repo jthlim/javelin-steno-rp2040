@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 
 #include "hid_report_buffer.h"
+#include "javelin/clock.h"
 #include "javelin/console.h"
 #include "split_hid_report_buffer.h"
 #include "usb_descriptors.h"
@@ -10,15 +11,17 @@
 
 //---------------------------------------------------------------------------
 
+constexpr uint32_t FULL_BUFFER_RESET_TIMEOUT = 50;
+
+//---------------------------------------------------------------------------
+
 uint32_t HidReportBufferBase::reportsSentCount[ITF_NUM_TOTAL] = {};
 
 //---------------------------------------------------------------------------
 
 void HidReportBufferBase::SendReport(uint8_t reportId, const uint8_t *data,
                                      size_t length) {
-  do {
-    tud_task();
-  } while (IsFull());
+  PumpUntilNotFull();
 
   const bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
@@ -67,6 +70,29 @@ void HidReportBufferBase::SendNextReport() {
     reportsSentCount[instanceNumber]++;
     if (tud_hid_n_report(instanceNumber, entry->reportId, entry->data,
                          entry->length)) {
+      return;
+    }
+  }
+}
+
+//---------------------------------------------------------------------------
+
+void HidReportBufferBase::PumpUntilNotFull() {
+  // Android and Linux do not read 'un-attached' usb endpoints, leading the
+  // console to end up in an infinite waiting loop to have a free entry.
+  //
+  // To protect against this, check if there's no progress for a period of time
+  // and reset the buffer if so.
+  const size_t startTime = Clock::GetMilliseconds();
+  for (;;) {
+    tud_task();
+
+    if (!IsFull()) {
+      return;
+    }
+
+    if (Clock::GetMilliseconds() - startTime > FULL_BUFFER_RESET_TIMEOUT) {
+      Reset();
       return;
     }
   }

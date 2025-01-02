@@ -50,6 +50,8 @@ private:
     return (Entry *)(entryData + entrySize * index);
   }
 
+  void PumpUntilNotFull();
+
 public:
   uint8_t entryData[0];
 };
