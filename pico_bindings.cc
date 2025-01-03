@@ -101,6 +101,7 @@ static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
     reverseAutoSuffixForSuffixDictionaryContainer;
 static JavelinStaticAllocate<StenoReverseAutoSuffixDictionary>
     reverseAutoSuffixDictionaryContainer;
+static StenoProcessorElement *engineElement;
 
 static List<StenoDictionaryListEntry> dictionaries;
 #endif
@@ -206,7 +207,7 @@ void SetStenoMode(void *context, const char *commandLine) {
   ++stenoMode;
 #if JAVELIN_USE_EMBEDDED_STENO
   if (Str::Eq(stenoMode, "embedded")) {
-    passthroughContainer->SetNext(&StenoEngine::GetInstance());
+    passthroughContainer->SetNext(engineElement);
   } else
 #endif
       if (Str::Eq(stenoMode, "gemini")) {
@@ -353,7 +354,7 @@ static void GetStrokeCount() {
 static void GetStenoMode() {
   const StenoProcessorElement *processor = passthroughContainer->GetNext();
 #if JAVELIN_USE_EMBEDDED_STENO
-  if (processor == &StenoEngine::GetInstance()) {
+  if (processor == engineElement) {
     Console::Printf("embedded\n\n");
   } else
 #endif
@@ -619,6 +620,11 @@ void InitJavelinMaster() {
   userDictionary->AddConsoleCommands(console);
 
   StenoProcessorElement *processorElement = engine;
+  if (config->useJeffModifiers) {
+    processorElement =
+        new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
+  }
+  engineElement = processorElement;
 #else
   StenoProcessorElement *processorElement = &gemini;
 #endif
@@ -628,13 +634,6 @@ void InitJavelinMaster() {
 #else
   processorElement =
       new (passthroughContainer) StenoPassthrough(processorElement);
-#endif
-
-#if JAVELIN_USE_EMBEDDED_STENO
-  if (config->useJeffModifiers) {
-    processorElement =
-        new (jeffModifiersContainer) StenoJeffModifiers(*processorElement);
-  }
 #endif
 
   new (firstUpContainer) StenoFirstUp(*processorElement);
