@@ -142,10 +142,12 @@ target_sources(${NAME} PUBLIC
   javelin/script_storage.cc
   javelin/segment.cc
   javelin/segment_builder.cc
-  javelin/split/pair_console.cc
   javelin/split/split.cc
+  javelin/split/split_console.cc
+  javelin/split/split_power_override.cc
   javelin/split/split_serial_buffer.cc
   javelin/split/split_usb_status.cc
+  javelin/split/split_version.cc
   javelin/state.cc
   javelin/steno_key_code.cc
   javelin/steno_key_code_buffer.cc
@@ -161,7 +163,6 @@ target_sources(${NAME} PUBLIC
   javelin/utf8_pointer.cc
   javelin/varint_writer.cc
   javelin/word_list.cc
-  javelin/word_list_data.cc
   javelin/wpm_tracker.cc
   javelin/writer.cc
 )

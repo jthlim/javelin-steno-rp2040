@@ -8,9 +8,10 @@
 #include "javelin/debounce.h"
 #include "javelin/flash.h"
 #include "javelin/keyboard_led_status.h"
-#include "javelin/split/pair_console.h"
+#include "javelin/split/split_console.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
+#include "javelin/split/split_version.h"
 #include "javelin/static_allocate.h"
 #include "javelin/timer_manager.h"
 #include "main_report_builder.h"
@@ -296,7 +297,7 @@ void DoSlaveRunLoop() {
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
-    PairConsole::Process();
+    SplitConsole::Process();
 
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
@@ -331,9 +332,10 @@ int main(void) {
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
     SplitSerialBuffer::RegisterTxHandler();
+    SplitVersion::RegisterRxHandler();
     Ssd1306::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
-    PairConsole::RegisterHandlers();
+    SplitConsole::RegisterHandlers();
     Rp2040EncoderState::RegisterRxHandler();
 
     InitJavelinMaster();
@@ -349,9 +351,10 @@ int main(void) {
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();
     SplitSerialBuffer::RegisterRxHandler();
+    SplitVersion::RegisterTxHandler();
     Ssd1306::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();
-    PairConsole::RegisterHandlers();
+    SplitConsole::RegisterHandlers();
     Rp2040EncoderState::RegisterTxHandler();
 
     InitJavelinSlave();

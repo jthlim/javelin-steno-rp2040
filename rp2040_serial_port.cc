@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 
-#if JAVELIN_SPLIT
+#if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
 
 void SplitSerialBuffer::SplitSerialBufferData::OnDataReceived(const void *data,
                                                               size_t length) {
