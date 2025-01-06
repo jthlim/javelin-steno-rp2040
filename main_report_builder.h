@@ -2,6 +2,7 @@
 
 #pragma once
 #include "hid_report_buffer.h"
+#include "javelin/mem.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,7 +16,8 @@ public:
   void PressMouseButton(size_t buttonIndex);
   void ReleaseMouseButton(size_t buttonIndex);
   void MoveMouse(int dx, int dy);
-  void WheelMouse(int delta);
+  void VWheelMouse(int delta);
+  void HWheelMouse(int delta);
 
   void FlushAllIfRequired();
   void Flush();
@@ -53,17 +55,11 @@ private:
   struct MouseBuffer {
     // Order is important. First 7 bytes is the report packet.
     uint32_t buttonData;
-    int8_t dx, dy, wheel;
-    uint8_t movementMask; // Bit 0 = dx,dy, Bit 1 = wheel
+    int16_t dx, dy, vWheel, hWheel;
+    uint8_t movementMask; // Bit 0 = dx,dy, Bit 1 = vWheel, Bit 2 = hWheel
     uint32_t buttonPresence;
 
-    void Reset() {
-      movementMask = 0;
-      dx = 0;
-      dy = 0;
-      buttonData = 0;
-      buttonPresence = 0;
-    }
+    void Reset() { Mem::Clear(*this); }
 
     void SetMove(int x, int y) {
       dx = x;
@@ -71,13 +67,19 @@ private:
       movementMask |= 1;
     }
 
-    void SetWheel(int delta) {
-      wheel = delta;
+    void SetVWheel(int delta) {
+      vWheel = delta;
       movementMask |= 2;
     }
 
+    void SetHWheel(int delta) {
+      hWheel = delta;
+      movementMask |= 4;
+    }
+
     bool HasMovement() const { return (movementMask & 1) != 0; }
-    bool HasWheel() const { return (movementMask & 2) != 0; }
+    bool HasVWheel() const { return (movementMask & 2) != 0; }
+    bool HasHWheel() const { return (movementMask & 4) != 0; }
 
     bool HasData() const { return (movementMask | buttonPresence) != 0; }
   };

@@ -200,7 +200,7 @@ void MainReportBuilder::SendMousePageReportIfRequired() {
   }
 
   reportBuffer.SendReport(MOUSE_PAGE_REPORT_ID,
-                          (const uint8_t *)&mouseBuffers[0], 7);
+                          (const uint8_t *)&mouseBuffers[0], 12);
 }
 
 void MainReportBuilder::Flush() {
@@ -209,7 +209,7 @@ void MainReportBuilder::Flush() {
 
   for (int i = 0; i < 8; ++i) {
     buffers[0].data32[i] =
-        (buffers[1].presenceFlags32[i] & buffers[1].data32[i]) |
+        buffers[1].data32[i] |
         (~buffers[1].presenceFlags32[i] & buffers[0].data32[i]);
   }
 
@@ -223,14 +223,15 @@ void MainReportBuilder::FlushMouse() {
   SendMousePageReportIfRequired();
 
   mouseBuffers[0].buttonData =
-      (mouseBuffers[1].buttonPresence & mouseBuffers[1].buttonData) |
+      mouseBuffers[1].buttonData |
       (~mouseBuffers[1].buttonPresence & mouseBuffers[0].buttonData);
   mouseBuffers[0].buttonPresence = mouseBuffers[1].buttonPresence;
 
   mouseBuffers[0].movementMask = mouseBuffers[1].movementMask;
   mouseBuffers[0].dx = mouseBuffers[1].dx;
   mouseBuffers[0].dy = mouseBuffers[1].dy;
-  mouseBuffers[0].wheel = mouseBuffers[1].wheel;
+  mouseBuffers[0].vWheel = mouseBuffers[1].vWheel;
+  mouseBuffers[0].hWheel = mouseBuffers[1].hWheel;
 
   mouseBuffers[1].Reset();
 }
@@ -277,17 +278,30 @@ void MainReportBuilder::MoveMouse(int dx, int dy) {
   mouseBuffers[1].SetMove(dx, dy);
 }
 
-void MainReportBuilder::WheelMouse(int delta) {
-  if (!mouseBuffers[0].HasWheel()) {
-    mouseBuffers[0].SetWheel(delta);
+void MainReportBuilder::VWheelMouse(int delta) {
+  if (!mouseBuffers[0].HasVWheel()) {
+    mouseBuffers[0].SetVWheel(delta);
     return;
   }
 
-  if (mouseBuffers[1].HasWheel()) {
+  if (mouseBuffers[1].HasVWheel()) {
     FlushMouse();
   }
 
-  mouseBuffers[1].SetWheel(delta);
+  mouseBuffers[1].SetVWheel(delta);
+}
+
+void MainReportBuilder::HWheelMouse(int delta) {
+  if (!mouseBuffers[0].HasHWheel()) {
+    mouseBuffers[0].SetHWheel(delta);
+    return;
+  }
+
+  if (mouseBuffers[1].HasHWheel()) {
+    FlushMouse();
+  }
+
+  mouseBuffers[1].SetHWheel(delta);
 }
 
 //---------------------------------------------------------------------------
@@ -319,6 +333,12 @@ void Mouse::Move(int dx, int dy) {
   MainReportBuilder::instance.MoveMouse(dx, dy);
 }
 
-void Mouse::Wheel(int delta) { MainReportBuilder::instance.WheelMouse(delta); }
+void Mouse::VWheel(int delta) {
+  MainReportBuilder::instance.VWheelMouse(delta);
+}
+
+void Mouse::HWheel(int delta) {
+  MainReportBuilder::instance.HWheelMouse(delta);
+}
 
 //---------------------------------------------------------------------------
