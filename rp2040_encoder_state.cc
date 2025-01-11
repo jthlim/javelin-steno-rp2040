@@ -3,7 +3,6 @@
 #include "rp2040_encoder_state.h"
 #include "javelin/button_script_manager.h"
 #include "javelin/clock.h"
-#include "javelin/console.h"
 #include <hardware/gpio.h>
 #include <hardware/timer.h>
 
@@ -31,6 +30,10 @@ void Rp2040EncoderState::Initialize() {
 }
 
 void Rp2040EncoderState::CallScript(size_t encoderIndex, int delta) {
+  if (delta == 0) {
+    return;
+  }
+
   constexpr size_t ENCODER_SCRIPT_OFFSET = (2 + BUTTON_COUNT * 2);
   const size_t scriptIndex =
       ENCODER_SCRIPT_OFFSET + 2 * encoderIndex + ((delta < 0) ? 1 : 0);
@@ -40,19 +43,20 @@ void Rp2040EncoderState::CallScript(size_t encoderIndex, int delta) {
 
 void Rp2040EncoderState::UpdateInternal() {
   for (size_t i = 0; i < LOCAL_ENCODER_COUNT; ++i) {
-    const int newValue = gpio_get(ENCODER_PINS[i].a);
-    if (newValue == lastEncoderStates[i]) {
+    const uint8_t newValue = (gpio_get(ENCODER_PINS[i].a) ? 1 : 0) |
+                             (gpio_get(ENCODER_PINS[i].b) ? 2 : 0);
+    const uint8_t lastValue = lastEncoderStates[i].GetDebouncedState();
+    const Debounced<uint8_t> debounced = lastEncoderStates[i].Update(newValue);
+    if (!debounced.isUpdated) {
       continue;
     }
-    lastEncoderStates[i] = newValue;
 
-#if JAVELIN_ENCODER_TRIGGER_ON_HIGH_ONLY
-    if (newValue == 0) {
-      continue;
-    }
-#endif
-    const int delta = gpio_get(ENCODER_PINS[i].b) == newValue ? 1 : -1;
+    static const int8_t DELTA_LUT[] = {
+        0, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
+    const int delta = DELTA_LUT[lastValue | (newValue << 2)];
     deltas[i + JAVELIN_ENCODER_LOCAL_OFFSET] += delta;
+
 #if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
     CallScript(i + JAVELIN_ENCODER_LOCAL_OFFSET, delta);
 #endif
@@ -61,9 +65,6 @@ void Rp2040EncoderState::UpdateInternal() {
 #if !JAVELIN_SPLIT || JAVELIN_SPLIT_IS_MASTER
   for (size_t i = 0; i < JAVELIN_ENCODER_COUNT; ++i) {
     const int delta = deltas[i];
-    if (delta == 0) {
-      continue;
-    }
     deltas[i] = 0;
     CallScript(i, delta);
   }
@@ -92,7 +93,7 @@ void Rp2040EncoderState::UpdateBuffer(TxBuffer &buffer) {
   }
 
   if (buffer.Add(SplitHandlerId::ENCODER, deltas, sizeof(deltas))) {
-    memset(deltas, 0, sizeof(deltas));
+    Mem::Clear(deltas);
   }
 }
 

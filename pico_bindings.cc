@@ -38,8 +38,6 @@
 #include "javelin/script_storage.h"
 #include "javelin/split/split_console.h"
 #include "javelin/static_allocate.h"
-#include "javelin/steno_key_code.h"
-#include "javelin/steno_key_code_emitter.h"
 #include "javelin/word_list.h"
 #include "main_report_builder.h"
 #include "rp2040_divider.h"

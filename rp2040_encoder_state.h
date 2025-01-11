@@ -2,6 +2,7 @@
 
 #pragma once
 #include JAVELIN_BOARD_CONFIG
+#include "javelin/debounce.h"
 #include "javelin/split/split.h"
 
 //---------------------------------------------------------------------------
@@ -38,7 +39,7 @@ private:
       sizeof(ENCODER_PINS) / sizeof(*ENCODER_PINS);
 
   int8_t deltas[JAVELIN_ENCODER_COUNT];
-  uint8_t lastEncoderStates[LOCAL_ENCODER_COUNT];
+  GlobalDeferredDebounce<uint8_t, 1> lastEncoderStates[LOCAL_ENCODER_COUNT];
 
   static Rp2040EncoderState instance;
 
