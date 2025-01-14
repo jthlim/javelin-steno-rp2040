@@ -97,8 +97,8 @@ private:
     uint8_t dirtyFlag;
     Ssd1306ControlTxRxData data;
 
-    static const int DIRTY_FLAG_SCREEN_ON = 1;
-    static const int DIRTY_FLAG_CONTRAST = 2;
+    static constexpr int DIRTY_FLAG_SCREEN_ON = 1;
+    static constexpr int DIRTY_FLAG_CONTRAST = 2;
 
     virtual void UpdateBuffer(TxBuffer &buffer);
     virtual void OnDataReceived(const void *data, size_t length);

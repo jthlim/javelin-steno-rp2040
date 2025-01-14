@@ -91,7 +91,7 @@ private:
   Buffer buffers[2];
   MouseBuffer mouseBuffers[2];
 
-  static const size_t MAXIMUM_REPORT_DATA_SIZE = 17;
+  static constexpr size_t MAXIMUM_REPORT_DATA_SIZE = 17;
   HidReportBuffer<MAXIMUM_REPORT_DATA_SIZE> reportBuffer;
 
   bool HasData() const;

@@ -35,7 +35,7 @@ public:
   static JavelinStaticAllocate<StenoStrokeCapture> container;
 
 private:
-  static const size_t MAXIMUM_STROKE_COUNT = 32;
+  static constexpr size_t MAXIMUM_STROKE_COUNT = 32;
   size_t strokeCount = 0;
 #if JAVELIN_SPLIT
   AutoDraw autoDraw[2];

@@ -380,7 +380,7 @@ static void GetStenoTrigger() {
   }
 }
 
-static const DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
+static constexpr DynamicParameterData DYNAMIC_PARAMETER_DATA[] = {
 #if JAVELIN_USE_EMBEDDED_STENO
     {"available_host_layouts", &HostLayouts::ListHostLayouts},
     {"host_layout", &HostLayouts::GetHostLayout},

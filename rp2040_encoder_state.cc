@@ -51,7 +51,7 @@ void Rp2040EncoderState::UpdateInternal() {
       continue;
     }
 
-    static const int8_t DELTA_LUT[] = {
+    static constexpr int8_t DELTA_LUT[] = {
         0, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     };
     const int delta = DELTA_LUT[lastValue | (newValue << 2)];

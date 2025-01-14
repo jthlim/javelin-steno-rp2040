@@ -24,7 +24,7 @@ public:
 private:
   ConsoleReportBuffer();
 
-  static const size_t MAX_BUFFER_SIZE = 64;
+  static constexpr size_t MAX_BUFFER_SIZE = 64;
 
   int bufferSize = 0;
   uint8_t buffer[MAX_BUFFER_SIZE];
