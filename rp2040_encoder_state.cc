@@ -14,18 +14,32 @@ Rp2040EncoderState Rp2040EncoderState::instance;
 
 //---------------------------------------------------------------------------
 
-static void InitializePin(int pin) {
+void EncoderPins::Initialize() const {
+  InitializePin(a);
+  InitializePin(b);
+}
+
+void EncoderPins::InitializePin(int pin) {
   gpio_init(pin);
   gpio_set_dir(pin, false);
   gpio_pull_up(pin);
 }
 
+int EncoderPins::ReadState() const {
+  return (gpio_get(a) ? 1 : 0) | (gpio_get(b) ? 2 : 0);
+}
+
+//---------------------------------------------------------------------------
+
 void Rp2040EncoderState::Initialize() {
+  for (const EncoderPins &encoderPins : ENCODER_PINS) {
+    encoderPins.Initialize();
+  }
+
+  busy_wait_us_32(20);
+
   for (size_t i = 0; i < LOCAL_ENCODER_COUNT; ++i) {
-    InitializePin(ENCODER_PINS[i].a);
-    InitializePin(ENCODER_PINS[i].b);
-    busy_wait_us_32(10);
-    instance.lastEncoderStates[i] = gpio_get(ENCODER_PINS[i].a);
+    instance.lastEncoderStates[i] = ENCODER_PINS[i].ReadState();
   }
 }
 
@@ -43,8 +57,7 @@ void Rp2040EncoderState::CallScript(size_t encoderIndex, int delta) {
 
 void Rp2040EncoderState::UpdateInternal() {
   for (size_t i = 0; i < LOCAL_ENCODER_COUNT; ++i) {
-    const uint8_t newValue = (gpio_get(ENCODER_PINS[i].a) ? 1 : 0) |
-                             (gpio_get(ENCODER_PINS[i].b) ? 2 : 0);
+    const uint8_t newValue = ENCODER_PINS[i].ReadState();
     const uint8_t lastValue = lastEncoderStates[i].GetDebouncedState();
     const Debounced<uint8_t> debounced = lastEncoderStates[i].Update(newValue);
     if (!debounced.isUpdated) {
