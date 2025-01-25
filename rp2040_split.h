@@ -44,6 +44,9 @@ private:
 
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
     pio_sm_config config;
+#else
+    pio_sm_config txConfig;
+    pio_sm_config rxConfig;
 #endif
 
     void Initialize();

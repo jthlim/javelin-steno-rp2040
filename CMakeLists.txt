@@ -36,6 +36,7 @@ pico_sdk_init()
 add_executable(${NAME})
 
 pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split_tx_rx.pio)
 pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_ws2812.pio)
 
 target_sources(${NAME} PUBLIC
@@ -66,6 +67,9 @@ target_sources(${NAME} PUBLIC
   ssd1306.cc
   ssd1306_paper_tape.cc
   ssd1306_steno_layout.cc
+  st7789.cc
+  st7789_paper_tape.cc
+  st7789_steno_layout.cc
   usb_descriptors.cc
 
   javelin/base64.cc
@@ -130,6 +134,7 @@ target_sources(${NAME} PUBLIC
   javelin/processor/first_up.cc
   javelin/processor/gemini.cc
   javelin/processor/jeff_modifiers.cc
+  javelin/processor/paper_tape.cc
   javelin/processor/plover_hid.cc
   javelin/processor/procat.cc
   javelin/processor/processor.cc
@@ -179,6 +184,7 @@ target_link_libraries(${NAME}
   hardware_i2c
   hardware_pio
   hardware_pwm
+  hardware_spi
   pico_multicore
   pico_stdlib
   tinyusb_device

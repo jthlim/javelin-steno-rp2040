@@ -232,6 +232,11 @@ ButtonState Rp2040ButtonState::Read() {
 #endif
 
 #if JAVELIN_BUTTON_PINS
+
+#if !defined(JAVELIN_BUTTON_PINS_OFFSET)
+#define JAVELIN_BUTTON_PINS_OFFSET 0
+#endif
+
   const int buttonMask = gpio_get_all();
 #pragma GCC unroll 1
   for (size_t b = 0; b < sizeof(BUTTON_PINS); ++b) {
@@ -241,7 +246,7 @@ ButtonState Rp2040ButtonState::Read() {
       continue;
     }
     if (((buttonMask >> pin) & 1) == pinAndPolarity >> 7) {
-      state.Set(b);
+      state.Set(JAVELIN_BUTTON_PINS_OFFSET + b);
     }
   }
 #endif

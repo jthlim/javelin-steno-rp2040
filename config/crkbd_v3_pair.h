@@ -5,10 +5,6 @@
 
 //---------------------------------------------------------------------------
 
-struct StenoConfigBlock;
-
-//---------------------------------------------------------------------------
-
 #define JAVELIN_USE_EMBEDDED_STENO 0
 #define JAVELIN_USE_USER_DICTIONARY 0
 #define JAVELIN_USB_MILLIAMPS 500

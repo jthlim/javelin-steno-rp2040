@@ -23,6 +23,7 @@
 #include "rp2040_ws2812.h"
 #include "split_hid_report_buffer.h"
 #include "ssd1306.h"
+#include "st7789.h"
 #include "usb_descriptors.h"
 
 #include <hardware/watchdog.h>
@@ -145,9 +146,10 @@ public:
   void UpdateBuffer(TxBuffer &buffer);
 
 private:
-  bool needsTransmit = true;
+  bool needsTransmit;
   ButtonState buttonState;
 
+  virtual void OnTransmitConnected() { needsTransmit = true; }
   virtual void OnTransmitConnectionReset() { needsTransmit = true; }
 };
 
@@ -181,8 +183,10 @@ void SlaveTask::Update() {
 
 void SlaveTask::UpdateBuffer(TxBuffer &buffer) {
   if (needsTransmit) {
-    needsTransmit = false;
-    buffer.Add(SplitHandlerId::KEY_STATE, &buttonState, sizeof(ButtonState));
+    if (buffer.Add(SplitHandlerId::KEY_STATE, &buttonState,
+                   sizeof(ButtonState))) {
+      needsTransmit = false;
+    }
   }
 }
 
@@ -272,6 +276,7 @@ void DoMasterRunLoop() {
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
+    St7789::Update();
 
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
@@ -297,6 +302,7 @@ void DoSlaveRunLoop() {
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
+    St7789::Update();
     SplitConsole::Process();
 
 #if JAVELIN_USE_WATCHDOG
@@ -322,6 +328,7 @@ int main(void) {
   Ws2812::Initialize();
   Rp2040Split::Initialize();
   Ssd1306::Initialize();
+  St7789::Initialize();
 
   if (Split::IsMaster()) {
     new (masterTaskContainer) MasterTask;
@@ -334,6 +341,7 @@ int main(void) {
     SplitSerialBuffer::RegisterTxHandler();
     SplitVersion::RegisterRxHandler();
     Ssd1306::RegisterMasterHandlers();
+    St7789::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
     SplitConsole::RegisterHandlers();
     Rp2040EncoderState::RegisterRxHandler();
@@ -353,6 +361,7 @@ int main(void) {
     SplitSerialBuffer::RegisterRxHandler();
     SplitVersion::RegisterTxHandler();
     Ssd1306::RegisterSlaveHandlers();
+    St7789::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();
     SplitConsole::RegisterHandlers();
     Rp2040EncoderState::RegisterTxHandler();

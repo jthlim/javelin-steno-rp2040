@@ -28,6 +28,7 @@
 #include "javelin/processor/first_up.h"
 #include "javelin/processor/gemini.h"
 #include "javelin/processor/jeff_modifiers.h"
+#include "javelin/processor/paper_tape.h"
 #include "javelin/processor/passthrough.h"
 #include "javelin/processor/plover_hid.h"
 #include "javelin/processor/procat.h"
@@ -43,12 +44,15 @@
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
 #include "ssd1306.h"
+#include "st7789.h"
 
 #include <hardware/clocks.h>
 #include <hardware/flash.h>
+#include <hardware/spi.h>
 #include <hardware/timer.h>
 #include <hardware/watchdog.h>
 #include <malloc.h>
+#include <pico/time.h>
 #include <tusb.h>
 
 #include JAVELIN_BOARD_CONFIG
@@ -70,10 +74,11 @@ static JavelinStaticAllocate<StenoUserDictionary> userDictionaryContainer;
 #endif
 #endif
 
-static StenoGemini gemini;
-static StenoTxBolt txBolt;
-static StenoProcat procat;
-static StenoPloverHid ploverHid;
+static PaperTape paperTape;
+static StenoGemini gemini(&paperTape);
+static StenoTxBolt txBolt(&paperTape);
+static StenoProcat procat(&paperTape);
+static StenoPloverHid ploverHid(&paperTape);
 static StenoProcessorElement *processors;
 
 #if JAVELIN_DISPLAY_DRIVER
@@ -444,7 +449,21 @@ void ListParametersBinding(void *context, const char *commandLine) {
 }
 
 #if ENABLE_DEBUG_COMMAND
-void Debug_Binding(void *context, const char *commandLine) {}
+
+void Debug_Binding(void *context, const char *commandLine) {
+  const char *param = strchr(commandLine, ' ');
+  int command = 0;
+  if (param) {
+    Str::ParseInteger(&command, param + 1);
+  }
+
+  Console::Printf("Debug command: %d\n\n", command);
+  switch (command) {
+  case 0:
+    // Drop in here.
+    break;
+  }
+}
 #endif
 
 #if JAVELIN_USE_WATCHDOG
@@ -597,6 +616,7 @@ void InitJavelinMaster() {
                           SetKeyboardProtocol, nullptr);
   console.RegisterCommand("set_host_layout", "Sets the current host layout",
                           &HostLayouts::SetHostLayout_Binding, nullptr);
+  PaperTape::AddConsoleCommands(console);
 #if JAVELIN_USE_EMBEDDED_STENO
   engine->AddConsoleCommands(console);
   console.RegisterCommand(

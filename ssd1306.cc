@@ -133,7 +133,7 @@ void Ssd1306::SendDmaBuffer(size_t count) {
   dma4->source = dmaBuffer;
   dma4->destination = &JAVELIN_OLED_I2C->hw->data_cmd;
 
-  Rp2040DmaControl dmaControl = {
+  constexpr Rp2040DmaControl dmaControl = {
       .enable = true,
       .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
       .incrementRead = true,
@@ -778,6 +778,8 @@ void Display::SetDrawColor(int displayId, int color) {
 #endif
   Ssd1306::instances[displayId].drawColor = color != 0;
 }
+
+//---------------------------------------------------------------------------
 
 #endif // JAVELIN_DISPLAY_DRIVER == 1306
 

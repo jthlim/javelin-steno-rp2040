@@ -129,14 +129,16 @@ void MainReportBuilder::FlushAllIfRequired() {
     if (HasData()) {
       Flush();
     }
-    WpmTracker::instance.Tally(wpmTally);
-    wpmTally = 0;
   }
   if (HasMouseData()) {
     FlushMouse();
     if (HasMouseData()) {
       FlushMouse();
     }
+  }
+  if (const int value = wpmTally; value) {
+    wpmTally = 0;
+    WpmTracker::instance.Tally(value);
   }
 }
 

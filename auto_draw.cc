@@ -9,6 +9,7 @@
 #include "javelin/timer_manager.h"
 #include "javelin/wpm_tracker.h"
 #include "ssd1306.h"
+#include "st7789.h"
 
 //---------------------------------------------------------------------------
 
@@ -16,6 +17,8 @@
 
 #if JAVELIN_DISPLAY_DRIVER == 1306
 #define DisplayDriver Ssd1306
+#elif JAVELIN_DISPLAY_DRIVER == 7789
+#define DisplayDriver St7789
 #endif
 
 //---------------------------------------------------------------------------

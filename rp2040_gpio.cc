@@ -8,7 +8,7 @@
 
 void Gpio::SetInputPin(int pin, Pull pull) {
   gpio_init(pin);
-  gpio_set_dir(pin, false);
+  gpio_set_dir(pin, GPIO_IN);
   switch (pull) {
   case Pull::NONE:
     break;
@@ -25,7 +25,7 @@ bool Gpio::GetPin(int pin) { return gpio_get(pin) != 0; }
 
 void Gpio::SetPin(int pin, bool value) {
   gpio_init(pin);
-  gpio_set_dir(pin, true);
+  gpio_set_dir(pin, GPIO_OUT);
   gpio_put(pin, value);
 }
 

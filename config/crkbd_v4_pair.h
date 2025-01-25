@@ -6,10 +6,6 @@
 
 //---------------------------------------------------------------------------
 
-struct StenoConfigBlock;
-
-//---------------------------------------------------------------------------
-
 #define JAVELIN_USE_EMBEDDED_STENO 0
 #define JAVELIN_USE_USER_DICTIONARY 0
 #define JAVELIN_USB_MILLIAMPS 500
@@ -68,7 +64,6 @@ const size_t BUTTON_COUNT = 46;
 #define JAVELIN_ENCODER 1
 #define JAVELIN_ENCODER_COUNT 4
 #define JAVELIN_ENCODER_LOCAL_OFFSET 2
-#define JAVELIN_ENCODER_TRIGGER_ON_HIGH_ONLY 1
 
 constexpr EncoderPins ENCODER_PINS[] = {{24, 7}, {6, 7}};
 

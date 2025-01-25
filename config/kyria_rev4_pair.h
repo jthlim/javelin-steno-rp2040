@@ -6,6 +6,12 @@
 
 //---------------------------------------------------------------------------
 
+// Only one of these at most can be enabled.
+#define USE_HALCYON_DISPLAY 1
+#define USE_HALCYON_ENCODER 0
+
+//---------------------------------------------------------------------------
+
 #define JAVELIN_USE_EMBEDDED_STENO 0
 #define JAVELIN_USE_USER_DICTIONARY 0
 #define JAVELIN_USB_MILLIAMPS 500
@@ -13,38 +19,43 @@
 #define JAVELIN_RGB 1
 #define JAVELIN_RGB_COUNT 62
 #define JAVELIN_RGB_LEFT_COUNT 31
-#define JAVELIN_RGB_PIN 0
+#define JAVELIN_RGB_PIN 3
 #define JAVELIN_USE_RGB_MAP 1
 
 #define JAVELIN_SPLIT 1
-#define JAVELIN_SPLIT_TX_PIN 1
-#define JAVELIN_SPLIT_RX_PIN 1
+#define JAVELIN_SPLIT_TX_PIN 28
+#define JAVELIN_SPLIT_RX_PIN 29
 #define JAVELIN_SPLIT_IS_MASTER 0
-#define JAVELIN_SPLIT_SIDE_PIN 9
-#define JAVELIN_SPLIT_TX_RX_BUFFER_SIZE 512
+#define JAVELIN_SPLIT_SIDE_PIN 24
+#define JAVELIN_SPLIT_TX_RX_BUFFER_SIZE 2048
 
-#define JAVELIN_DISPLAY_DRIVER 1306
-#define JAVELIN_OLED_WIDTH 128
-#define JAVELIN_OLED_HEIGHT 64
-#define JAVELIN_DISPLAY_WIDTH 128
-#define JAVELIN_DISPLAY_HEIGHT 64
-#define JAVELIN_OLED_I2C i2c1
-#define JAVELIN_OLED_SDA_PIN 2
-#define JAVELIN_OLED_SCL_PIN 3
-#define JAVELIN_OLED_I2C_ADDRESS 0x3c
-#define JAVELIN_OLED_ROTATION 180
+#if USE_HALCYON_DISPLAY
+#define JAVELIN_DISPLAY_DRIVER 7789
+#define JAVELIN_DISPLAY_MISO_PIN 12
+#define JAVELIN_DISPLAY_CS_PIN 13
+#define JAVELIN_DISPLAY_SCK_PIN 14
+#define JAVELIN_DISPLAY_MOSI_PIN 15
+#define JAVELIN_DISPLAY_DC_PIN 16
+#define JAVELIN_DISPLAY_RST_PIN 26
+#define JAVELIN_DISPLAY_SPI spi1
+#define JAVELIN_DISPLAY_SCREEN_WIDTH 135
+#define JAVELIN_DISPLAY_SCREEN_HEIGHT 240
+#define JAVELIN_DISPLAY_ROTATION 0
+#define JAVELIN_DISPLAY_WIDTH 135
+#define JAVELIN_DISPLAY_HEIGHT 240
+#endif
 
 #define JAVELIN_BUTTON_MATRIX 1
 
-constexpr uint8_t LEFT_COLUMN_PINS[] = {8, 27, 26, 22, 20, 23, 21};
-constexpr uint32_t LEFT_COLUMN_PIN_MASK = 0x0cf00100;
-constexpr uint8_t LEFT_ROW_PINS[] = {4, 5, 6, 7};
-constexpr uint32_t LEFT_ROW_PIN_MASK = 0x000000f0;
+constexpr uint8_t LEFT_COLUMN_PINS[] = {19, 20, 25, 4, 9, 10, 5};
+constexpr uint32_t LEFT_COLUMN_PIN_MASK = 0x02180630;
+constexpr uint8_t LEFT_ROW_PINS[] = {8, 11, 7, 6};
+constexpr uint32_t LEFT_ROW_PIN_MASK = 0x000009c0;
 
-constexpr uint8_t RIGHT_COLUMN_PINS[] = {23, 4, 5, 6, 7, 8, 21};
-constexpr uint32_t RIGHT_COLUMN_PIN_MASK = 0x00a001f0;
-constexpr uint8_t RIGHT_ROW_PINS[] = {27, 26, 22, 20};
-constexpr uint32_t RIGHT_ROW_PIN_MASK = 0x0c500000;
+constexpr uint8_t RIGHT_COLUMN_PINS[] = {5, 10, 9, 4, 25, 20, 19};
+constexpr uint32_t RIGHT_COLUMN_PIN_MASK = 0x02180630;
+constexpr uint8_t RIGHT_ROW_PINS[] = {8, 11, 7, 6};
+constexpr uint32_t RIGHT_ROW_PIN_MASK = 0x000009c0;
 
 // clang-format off
 //
@@ -100,17 +111,32 @@ constexpr uint8_t RGB_MAP[62] = {
 
 // clang-format on
 
+#if USE_HALCYON_ENCODER
+
+#define JAVELIN_BUTTON_PINS 1
+#define JAVELIN_BUTTON_PINS_OFFSET 51
+constexpr uint32_t BUTTON_PIN_MASK = 0x00010000;
+constexpr uint8_t BUTTON_PINS[] = {16};
+
+const size_t BUTTON_COUNT = 52;
+
+constexpr EncoderPins ENCODER_PINS[] = {{23, 22}, {27, 26}};
+
+#else
+
 const size_t BUTTON_COUNT = 50;
 
-#define JAVELIN_ENCODER 1
-#define JAVELIN_ENCODER_COUNT 2
-#define JAVELIN_ENCODER_LOCAL_OFFSET 1
+constexpr EncoderPins ENCODER_PINS[] = {{23, 22}};
 
-constexpr EncoderPins ENCODER_PINS[] = {{29, 28}};
+#endif
+
+#define JAVELIN_ENCODER 1
+#define JAVELIN_ENCODER_COUNT 4
+#define JAVELIN_ENCODER_LOCAL_OFFSET 2
 
 const char *const MANUFACTURER_NAME = "splitkb";
-const char *const PRODUCT_NAME = "Kyria (Javelin)";
-const int VENDOR_ID = 0x8d1d;
+const char *const PRODUCT_NAME = "Halcyon Kyria (Javelin)";
+const int VENDOR_ID = 0x7fce;
 // const int PRODUCT_ID = 0xcf44;
 
 //---------------------------------------------------------------------------
