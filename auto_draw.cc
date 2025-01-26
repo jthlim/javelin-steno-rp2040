@@ -142,14 +142,16 @@ void StenoStrokeCapture::DrawWpm(int displayId) {
 
   char buffer[16];
   Str::Sprintf(buffer, "%d", WpmTracker::instance.Get5sWpm());
-#if JAVELIN_DISPLAY_WIDTH >= 64
+#if JAVELIN_DISPLAY_WIDTH >= 130 && JAVELIN_DISPLAY_HEIGHT >= 128
+  const Font *font = &Font::HUGE_DIGITS;
+#elif JAVELIN_DISPLAY_WIDTH >= 64
   const Font *font = &Font::LARGE_DIGITS;
 #else
   const Font *font = &Font::MEDIUM_DIGITS;
 #endif
   DisplayDriver::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
                           JAVELIN_DISPLAY_HEIGHT / 2 - font->height / 2 +
-                              font->baseline / 2,
+                              3 * font->baseline / 4,
                           font, TextAlignment::MIDDLE, buffer);
 
   font = &Font::DEFAULT;
@@ -164,7 +166,10 @@ void StenoStrokeCapture::DrawStrokes(int displayId) {
   char buffer[16];
   Str::Sprintf(buffer, "%zu", strokeCount);
 
-#if JAVELIN_DISPLAY_WIDTH >= 128
+#if JAVELIN_DISPLAY_WIDTH >= 130 && JAVELIN_DISPLAY_HEIGHT >= 128
+  const Font *font =
+      Str::Length(buffer) <= 3 ? &Font::HUGE_DIGITS : &Font::LARGE_DIGITS;
+#elif JAVELIN_DISPLAY_WIDTH >= 128
   const Font *font = &Font::LARGE_DIGITS;
 #elif JAVELIN_DISPLAY_WIDTH >= 64
   const Font *font =
@@ -175,7 +180,7 @@ void StenoStrokeCapture::DrawStrokes(int displayId) {
 #endif
   DisplayDriver::DrawText(displayId, JAVELIN_DISPLAY_WIDTH / 2,
                           JAVELIN_DISPLAY_HEIGHT / 2 - font->height / 2 +
-                              font->baseline / 2,
+                              3 * font->baseline / 4,
                           font, TextAlignment::MIDDLE, buffer);
 
   font = &Font::DEFAULT;

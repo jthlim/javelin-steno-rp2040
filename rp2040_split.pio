@@ -31,21 +31,24 @@ public rx_start:
     set y, 1
 
 rx_1:
-    wait 1 pin 0          [5]
+    wait 1 pin 0          [6]
+rx_1_repeat:
     jmp pin rx_1_1
 rx_1_0:
     in y, 1
-    jmp rx_1
+    wait 1 pin 0          [5]
+    jmp rx_1_repeat
 rx_1_1:
     in null, 1
 
 .wrap_target
 rx_0:
-    wait 0 pin 0          [5]
+    wait 0 pin 0          [6]
     jmp pin rx_0_1
 rx_0_0:
     in null, 1
-    jmp rx_1
+    wait 1 pin 0          [5]
+    jmp rx_1_repeat
 rx_0_1:
     in y, 1
 .wrap

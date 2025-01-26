@@ -2,8 +2,6 @@
 
 #include "st7789.h"
 #include "javelin/button_script_manager.h"
-#include "javelin/clock.h"
-#include "javelin/console.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
 #include "javelin/utf8_pointer.h"
@@ -49,23 +47,16 @@ St7789::St7789Data St7789::instances[1];
 
 void St7789::SendCommand(St7789Command command, const void *data,
                          size_t length) {
-  gpio_put(JAVELIN_DISPLAY_CS_PIN, 0);
   gpio_put(JAVELIN_DISPLAY_DC_PIN, 0);
-  spi_set_format(JAVELIN_DISPLAY_SPI, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
+  spi_set_format(JAVELIN_DISPLAY_SPI, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
 
-  sleep_us(1);
   spi_write_blocking(JAVELIN_DISPLAY_SPI, (const uint8_t *)&command,
                      sizeof(command));
 
   if (length) {
     gpio_put(JAVELIN_DISPLAY_DC_PIN, 1);
-
-    sleep_us(1);
     spi_write_blocking(JAVELIN_DISPLAY_SPI, (const uint8_t *)data, length);
   }
-
-  gpio_put(JAVELIN_DISPLAY_CS_PIN, 1);
-  gpio_put(JAVELIN_DISPLAY_DC_PIN, 1);
 }
 
 void St7789::SetLR(uint32_t left, uint32_t right) {
@@ -108,28 +99,23 @@ void St7789::St7789Data::Initialize() {
 
   gpio_init(JAVELIN_DISPLAY_CS_PIN);
   gpio_set_dir(JAVELIN_DISPLAY_CS_PIN, GPIO_OUT);
-  gpio_put(JAVELIN_DISPLAY_CS_PIN, 1);
+  gpio_put(JAVELIN_DISPLAY_CS_PIN, 0);
 
   gpio_init(JAVELIN_DISPLAY_RST_PIN);
   gpio_set_dir(JAVELIN_DISPLAY_RST_PIN, GPIO_OUT);
   gpio_put(JAVELIN_DISPLAY_RST_PIN, 0);
-  sleep_ms(100);
+  sleep_us(100);
   gpio_put(JAVELIN_DISPLAY_RST_PIN, 1);
-  sleep_ms(150);
+  sleep_ms(120);
 
   SendCommand(St7789Command::SOFTWARE_RESET);
-  sleep_ms(120);
+  sleep_ms(5);
 
   SendCommand(St7789Command::SLEEP_OFF, NULL, 0);
   sleep_ms(5);
 
   static const uint8_t interfaceFormat = 0x55; // 565 rgb interface + control.
   SendCommand(St7789Command::SET_INTERFACE_PIXEL_FORMAT, &interfaceFormat, 1);
-  sleep_ms(10);
-
-  static const uint8_t memoryDataAccessControl = 0;
-  SendCommand(St7789Command::MEMORY_DATA_ACCESS_CONTROL,
-              &memoryDataAccessControl, 1);
 
   SendCommand(St7789Command::DISPLAY_INVERSION_ON);
   SendCommand(St7789Command::SET_DISPLAY_MODE_NORMAL, NULL, 0);
@@ -140,7 +126,6 @@ void St7789::St7789Data::Initialize() {
   dma4->WaitUntilComplete();
 
   SendCommand(St7789Command::DISPLAY_ON, NULL, 0);
-  sleep_ms(200);
 
   available = true;
 }
@@ -227,7 +212,7 @@ void St7789::St7789Data::DrawRect(int left, int top, int right, int bottom) {
   if (right >= JAVELIN_DISPLAY_WIDTH) {
     right = JAVELIN_DISPLAY_WIDTH;
   }
-  int width = right - left;
+  const int width = right - left;
 
   if (top < 0) {
     top = 0;
@@ -262,7 +247,7 @@ void St7789::St7789Data::DrawImage(int x, int y, int width, int height,
     return;
   }
 
-  size_t bytesPerColumn = (height + 7) >> 3;
+  const size_t bytesPerColumn = (height + 7) >> 3;
 
   if (x < 0) {
     width += x;
@@ -286,8 +271,8 @@ void St7789::St7789Data::DrawImage(int x, int y, int width, int height,
     for (int yy = 0, topY = y; yy < bytesPerColumn; ++yy, topY += 8) {
       int v = *data++;
       while (v) {
-        int nextRow = __builtin_ctz(v);
-        uint32_t pixelY = topY + nextRow;
+        const int nextRow = __builtin_ctz(v);
+        const uint32_t pixelY = topY + nextRow;
         if (pixelY < JAVELIN_DISPLAY_HEIGHT) {
           p[pixelY * JAVELIN_DISPLAY_WIDTH] = drawColor;
         }
@@ -330,7 +315,31 @@ void St7789::St7789Data::DrawGrayscaleRange(int x, int y, int width, int height,
 
   dirty = true;
 
-  // TODO
+  uint16_t *p = &buffer16[y * JAVELIN_DISPLAY_WIDTH + x];
+
+  const int endX = x + width;
+  if (endX > JAVELIN_DISPLAY_WIDTH) {
+    width = JAVELIN_DISPLAY_WIDTH - x;
+  }
+  const int endY = y + height;
+  if (endY > JAVELIN_DISPLAY_HEIGHT) {
+    height = JAVELIN_DISPLAY_HEIGHT - y;
+  }
+
+  while (width > 0) {
+    const uint8_t *column = data;
+    uint16_t *pColumn = p;
+    data += bytesPerColumn;
+
+    for (int yy = 0; yy < height; ++yy) {
+      if (min <= column[yy] && column[yy] < max) {
+        pColumn[yy * JAVELIN_DISPLAY_WIDTH] = drawColor;
+      }
+    }
+
+    p++;
+    --width;
+  }
 }
 
 void St7789::St7789Data::DrawText(int x, int y, const Font *font,
@@ -361,7 +370,7 @@ void St7789::St7789Data::DrawText(int x, int y, const Font *font,
 
     const uint8_t *data = font->GetCharacterData(c);
     if (data) {
-      uint32_t width = font->GetCharacterWidth(c);
+      const uint32_t width = font->GetCharacterWidth(c);
       DrawImage(x, y, width, font->height, data);
       x += width;
     }
@@ -392,10 +401,7 @@ void St7789::St7789Data::Update() {
   SetTB(yOffset, yOffset + JAVELIN_DISPLAY_SCREEN_HEIGHT - 1);
   SendCommand(St7789Command::MEMORY_WRITE);
 
-  gpio_put(JAVELIN_DISPLAY_CS_PIN, 0);
   gpio_put(JAVELIN_DISPLAY_DC_PIN, 1);
-  sleep_us(1);
-
   SendScreenData();
 }
 
@@ -403,7 +409,7 @@ void St7789::St7789Data::SendScreenData() const {
   dma4->source = buffer32;
   dma4->destination = &spi_get_hw(JAVELIN_DISPLAY_SPI)->dr;
   dma4->count = sizeof(buffer32) / 2;
-  spi_set_format(JAVELIN_DISPLAY_SPI, 16, SPI_CPOL_0, SPI_CPHA_0,
+  spi_set_format(JAVELIN_DISPLAY_SPI, 16, SPI_CPOL_1, SPI_CPHA_1,
                  SPI_MSB_FIRST);
 
   constexpr Rp2040DmaControl dmaControl = {
@@ -684,12 +690,11 @@ void Display::SetDrawColor(int displayId, int color) {
 #else
   displayId = 0;
 #endif
-  int r = (color >> 19) & 0x1f;
-  int g = (color >> 10) & 0x3f;
-  int b = (color >> 3) & 0x1f;
+  const int r = (color >> 19) & 0x1f;
+  const int g = (color >> 10) & 0x3f;
+  const int b = (color >> 3) & 0x1f;
 
-  int rgb565 = (r << 11) | (g << 5) | b;
-
+  const int rgb565 = (r << 11) | (g << 5) | b;
   St7789::instances[displayId].drawColor = rgb565;
 }
 
@@ -705,8 +710,7 @@ void Display::SetDrawColorRgb(int displayId, int r, int g, int b) {
   g = (g >> 2) & 0x3f;
   b = (b >> 3) & 0x1f;
 
-  int rgb565 = (r << 11) | (g << 5) | b;
-
+  const int rgb565 = (r << 11) | (g << 5) | b;
   St7789::instances[displayId].drawColor = rgb565;
 }
 
