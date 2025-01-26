@@ -51,6 +51,7 @@ void St7789::SendCommand(St7789Command command, const void *data,
                          size_t length) {
   gpio_put(JAVELIN_DISPLAY_CS_PIN, 0);
   gpio_put(JAVELIN_DISPLAY_DC_PIN, 0);
+  spi_set_format(JAVELIN_DISPLAY_SPI, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 
   sleep_us(1);
   spi_write_blocking(JAVELIN_DISPLAY_SPI, (const uint8_t *)&command,
@@ -91,7 +92,6 @@ void St7789::SetTB(uint32_t top, uint32_t bottom) {
 
 void St7789::St7789Data::Initialize() {
   spi_init(JAVELIN_DISPLAY_SPI, 125'000'000);
-  spi_set_format(JAVELIN_DISPLAY_SPI, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 
   gpio_init(JAVELIN_DISPLAY_MISO_PIN);
   gpio_set_function(JAVELIN_DISPLAY_MISO_PIN, GPIO_FUNC_SPI);
@@ -142,67 +142,8 @@ void St7789::St7789Data::Initialize() {
   SendCommand(St7789Command::DISPLAY_ON, NULL, 0);
   sleep_ms(200);
 
-  // available = true;
+  available = true;
 }
-
-// bool St7789::SendCommand(uint8_t command) {
-//   uint8_t buffer[2] = {0x80, command};
-//   return i2c_write_blocking(JAVELIN_OLED_I2C, JAVELIN_OLED_I2C_ADDRESS,
-//   buffer,
-//                             2, false) == 2;
-// }
-
-// bool St7789::SendCommandList(const uint8_t *commands, size_t length) {
-//   for (size_t i = 0; i < length; ++i) {
-//     if (!SendCommand(commands[i])) {
-//       return false;
-//     }
-//   }
-//   return true;
-// }
-
-// void St7789::SendCommandListDma(const uint8_t *commands, size_t length) {
-//   JAVELIN_OLED_I2C->hw->enable = 0;
-//   JAVELIN_OLED_I2C->hw->tar = JAVELIN_OLED_I2C_ADDRESS;
-//   JAVELIN_OLED_I2C->hw->enable = 1;
-
-//   // Start of data.
-//   uint16_t *d = dmaBuffer;
-//   for (size_t i = 0; i < length; ++i) {
-//     *d++ = 0x80;
-//     *d++ = commands[i] | 0x200;
-//   }
-
-//   SendDmaBuffer(length * 2);
-// }
-
-// bool St7789::IsI2cTxReady() {
-//   return (JAVELIN_OLED_I2C->hw->raw_intr_stat &
-//           I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS) != 0;
-// }
-
-// void St7789::WaitForI2cTxReady() {
-//   while (!IsI2cTxReady()) {
-//     // Do nothing.
-//   }
-// }
-
-// void St7789::SendDmaBuffer(size_t count) {
-//   dma4->count = count;
-//   dma4->source = dmaBuffer;
-//   dma4->destination = &JAVELIN_OLED_I2C->hw->data_cmd;
-
-//   Rp2040DmaControl dmaControl = {
-//       .enable = true,
-//       .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
-//       .incrementRead = true,
-//       .incrementWrite = false,
-//       .chainToDma = 4,
-//       .transferRequest = Rp2040DmaTransferRequest::I2C1_TX,
-//       .sniffEnable = false,
-//   };
-//   dma4->controlTrigger = dmaControl;
-// }
 
 //---------------------------------------------------------------------------
 
@@ -216,17 +157,33 @@ void St7789::St7789Data::SetPixel(uint32_t x, uint32_t y) {
 }
 
 void St7789::St7789Data::Clear() {
-  // if (!available) {
-  //   return;
-  // }
+  static int zero = 0;
+
+  if (!available) {
+    return;
+  }
   dirty = true;
-  Mem::Clear(buffer32);
+
+  dma6->source = &zero;
+  dma6->destination = buffer32;
+  dma6->count = sizeof(buffer32) / 4;
+  constexpr Rp2040DmaControl dmaControl = {
+      .enable = true,
+      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .incrementRead = false,
+      .incrementWrite = true,
+      .chainToDma = 6,
+      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .sniffEnable = false,
+  };
+  dma6->controlTrigger = dmaControl;
+  dma6->WaitUntilComplete();
 }
 
 void St7789::St7789Data::DrawLine(int x0, int y0, int x1, int y1) {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
   dirty = true;
 
   // Use balanced Bresenham's line algorithm:
@@ -256,9 +213,9 @@ void St7789::St7789Data::DrawLine(int x0, int y0, int x1, int y1) {
 }
 
 void St7789::St7789Data::DrawRect(int left, int top, int right, int bottom) {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
 
   if (right < 0 || bottom < 0 || left >= JAVELIN_DISPLAY_WIDTH ||
       top >= JAVELIN_DISPLAY_HEIGHT) {
@@ -292,9 +249,9 @@ void St7789::St7789Data::DrawRect(int left, int top, int right, int bottom) {
 
 void St7789::St7789Data::DrawImage(int x, int y, int width, int height,
                                    const uint8_t *data) {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
 
   // It's all off the screen.
   if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
@@ -378,9 +335,9 @@ void St7789::St7789Data::DrawGrayscaleRange(int x, int y, int width, int height,
 
 void St7789::St7789Data::DrawText(int x, int y, const Font *font,
                                   TextAlignment alignment, const char *text) {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
 
   Utf8Pointer utf8p(text);
   y -= font->baseline;
@@ -413,13 +370,13 @@ void St7789::St7789Data::DrawText(int x, int y, const Font *font,
 }
 
 void St7789::St7789Data::Update() {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
 
   control.Update();
 
-  if (!dirty) { // || dma4->IsBusy() || !IsI2cTxReady()) {
+  if (!dirty || dma4->IsBusy()) {
     return;
   }
 
@@ -439,13 +396,19 @@ void St7789::St7789Data::Update() {
   gpio_put(JAVELIN_DISPLAY_DC_PIN, 1);
   sleep_us(1);
 
+  SendScreenData();
+}
+
+void St7789::St7789Data::SendScreenData() const {
   dma4->source = buffer32;
   dma4->destination = &spi_get_hw(JAVELIN_DISPLAY_SPI)->dr;
-  dma4->count = sizeof(buffer32);
+  dma4->count = sizeof(buffer32) / 2;
+  spi_set_format(JAVELIN_DISPLAY_SPI, 16, SPI_CPOL_0, SPI_CPHA_0,
+                 SPI_MSB_FIRST);
 
   constexpr Rp2040DmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::BYTE,
+      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 4,
@@ -476,18 +439,18 @@ void St7789::St7789Control::Update() {
 
 //---------------------------------------------------------------------------
 
-// void St7789::St7789Availability::UpdateBuffer(TxBuffer &buffer) {
-//   if (!dirty) {
-//     return;
-//   }
-//   dirty = false;
-//   buffer.Add(SplitHandlerId::DISPLAY_AVAILABLE, &available, sizeof(bool));
-// }
+void St7789::St7789Availability::UpdateBuffer(TxBuffer &buffer) {
+  if (!dirty) {
+    return;
+  }
+  dirty = false;
+  buffer.Add(SplitHandlerId::DISPLAY_AVAILABLE, &available, sizeof(bool));
+}
 
-// void St7789::St7789Availability::OnDataReceived(const void *data,
-//                                                 size_t length) {
-//   available = *(bool *)data;
-// }
+void St7789::St7789Availability::OnDataReceived(const void *data,
+                                                size_t length) {
+  available = *(bool *)data;
+}
 
 void St7789::St7789Control::UpdateBuffer(TxBuffer &buffer) {
   if (dirtyFlag == 0) {
@@ -523,9 +486,9 @@ struct St7789TxRxData {
 };
 
 void St7789::St7789Data::UpdateBuffer(TxBuffer &buffer) {
-  // if (!available) {
-  //   return;
-  // }
+  if (!available) {
+    return;
+  }
   if (!dirty && txRxOffset == 0) {
     return;
   }
@@ -726,10 +689,8 @@ void Display::SetDrawColor(int displayId, int color) {
   int b = (color >> 3) & 0x1f;
 
   int rgb565 = (r << 11) | (g << 5) | b;
-  int pixelColor;
-  asm("rev16 %0, %1" : "=r"(pixelColor) : "r"(rgb565));
 
-  St7789::instances[displayId].drawColor = pixelColor;
+  St7789::instances[displayId].drawColor = rgb565;
 }
 
 void Display::SetDrawColorRgb(int displayId, int r, int g, int b) {
@@ -745,10 +706,8 @@ void Display::SetDrawColorRgb(int displayId, int r, int g, int b) {
   b = (b >> 3) & 0x1f;
 
   int rgb565 = (r << 11) | (g << 5) | b;
-  int pixelColor;
-  asm("rev16 %0, %1" : "=r"(pixelColor) : "r"(rgb565));
 
-  St7789::instances[displayId].drawColor = pixelColor;
+  St7789::instances[displayId].drawColor = rgb565;
 }
 
 //---------------------------------------------------------------------------

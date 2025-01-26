@@ -35,13 +35,13 @@ public:
 
 #if JAVELIN_SPLIT
   static void RegisterMasterHandlers() {
-    // Split::RegisterRxHandler(SplitHandlerId::DISPLAY_AVAILABLE,
-    //                          &instances[1].available);
+    Split::RegisterRxHandler(SplitHandlerId::DISPLAY_AVAILABLE,
+                             &instances[1].available);
     Split::RegisterTxHandler(&instances[1]);
     Split::RegisterTxHandler(&instances[1].control);
   }
   static void RegisterSlaveHandlers() {
-    // Split::RegisterTxHandler(&instances[1].available);
+    Split::RegisterTxHandler(&instances[1].available);
     Split::RegisterRxHandler(SplitHandlerId::DISPLAY_DATA, &instances[1]);
     Split::RegisterRxHandler(SplitHandlerId::DISPLAY_CONTROL,
                              &instances[1].control);
@@ -52,25 +52,25 @@ public:
 #endif
 
 private:
-  // class St7789Availability : public SplitTxHandler, public SplitRxHandler {
-  // public:
-  //   void operator=(bool value) { available = value; }
-  //   bool operator!() const { return !available; }
-  //   operator bool() const { return available; }
+  class St7789Availability : public SplitTxHandler, public SplitRxHandler {
+  public:
+    void operator=(bool value) { available = value; }
+    bool operator!() const { return !available; }
+    operator bool() const { return available; }
 
-  // private:
-  //   bool available = true; // During startup scripts, the frame buffer may
-  //                          // need to be written.
-  //                          // Setting this to available will permit
-  //                          // the slave screen to be updated until the first
-  //                          // availability packet comes in.
-  //   bool dirty = true;
+  private:
+    bool available = true; // During startup scripts, the frame buffer may
+                           // need to be written.
+                           // Setting this to available will permit
+                           // the slave screen to be updated until the first
+                           // availability packet comes in.
+    bool dirty = true;
 
-  //   virtual void UpdateBuffer(TxBuffer &buffer);
-  //   virtual void OnDataReceived(const void *data, size_t length);
-  //   virtual void OnReceiveConnectionReset() { available = false; }
-  //   virtual void OnTransmitConnectionReset() { dirty = true; }
-  // };
+    virtual void UpdateBuffer(TxBuffer &buffer);
+    virtual void OnDataReceived(const void *data, size_t length);
+    virtual void OnReceiveConnectionReset() { available = false; }
+    virtual void OnTransmitConnectionReset() { dirty = true; }
+  };
 
   class St7789Control : public SplitTxHandler, public SplitRxHandler {
   public:
@@ -107,7 +107,7 @@ private:
 
   class St7789Data : public SplitTxHandler, public SplitRxHandler {
   public:
-    // St7789Availability available;
+    St7789Availability available;
     St7789Control control;
     bool dirty;
     uint16_t drawColor = 0xffff;
@@ -138,6 +138,8 @@ private:
       uint32_t buffer32[JAVELIN_DISPLAY_SCREEN_WIDTH *
                         JAVELIN_DISPLAY_SCREEN_HEIGHT / 2];
     };
+
+    void SendScreenData() const;
 
     virtual void UpdateBuffer(TxBuffer &buffer);
     virtual void OnTransmitConnectionReset() { dirty = true; }

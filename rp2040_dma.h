@@ -69,7 +69,10 @@ struct Rp2040DmaControl {
   uint32_t incrementWrite : 1;
   uint32_t ringSizeShift : 4;
   uint32_t ringSel : 1;
+
+  // Set to the channel being used to disable chaining.
   uint32_t chainToDma : 4;
+
   Rp2040DmaTransferRequest transferRequest : 6;
   uint32_t quietIrq : 1;
   uint32_t bswap : 1;
