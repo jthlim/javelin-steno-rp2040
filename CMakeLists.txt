@@ -109,9 +109,10 @@ target_sources(${NAME} PUBLIC
   javelin/font/monochrome/data/default.cc
   javelin/font/monochrome/data/dos.cc
   javelin/font/monochrome/data/huge_digits.cc
-  javelin/font/monochrome/data/small_digits.cc
-  javelin/font/monochrome/data/medium_digits.cc
+  javelin/font/monochrome/data/large.cc
   javelin/font/monochrome/data/large_digits.cc
+  javelin/font/monochrome/data/medium_digits.cc
+  javelin/font/monochrome/data/small_digits.cc
   javelin/font/monochrome/font.cc
   javelin/hal/ble.cc
   javelin/hal/bootloader.cc

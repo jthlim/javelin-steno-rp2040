@@ -32,14 +32,13 @@ loop:
 public rx_start:
     set y, 1
 
-rx_1:
     wait 1 pin 0          [1]
-rx_1_repeat:
+rx_1:
     jmp pin rx_1_1
 rx_1_0:
     in y, 1
     wait 1 pin 0
-    jmp rx_1_repeat
+    jmp rx_1
 rx_1_1:
     in null, 1
 
@@ -50,7 +49,7 @@ rx_0:
 rx_0_0:
     in null, 1
     wait 1 pin 0
-    jmp rx_1_repeat
+    jmp rx_1
 rx_0_1:
     in y, 1
 .wrap
