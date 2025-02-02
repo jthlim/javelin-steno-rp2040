@@ -49,6 +49,7 @@ target_sources(${NAME} PUBLIC
   main_report_builder.cc
   pico_bindings.cc
   pico_thread.cc
+  pinnacle.cc
   plover_hid_report_buffer.cc
   rp2040_bootloader.cc
   rp2040_button_state.cc

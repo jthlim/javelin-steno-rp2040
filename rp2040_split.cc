@@ -37,16 +37,16 @@ bool Split::IsLeft() {
 const PIO PIO_INSTANCE = pio0;
 
 #if JAVELIN_SPLIT_TX_PIN == JAVELIN_SPLIT_RX_PIN
-const int TX_STATE_MACHINE_INDEX = 0;
-const int RX_STATE_MACHINE_INDEX = 0;
+constexpr int TX_STATE_MACHINE_INDEX = 0;
+constexpr int RX_STATE_MACHINE_INDEX = 0;
 #else
-const int TX_STATE_MACHINE_INDEX = 0;
-const int RX_STATE_MACHINE_INDEX = 1;
+constexpr int TX_STATE_MACHINE_INDEX = 0;
+constexpr int RX_STATE_MACHINE_INDEX = 1;
 #endif
 
-const uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
-const uint32_t SLAVE_RECEIVE_TIMEOUT_US = 10000;
-const uint32_t RETRY_TIMEOUT_US = 100000;
+constexpr uint32_t MASTER_RECEIVE_TIMEOUT_US = 2000;
+constexpr uint32_t SLAVE_RECEIVE_TIMEOUT_US = 10000;
+constexpr uint32_t RETRY_TIMEOUT_US = 100000;
 
 //---------------------------------------------------------------------------
 
@@ -158,7 +158,7 @@ void Rp2040Split::SplitData::ResetRxDma() {
   dma3->destination = &rxBuffer.header;
   dma3->count = sizeof(RxBuffer) / sizeof(uint32_t);
 
-  Rp2040DmaControl receiveControl = {
+  constexpr Rp2040DmaControl receiveControl = {
     .enable = true,
     .dataSize = Rp2040DmaControl::DataSize::WORD,
     .incrementRead = false,
@@ -187,7 +187,7 @@ void Rp2040Split::SplitData::SendTxBuffer() {
   const size_t bitCount = 32 * wordCount;
   pio_sm_put_blocking(PIO_INSTANCE, TX_STATE_MACHINE_INDEX, bitCount - 1);
 
-  Rp2040DmaControl sendControl = {
+  constexpr Rp2040DmaControl sendControl = {
       .enable = true,
       .dataSize = Rp2040DmaControl::DataSize::WORD,
       .incrementRead = true,
@@ -232,8 +232,9 @@ void Rp2040Split::SplitData::OnReceiveSucceeded() {
 }
 
 bool Rp2040Split::SplitData::ProcessReceive() {
-  size_t dma3Count = dma3->count;
-  size_t receivedWordCount = sizeof(RxBuffer) / sizeof(uint32_t) - dma3Count;
+  const size_t dma3Count = dma3->count;
+  const size_t receivedWordCount =
+      sizeof(RxBuffer) / sizeof(uint32_t) - dma3Count;
 
   switch (rxBuffer.Validate(receivedWordCount, metrics)) {
   case RxBufferValidateResult::CONTINUE:
@@ -297,9 +298,9 @@ void Rp2040Split::SplitData::Update() {
 
   case State::RECEIVING:
     if (!ProcessReceive()) {
-      uint32_t now = time_us_32();
-      uint32_t timeSinceLastUpdate = now - receiveStartTime;
-      uint32_t receiveTimeout =
+      const uint32_t now = time_us_32();
+      const uint32_t timeSinceLastUpdate = now - receiveStartTime;
+      const uint32_t receiveTimeout =
           IsMaster() ? MASTER_RECEIVE_TIMEOUT_US : SLAVE_RECEIVE_TIMEOUT_US;
       if (timeSinceLastUpdate > receiveTimeout) {
         metrics[SplitMetricId::TIMEOUT_COUNT]++;

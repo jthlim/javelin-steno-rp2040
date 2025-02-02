@@ -15,6 +15,7 @@
 #include "javelin/static_allocate.h"
 #include "javelin/timer_manager.h"
 #include "main_report_builder.h"
+#include "pinnacle.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_button_state.h"
 #include "rp2040_crc.h"
@@ -112,6 +113,7 @@ void MasterTask::Update() {
     return;
   }
 
+  Pinnacle::Update();
   Rp2040EncoderState::Update();
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
@@ -158,6 +160,7 @@ void SlaveTask::Update() {
     return;
   }
 
+  Pinnacle::Update();
   Rp2040EncoderState::Update();
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
@@ -297,8 +300,7 @@ void DoSlaveRunLoop() {
     cdc_task();
 
     SplitHidReportBuffer::Update();
-    MainReportBuilder::instance.FlushAllIfRequired();
-    ConsoleReportBuffer::instance.Flush();
+    FlushBuffers();
     ConsoleInputBuffer::Process();
     Ws2812::Update();
     Ssd1306::Update();
@@ -327,6 +329,7 @@ int main(void) {
   Rp2040Crc::Initialize();
   Ws2812::Initialize();
   Rp2040Split::Initialize();
+  Pinnacle::Initialize();
   Ssd1306::Initialize();
   St7789::Initialize();
 
@@ -340,6 +343,7 @@ int main(void) {
     SplitHidReportBuffer::RegisterMasterHandlers();
     SplitSerialBuffer::RegisterTxHandler();
     SplitVersion::RegisterRxHandler();
+    Pinnacle::RegisterRxHandler();
     Ssd1306::RegisterMasterHandlers();
     St7789::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
@@ -360,6 +364,7 @@ int main(void) {
     SplitHidReportBuffer::RegisterSlaveHandlers();
     SplitSerialBuffer::RegisterRxHandler();
     SplitVersion::RegisterTxHandler();
+    Pinnacle::RegisterTxHandler();
     Ssd1306::RegisterSlaveHandlers();
     St7789::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();

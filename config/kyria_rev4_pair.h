@@ -6,7 +6,11 @@
 
 //---------------------------------------------------------------------------
 
-// Only one of these at most can be enabled.
+// The cirque driver has auto-detection, so can always be enabled.
+#define USE_CIRQUE_TRACKPAD 1
+
+// There is no way to autodetect display/encoder, so only one of these can
+// be enabled.
 #define USE_HALCYON_DISPLAY 1
 #define USE_HALCYON_ENCODER 0
 
@@ -43,6 +47,18 @@
 #define JAVELIN_DISPLAY_ROTATION 0
 #define JAVELIN_DISPLAY_WIDTH 135
 #define JAVELIN_DISPLAY_HEIGHT 240
+#endif
+
+#if USE_CIRQUE_TRACKPAD
+#define JAVELIN_POINTER 0x73a
+#define JAVELIN_POINTER_SPI spi1
+#define JAVELIN_POINTER_MISO_PIN 12
+#define JAVELIN_POINTER_CS_PIN 13
+#define JAVELIN_POINTER_SCK_PIN 14
+#define JAVELIN_POINTER_MOSI_PIN 15
+
+#define JAVELIN_POINTER_COUNT 2
+#define JAVELIN_POINTER_LOCAL_OFFSET 1
 #endif
 
 #define JAVELIN_BUTTON_MATRIX 1

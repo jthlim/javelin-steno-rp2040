@@ -2,6 +2,7 @@
 
 #include "st7789.h"
 #include "javelin/button_script_manager.h"
+#include "javelin/console.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
 #include "javelin/utf8_pointer.h"
@@ -81,7 +82,16 @@ void St7789::SetTB(uint32_t top, uint32_t bottom) {
   SendCommand(St7789Command::SET_ROW_ADDRESS, data, sizeof(data));
 }
 
+static bool IsSpiInitialized(spi_inst_t *instance) {
+  return (spi_get_hw(instance)->cr1 & SPI_SSPCR1_SSE_BITS) != 0;
+}
+
 void St7789::St7789Data::Initialize() {
+  if (IsSpiInitialized(JAVELIN_DISPLAY_SPI)) {
+    available = false;
+    return;
+  }
+
   spi_init(JAVELIN_DISPLAY_SPI, 125'000'000);
 
   gpio_init(JAVELIN_DISPLAY_MISO_PIN);
@@ -128,6 +138,17 @@ void St7789::St7789Data::Initialize() {
   SendCommand(St7789Command::DISPLAY_ON, NULL, 0);
 
   available = true;
+}
+
+void St7789::PrintInfo() {
+#if JAVELIN_SPLIT
+  Console::Printf("Screen: %s, %s\n",
+                  instances[0].available ? "present" : "not present",
+                  instances[1].available ? "present" : "not present");
+#else
+  Console::Printf("Screen: %s\n",
+                  instances[0].available ? "present" : "not present");
+#endif
 }
 
 //---------------------------------------------------------------------------

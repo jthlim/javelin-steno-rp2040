@@ -184,6 +184,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
     // Rather than print incorrect info, don't print anything on the slave at
     // all.
     Ssd1306::PrintInfo();
+    St7789::PrintInfo();
 #endif
 
     Console::Printf("Processing chain\n");
@@ -297,6 +298,9 @@ static const ParameterData PARAMETER_DATA[] = {
     {"maximum_script_size", (void *)MAXIMUM_BUTTON_SCRIPT_SIZE},
 #if JAVELIN_USE_SCRIPT_STORAGE
     {"maximum_script_storage_size", (void *)MAXIMUM_SCRIPT_STORAGE_SIZE},
+#endif
+#if JAVELIN_POINTER
+    {"pointer_count", (void *)JAVELIN_POINTER_COUNT},
 #endif
     {"script_address", SCRIPT_BYTE_CODE},
     {"script_byte_code_version", (void *)SCRIPT_BYTE_CODE_VERSION},

@@ -18,6 +18,7 @@ enum St7789Command : uint8_t;
 class St7789 {
 public:
   static void Initialize() { GetInstance().Initialize(); }
+  static void PrintInfo();
 
   static void Update() { GetInstance().Update(); }
 
