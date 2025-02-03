@@ -159,6 +159,9 @@ struct Rp2040Dma {
     dmaAbort->Abort(this - (Rp2040Dma *)0x50000000);
     WaitUntilComplete();
   }
+
+  inline void Copy16(void *dest, const void *source, size_t count);
+  inline void Copy32(void *dest, const void *source, size_t count);
 };
 
 static Rp2040Dma *const dma0 = (Rp2040Dma *)0x50000000;
@@ -180,5 +183,39 @@ static volatile uint32_t *const dmaTimer0 = (uint32_t *)0x50000420;
 static volatile uint32_t *const dmaTimer1 = (uint32_t *)0x50000424;
 static volatile uint32_t *const dmaTimer2 = (uint32_t *)0x50000428;
 static volatile uint32_t *const dmaTimer3 = (uint32_t *)0x5000042c;
+
+//---------------------------------------------------------------------------
+
+inline void Rp2040Dma::Copy16(void *d, const void *s, size_t c) {
+  source = s;
+  destination = d;
+  count = c;
+  const Rp2040DmaControl dmaControl = {
+      .enable = true,
+      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
+      .incrementRead = true,
+      .incrementWrite = true,
+      .chainToDma = uint32_t(this - dma0),
+      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .sniffEnable = false,
+  };
+  dma6->controlTrigger = dmaControl;
+}
+
+inline void Rp2040Dma::Copy32(void *d, const void *s, size_t c) {
+  source = s;
+  destination = d;
+  count = c;
+  const Rp2040DmaControl dmaControl = {
+      .enable = true,
+      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .incrementRead = true,
+      .incrementWrite = true,
+      .chainToDma = uint32_t(this - dma0),
+      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .sniffEnable = false,
+  };
+  dma6->controlTrigger = dmaControl;
+}
 
 //---------------------------------------------------------------------------

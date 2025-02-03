@@ -34,6 +34,10 @@ public:
     instances[displayId].DrawText(x, y, font, alignment, text);
   }
 
+  static void RunConwayStep(int displayId) {
+    instances[displayId].RunConwayStep();
+  }
+
 #if JAVELIN_SPLIT
   static void RegisterMasterHandlers() {
     Split::RegisterRxHandler(SplitHandlerId::DISPLAY_AVAILABLE,
@@ -126,6 +130,8 @@ private:
     void DrawText(int x, int y, const Font *font, TextAlignment alignment,
                   const char *text);
     void SetPixel(uint32_t x, uint32_t y);
+
+    void RunConwayStep();
 
     void DrawPaperTape(const StenoStroke *strokes, size_t length);
     void DrawStenoLayout(StenoStroke stroke);

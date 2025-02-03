@@ -81,11 +81,11 @@ private:
 
 struct Pinnacle {
 public:
-  static bool Initialize() {}
+  static void Initialize() {}
   static void RegisterTxHandler() {}
   static void RegisterRxHandler() {}
 
-  static void Update();
+  static void Update() {}
 };
 
 #endif

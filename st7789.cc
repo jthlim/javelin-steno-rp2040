@@ -309,6 +309,10 @@ void St7789::St7789Data::DrawImage(int x, int y, int width, int height,
 void St7789::St7789Data::DrawGrayscaleRange(int x, int y, int width, int height,
                                             const uint8_t *data, int min,
                                             int max) {
+  if (!available) {
+    return;
+  }
+
   // It's all off the screen.
   if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
     return;
@@ -397,6 +401,128 @@ void St7789::St7789Data::DrawText(int x, int y, const Font *font,
     }
     x += font->spacing;
   }
+}
+
+struct RgbaThresholds {
+  uint32_t value;
+
+  void FromRgb565(uint16_t pixel) { value = pixel & 0x8410; }
+};
+
+RgbaThresholds conwayBuffers[3][JAVELIN_DISPLAY_WIDTH + 2];
+
+static void SetBuffer(RgbaThresholds *output, const uint16_t *input,
+                      size_t length) {
+  output->FromRgb565(input[length - 1]);
+  for (size_t i = 0; i < length; ++i) {
+    output[i + 1].FromRgb565(input[i]);
+  }
+  output[length + 1].FromRgb565(input[0]);
+}
+
+// Dead->alive will spike to 31, then decay to 24
+static constexpr uint8_t ALIVE[32] = {
+    31, 31, 31, 31, 31, 31, 31, 31, //
+    31, 31, 31, 31, 31, 31, 31, 31, //
+    16, 17, 18, 19, 20, 21, 22, 23, //
+    24, 24, 25, 26, 27, 28, 29, 30, //
+};
+
+// Alive->Dead will drop to 15, then decay to 0.
+static constexpr uint8_t DEAD[32] = {
+    0,  0,  1,  2,  3,  4,  5,  6,  //
+    7,  8,  9,  10, 11, 12, 13, 14, //
+    15, 15, 15, 15, 15, 15, 15, 15, //
+    15, 15, 15, 15, 15, 15, 15, 15, //
+};
+
+// This is a simplified table that ORs in the current pixel alive to
+// simplify the lookup.
+static constexpr const uint8_t *(NEXT_EVOLUTION[10]) = {
+    // previously dead, previously alive
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, ALIVE},
+    ALIVE, // {ALIVE, ALIVE},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD},
+    DEAD,  // {DEAD, DEAD}, // Needed since the OR can
+};
+
+void St7789::St7789Data::RunConwayStep() {
+  if (!available) {
+    return;
+  }
+
+  dirty = true;
+
+  uint16_t firstLineBuffer[JAVELIN_DISPLAY_WIDTH];
+  dma6->Copy16(firstLineBuffer, buffer16, JAVELIN_DISPLAY_WIDTH);
+
+  uint16_t outputBuffer0[JAVELIN_DISPLAY_WIDTH];
+  uint16_t outputBuffer1[JAVELIN_DISPLAY_WIDTH];
+
+  uint16_t *rowOutput = outputBuffer0;
+
+  SetBuffer(conwayBuffers[0],
+            buffer16 + (JAVELIN_DISPLAY_HEIGHT - 1) * JAVELIN_DISPLAY_WIDTH,
+            JAVELIN_DISPLAY_WIDTH);
+  SetBuffer(conwayBuffers[1], buffer16, JAVELIN_DISPLAY_WIDTH);
+
+  RgbaThresholds *lm1 = conwayBuffers[0];
+  RgbaThresholds *l = conwayBuffers[1];
+  RgbaThresholds *lp1 = conwayBuffers[2];
+
+  for (size_t y = 0; y < JAVELIN_DISPLAY_HEIGHT; ++y) {
+    const uint16_t *row = buffer16 + y * JAVELIN_DISPLAY_WIDTH;
+    const uint16_t *nextLineRgb565 =
+        (y == JAVELIN_DISPLAY_HEIGHT - 1)
+            ? firstLineBuffer
+            : &buffer16[(y + 1) * JAVELIN_DISPLAY_WIDTH];
+    SetBuffer(lp1, nextLineRgb565, JAVELIN_DISPLAY_WIDTH);
+
+    for (int x = 0; x < JAVELIN_DISPLAY_WIDTH; ++x) {
+      // This is brute force - could use area sum to reduce this to 5 terms:
+      //   count = BRsum + TLsum - TRsum - BLsum - centerValue
+      const RgbaThresholds &alive = l[x + 1];
+      const uint32_t count =
+          (lm1[x].value + lm1[x + 1].value + lm1[x + 2].value + l[x].value +
+           l[x + 2].value + lp1[x].value + lp1[x + 1].value +
+           lp1[x + 2].value) |
+          alive.value;
+
+      const uint32_t p = row[x];
+      int r = p >> 11;
+      int g = (p >> 6) & 0x1f;
+      int b = p & 0x1f;
+
+      r = NEXT_EVOLUTION[count >> 15][r];
+      g = NEXT_EVOLUTION[(count >> 10) & 0xf][g];
+      b = NEXT_EVOLUTION[(count >> 4) & 0xf][b];
+
+      rowOutput[x] = (r << 11) | (g << 6) | b;
+    }
+
+    rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
+    if (y != 0) {
+      dma6->Copy16(&buffer16[(y - 1) * JAVELIN_DISPLAY_WIDTH], rowOutput,
+                   JAVELIN_DISPLAY_WIDTH);
+    }
+
+    RgbaThresholds *temp = lm1;
+    lm1 = l;
+    l = lp1;
+    lp1 = temp;
+  }
+  rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
+
+  dma6->WaitUntilComplete();
+  dma6->Copy16(&buffer16[(JAVELIN_DISPLAY_HEIGHT - 1) * JAVELIN_DISPLAY_WIDTH],
+               rowOutput, JAVELIN_DISPLAY_WIDTH);
+  dma6->WaitUntilComplete();
 }
 
 void St7789::St7789Data::Update() {
@@ -541,19 +667,7 @@ void St7789::St7789Data::UpdateBuffer(TxBuffer &buffer) {
   } else {
     txData->size = sizeof(St7789TxRxData::data);
   }
-  dma6->source = buffer32 + (txData->offset / 4);
-  dma6->destination = txData->data;
-  dma6->count = txData->size / 4;
-  constexpr Rp2040DmaControl dmaControl = {
-      .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
-      .incrementRead = true,
-      .incrementWrite = true,
-      .chainToDma = 6,
-      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
-      .sniffEnable = false,
-  };
-  dma6->controlTrigger = dmaControl;
+  dma6->Copy32(txData->data, buffer32 + (txData->offset / 4), txData->size / 4);
   dma6->WaitUntilComplete();
 
   buffer.Add(SplitHandlerId::DISPLAY_DATA, 8 + txData->size);
@@ -568,19 +682,7 @@ void St7789::St7789Data::OnDataReceived(const void *data, size_t length) {
     return;
   }
 
-  dma6->source = rxData->data;
-  dma6->destination = buffer32 + (rxData->offset / 4);
-  dma6->count = rxData->size / 4;
-  constexpr Rp2040DmaControl dmaControl = {
-      .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
-      .incrementRead = true,
-      .incrementWrite = true,
-      .chainToDma = 6,
-      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
-      .sniffEnable = false,
-  };
-  dma6->controlTrigger = dmaControl;
+  dma6->Copy32(buffer32 + (rxData->offset / 4), rxData->data, rxData->size / 4);
   dma6->WaitUntilComplete();
 
   if (rxData->offset + rxData->size >= sizeof(buffer32)) {

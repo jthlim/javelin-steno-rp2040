@@ -350,6 +350,10 @@ void Ssd1306::Ssd1306Data::DrawImage(int x, int y, int width, int height,
 void Ssd1306::Ssd1306Data::DrawGrayscaleRange(int x, int y, int width,
                                               int height, const uint8_t *data,
                                               int min, int max) {
+  if (!available) {
+    return;
+  }
+
   // It's all off the screen.
   if (x >= JAVELIN_DISPLAY_WIDTH || y >= JAVELIN_DISPLAY_HEIGHT) {
     return;
