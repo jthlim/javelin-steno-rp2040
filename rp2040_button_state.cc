@@ -68,6 +68,10 @@ uint32_t touchPadThreshold[sizeof(BUTTON_TOUCH_PINS)];
 
 //---------------------------------------------------------------------------
 
+Rp2040ButtonState Rp2040ButtonState::instance;
+
+//---------------------------------------------------------------------------
+
 void Rp2040ButtonState::Initialize() {
 #if JAVELIN_BUTTON_MATRIX
 #if JAVELIN_SPLIT
@@ -206,7 +210,25 @@ void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
 }
 #endif
 
-ButtonState Rp2040ButtonState::Read() {
+void Rp2040ButtonState::UpdateInternal() {
+  if (queue.IsFull()) {
+    return;
+  }
+
+  const Debounced<ButtonState> debounced = debouncer.Update(ReadInternal());
+  if (!debounced.isUpdated) {
+    return;
+  }
+
+  const uint32_t now = Clock::GetMilliseconds();
+  instance.keyPressedTime = now;
+  instance.queue.Add(TimedButtonState{
+      .timestamp = now,
+      .state = debounced.value,
+  });
+}
+
+ButtonState Rp2040ButtonState::ReadInternal() {
   ButtonState state;
   state.ClearAll();
 

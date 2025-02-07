@@ -21,7 +21,11 @@ class Rp2040EncoderState
 public:
   static void Initialize();
 
+  static size_t GetLocalEncoderCount() { return localEncoderCount; }
+  static void SetLocalEncoderCount(size_t value) { localEncoderCount = value; }
+
   static void Update() { instance.UpdateInternal(); }
+  static void UpdateNoScriptCall() { instance.UpdateNoScriptCallInternal(); }
 
   static void RegisterTxHandler() {
 #if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
@@ -35,15 +39,18 @@ public:
   }
 
 private:
-  static constexpr size_t LOCAL_ENCODER_COUNT =
-      sizeof(ENCODER_PINS) / sizeof(*ENCODER_PINS);
+  static size_t localEncoderCount;
 
   int8_t deltas[JAVELIN_ENCODER_COUNT];
-  GlobalDeferredDebounce<uint8_t, 1> lastEncoderStates[LOCAL_ENCODER_COUNT];
+#if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
+  int8_t lastDeltas[JAVELIN_ENCODER_COUNT];
+#endif
+  GlobalDeferredDebounce<uint8_t, 1> lastEncoderStates[JAVELIN_ENCODER_COUNT];
 
   static Rp2040EncoderState instance;
 
   void UpdateInternal();
+  void UpdateNoScriptCallInternal();
 
   bool HasAnyDelta() const;
 
@@ -59,6 +66,7 @@ class Rp2040EncoderState {
 public:
   static void Initialize() {}
   static void Update() {}
+  static void UpdateNoScriptCall() {}
   static void RegisterTxHandler() {}
   static void RegisterRxHandler() {}
 };

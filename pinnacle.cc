@@ -3,6 +3,7 @@
 #include "pinnacle.h"
 #include "javelin/button_script_manager.h"
 #include "javelin/clock.h"
+#include "javelin/console.h"
 
 #include <hardware/gpio.h>
 #include <hardware/spi.h>
@@ -207,16 +208,21 @@ void Pinnacle::UpdateInternal() {
       if (newData != data[JAVELIN_POINTER_LOCAL_OFFSET].pointer) {
         data[JAVELIN_POINTER_LOCAL_OFFSET].isDirty = true;
         data[JAVELIN_POINTER_LOCAL_OFFSET].pointer = newData;
+#if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
+        CallScript(JAVELIN_POINTER_LOCAL_OFFSET, newData);
+#endif
       }
     }
   }
 
+#if JAVELIN_SPLIT && JAVELIN_SPLIT_IS_MASTER
   for (size_t i = 0; i < JAVELIN_POINTER_COUNT; ++i) {
     if (data[i].isDirty) {
       data[i].isDirty = false;
       CallScript(i, data[i].pointer);
     }
   }
+#endif
 }
 
 //---------------------------------------------------------------------------
@@ -258,6 +264,13 @@ void Pinnacle::CallScript(size_t pointerIndex, const Pointer &pointer) {
 
   ButtonScriptManager::GetInstance().ExecuteScriptIndex(
       scriptIndex, Clock::GetMilliseconds(), parameters, 3);
+}
+
+//---------------------------------------------------------------------------
+
+void Pinnacle::PrintInfo() {
+  Console::Printf("Pinnacle: %s\n",
+                  instance.available ? "available" : "not-available");
 }
 
 //---------------------------------------------------------------------------

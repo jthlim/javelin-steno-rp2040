@@ -105,6 +105,7 @@ const size_t BUTTON_COUNT = 50;
 #define JAVELIN_ENCODER 1
 #define JAVELIN_ENCODER_COUNT 2
 #define JAVELIN_ENCODER_LOCAL_OFFSET 1
+#define JAVELIN_ENCODER_SPEED 2
 
 constexpr EncoderPins ENCODER_PINS[] = {{29, 28}};
 

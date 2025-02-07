@@ -40,6 +40,7 @@ public:
   static void Uninitialize();
 
   static void Update() { instance.UpdateInternal(); }
+  static void PrintInfo();
 
   static void RegisterTxHandler() {
 #if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
@@ -86,6 +87,7 @@ public:
   static void RegisterRxHandler() {}
 
   static void Update() {}
+  static void PrintInfo() {}
 };
 
 #endif

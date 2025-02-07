@@ -41,6 +41,7 @@
 #include "javelin/static_allocate.h"
 #include "javelin/word_list.h"
 #include "main_report_builder.h"
+#include "pinnacle.h"
 #include "rp2040_divider.h"
 #include "rp2040_split.h"
 #include "ssd1306.h"
@@ -176,6 +177,7 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
 #if ENABLE_EXTRA_INFO
   ButtonScriptManager::GetInstance().PrintInfo();
+  Pinnacle::PrintInfo();
 #endif
 
   if (Rp2040Split::IsMaster()) {

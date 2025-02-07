@@ -14,9 +14,10 @@ add_definitions(
   -DJAVELIN_THREADS=1
   -DJAVELIN_CPU_CORTEX_M0=1
   -DJAVELIN_USE_CUSTOM_POP_COUNT=1
+  -DJAVELIN_SPLIT_VERSION_INCREMENT=1
   -DNDEBUG=1
   -DPICO_FLASH_SIZE_BYTES=0x1000000
-  -DPICO_FLASH_SPI_CLKDIV=2
+  -DPICO_FLASH_SPI_CLKDIV=4
   -DPICO_MALLOC_PANIC=0
   -DPICO_NO_FPGA_CHECK=1
   -DPICO_XOSC_STARTUP_DELAY_MULTIPLIER=128
@@ -47,6 +48,7 @@ target_sources(${NAME} PUBLIC
   libc_overrides.cc
   libc_stubs.cc
   main_report_builder.cc
+  main_task.cc
   pico_bindings.cc
   pico_thread.cc
   pinnacle.cc
@@ -153,6 +155,7 @@ target_sources(${NAME} PUBLIC
   javelin/segment_builder.cc
   javelin/split/split.cc
   javelin/split/split_console.cc
+  javelin/split/split_key_state.cc
   javelin/split/split_power_override.cc
   javelin/split/split_serial_buffer.cc
   javelin/split/split_usb_status.cc
@@ -182,6 +185,7 @@ target_include_directories(${NAME} PUBLIC
 )
 
 target_link_libraries(${NAME}
+  hardware_adc
   hardware_clocks
   hardware_flash
   hardware_gpio
@@ -197,3 +201,7 @@ target_link_libraries(${NAME}
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${NAME})
 
+set (SIZE "$ENV{PICO_TOOLCHAIN_PATH}/bin/arm-none-eabi-size")
+add_custom_command(TARGET ${NAME} POST_BUILD
+  COMMAND ${SIZE} javelin-steno-rp2040.elf
+)

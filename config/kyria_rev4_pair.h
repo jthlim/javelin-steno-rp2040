@@ -6,13 +6,13 @@
 
 //---------------------------------------------------------------------------
 
-// The cirque driver has auto-detection, so can always be enabled.
-#define USE_CIRQUE_TRACKPAD 1
+#define CONFIG_EXTRA_SOURCE "config/kyria_rev4.cc"
 
-// There is no way to autodetect display/encoder, so only one of these can
-// be enabled.
+//---------------------------------------------------------------------------
+
+#define USE_CIRQUE_TRACKPAD 1
 #define USE_HALCYON_DISPLAY 1
-#define USE_HALCYON_ENCODER 0
+#define USE_HALCYON_ENCODER 1
 
 //---------------------------------------------------------------------------
 
@@ -41,12 +41,17 @@
 #define JAVELIN_DISPLAY_MOSI_PIN 15
 #define JAVELIN_DISPLAY_DC_PIN 16
 #define JAVELIN_DISPLAY_RST_PIN 26
+#define JAVELIN_DISPLAY_BACKLIGHT_PIN 27
 #define JAVELIN_DISPLAY_SPI spi1
 #define JAVELIN_DISPLAY_SCREEN_WIDTH 135
 #define JAVELIN_DISPLAY_SCREEN_HEIGHT 240
 #define JAVELIN_DISPLAY_ROTATION 0
 #define JAVELIN_DISPLAY_WIDTH 135
 #define JAVELIN_DISPLAY_HEIGHT 240
+
+bool shouldUseDisplayModule();
+#define JAVELIN_DISPLAY_DETECT shouldUseDisplayModule()
+
 #endif
 
 #if USE_CIRQUE_TRACKPAD
@@ -131,16 +136,18 @@ constexpr uint8_t RGB_MAP[62] = {
 
 #define JAVELIN_BUTTON_PINS 1
 #define JAVELIN_BUTTON_PINS_OFFSET 51
-constexpr uint32_t BUTTON_PIN_MASK = 0x00010000;
-constexpr uint8_t BUTTON_PINS[] = {16};
+#define JAVELIN_ENCODER_BUTTON_PIN 16
+#define JAVELIN_ENCODER_UNUSED_PIN 17
 
-const size_t BUTTON_COUNT = 52;
+extern uint32_t BUTTON_PIN_MASK;
+extern uint8_t BUTTON_PINS[1];
 
 constexpr EncoderPins ENCODER_PINS[] = {{23, 22}, {27, 26}};
 
-#else
+void preButtonStateInitialize();
+#define JAVELIN_PRE_BUTTON_STATE_INITIALIZE preButtonStateInitialize();
 
-const size_t BUTTON_COUNT = 50;
+#else
 
 constexpr EncoderPins ENCODER_PINS[] = {{23, 22}};
 
@@ -149,6 +156,9 @@ constexpr EncoderPins ENCODER_PINS[] = {{23, 22}};
 #define JAVELIN_ENCODER 1
 #define JAVELIN_ENCODER_COUNT 4
 #define JAVELIN_ENCODER_LOCAL_OFFSET 2
+#define JAVELIN_ENCODER_SPEED 2
+
+const size_t BUTTON_COUNT = 52;
 
 const char *const MANUFACTURER_NAME = "splitkb";
 const char *const PRODUCT_NAME = "Halcyon Kyria (Javelin)";

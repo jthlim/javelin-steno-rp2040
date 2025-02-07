@@ -6,13 +6,13 @@
 
 //---------------------------------------------------------------------------
 
-// The cirque driver has auto-detection, so can always be enabled.
-#define USE_CIRQUE_TRACKPAD 1
+#define CONFIG_EXTRA_SOURCE "config/kyria_rev4.cc"
 
-// There is no way to autodetect display/encoder, so only one of these can
-// be enabled.
+//---------------------------------------------------------------------------
+
+#define USE_CIRQUE_TRACKPAD 1
 #define USE_HALCYON_DISPLAY 1
-#define USE_HALCYON_ENCODER 0
+#define USE_HALCYON_ENCODER 1
 
 //---------------------------------------------------------------------------
 
@@ -41,12 +41,17 @@
 #define JAVELIN_DISPLAY_MOSI_PIN 15
 #define JAVELIN_DISPLAY_DC_PIN 16
 #define JAVELIN_DISPLAY_RST_PIN 26
+#define JAVELIN_DISPLAY_BACKLIGHT_PIN 27
 #define JAVELIN_DISPLAY_SPI spi1
 #define JAVELIN_DISPLAY_SCREEN_WIDTH 135
 #define JAVELIN_DISPLAY_SCREEN_HEIGHT 240
 #define JAVELIN_DISPLAY_ROTATION 0
 #define JAVELIN_DISPLAY_WIDTH 135
 #define JAVELIN_DISPLAY_HEIGHT 240
+
+bool shouldUseDisplayModule();
+#define JAVELIN_DISPLAY_DETECT shouldUseDisplayModule()
+
 #endif
 
 #if USE_CIRQUE_TRACKPAD
@@ -133,22 +138,18 @@ constexpr uint8_t RGB_MAP[62] = {
 #if USE_HALCYON_ENCODER
 #define JAVELIN_BUTTON_PINS 1
 #define JAVELIN_BUTTON_PINS_OFFSET 50
-constexpr uint32_t BUTTON_PIN_MASK = 0x00010000;
-constexpr uint8_t BUTTON_PINS[] = {16};
+#define JAVELIN_ENCODER_BUTTON_PIN 16
+#define JAVELIN_ENCODER_UNUSED_PIN 17
 
-#define JAVELIN_SCRIPT_CONFIGURATION                                           \
-  R"({"name":"Kyria rev4","layout":[{"x":0,"y":0.9},{"x":1,"y":0.9},{"x":2,"y":0.35},{"x":3,"y":0},{"x":4,"y":0.35},{"x":5,"y":0.5},{"x":12,"y":0.5},{"x":13,"y":0.35},{"x":14,"y":0},{"x":15,"y":0.35},{"x":16,"y":0.9},{"x":17,"y":0.9},{"x":0,"y":1.9},{"x":1,"y":1.9},{"x":2,"y":1.35},{"x":3,"y":1},{"x":4,"y":1.35},{"x":5,"y":1.5},{"x":12,"y":1.5},{"x":13,"y":1.35},{"x":14,"y":1},{"x":15,"y":1.35},{"x":16,"y":1.9},{"x":17,"y":1.9},{"x":0,"y":2.9},{"x":1,"y":2.9},{"x":2,"y":2.35},{"x":3,"y":2},{"x":4,"y":2.35},{"x":5,"y":2.5},{"x":6.12,"y":3.13,"r":0.52},{"x":7.21,"y":3.99,"r":0.79},{"x":9.79,"y":3.99,"r":-0.79},{"x":10.88,"y":3.13,"r":-0.52},{"x":12,"y":2.5},{"x":13,"y":2.35},{"x":14,"y":2},{"x":15,"y":2.35},{"x":16,"y":2.9},{"x":17,"y":2.9},{"x":2.5,"y":3.4},{"x":3.5,"y":3.4},{"x":4.6,"y":3.55,"r":0.26},{"x":5.62,"y":4,"r":0.52},{"x":6.5,"y":4.7,"r":0.79},{"x":10.5,"y":4.7,"r":-0.79},{"x":11.38,"y":4,"r":-0.52},{"x":12.4,"y":3.55,"r":-0.26},{"x":13.5,"y":3.4},{"x":14.5,"y":3.4},{"x":6.2,"y":1.4,"s":0.8},{"x":11,"y":1.4,"s":0.8}]})"
-
-const size_t BUTTON_COUNT = 52;
+extern uint32_t BUTTON_PIN_MASK;
+extern uint8_t BUTTON_PINS[1];
 
 constexpr EncoderPins ENCODER_PINS[] = {{23, 22}, {27, 26}};
 
+void preButtonStateInitialize();
+#define JAVELIN_PRE_BUTTON_STATE_INITIALIZE preButtonStateInitialize();
+
 #else
-
-#define JAVELIN_SCRIPT_CONFIGURATION                                           \
-  R"({"name":"Kyria rev4","layout":[{"x":0,"y":0.9},{"x":1,"y":0.9},{"x":2,"y":0.35},{"x":3,"y":0},{"x":4,"y":0.35},{"x":5,"y":0.5},{"x":12,"y":0.5},{"x":13,"y":0.35},{"x":14,"y":0},{"x":15,"y":0.35},{"x":16,"y":0.9},{"x":17,"y":0.9},{"x":0,"y":1.9},{"x":1,"y":1.9},{"x":2,"y":1.35},{"x":3,"y":1},{"x":4,"y":1.35},{"x":5,"y":1.5},{"x":12,"y":1.5},{"x":13,"y":1.35},{"x":14,"y":1},{"x":15,"y":1.35},{"x":16,"y":1.9},{"x":17,"y":1.9},{"x":0,"y":2.9},{"x":1,"y":2.9},{"x":2,"y":2.35},{"x":3,"y":2},{"x":4,"y":2.35},{"x":5,"y":2.5},{"x":6.12,"y":3.13,"r":0.52},{"x":7.21,"y":3.99,"r":0.79},{"x":9.79,"y":3.99,"r":-0.79},{"x":10.88,"y":3.13,"r":-0.52},{"x":12,"y":2.5},{"x":13,"y":2.35},{"x":14,"y":2},{"x":15,"y":2.35},{"x":16,"y":2.9},{"x":17,"y":2.9},{"x":2.5,"y":3.4},{"x":3.5,"y":3.4},{"x":4.6,"y":3.55,"r":0.26},{"x":5.62,"y":4,"r":0.52},{"x":6.5,"y":4.7,"r":0.79},{"x":10.5,"y":4.7,"r":-0.79},{"x":11.38,"y":4,"r":-0.52},{"x":12.4,"y":3.55,"r":-0.26},{"x":13.5,"y":3.4},{"x":14.5,"y":3.4}]})"
-
-const size_t BUTTON_COUNT = 50;
 
 constexpr EncoderPins ENCODER_PINS[] = {{23, 22}};
 
@@ -157,6 +158,12 @@ constexpr EncoderPins ENCODER_PINS[] = {{23, 22}};
 #define JAVELIN_ENCODER 1
 #define JAVELIN_ENCODER_COUNT 4
 #define JAVELIN_ENCODER_LOCAL_OFFSET 0
+#define JAVELIN_ENCODER_SPEED 2
+
+const size_t BUTTON_COUNT = 52;
+
+#define JAVELIN_SCRIPT_CONFIGURATION                                           \
+  R"({"name":"Kyria rev4","layout":[{"x":0,"y":0.9},{"x":1,"y":0.9},{"x":2,"y":0.35},{"x":3,"y":0},{"x":4,"y":0.35},{"x":5,"y":0.5},{"x":12,"y":0.5},{"x":13,"y":0.35},{"x":14,"y":0},{"x":15,"y":0.35},{"x":16,"y":0.9},{"x":17,"y":0.9},{"x":0,"y":1.9},{"x":1,"y":1.9},{"x":2,"y":1.35},{"x":3,"y":1},{"x":4,"y":1.35},{"x":5,"y":1.5},{"x":12,"y":1.5},{"x":13,"y":1.35},{"x":14,"y":1},{"x":15,"y":1.35},{"x":16,"y":1.9},{"x":17,"y":1.9},{"x":0,"y":2.9},{"x":1,"y":2.9},{"x":2,"y":2.35},{"x":3,"y":2},{"x":4,"y":2.35},{"x":5,"y":2.5},{"x":6.12,"y":3.13,"r":0.52},{"x":7.21,"y":3.99,"r":0.79},{"x":9.79,"y":3.99,"r":-0.79},{"x":10.88,"y":3.13,"r":-0.52},{"x":12,"y":2.5},{"x":13,"y":2.35},{"x":14,"y":2},{"x":15,"y":2.35},{"x":16,"y":2.9},{"x":17,"y":2.9},{"x":2.5,"y":3.4},{"x":3.5,"y":3.4},{"x":4.6,"y":3.55,"r":0.26},{"x":5.62,"y":4,"r":0.52},{"x":6.5,"y":4.7,"r":0.79},{"x":10.5,"y":4.7,"r":-0.79},{"x":11.38,"y":4,"r":-0.52},{"x":12.4,"y":3.55,"r":-0.26},{"x":13.5,"y":3.4},{"x":14.5,"y":3.4},{"x":6.2,"y":1.4,"s":0.8},{"x":11,"y":1.4,"s":0.8}]})"
 
 const char *const MANUFACTURER_NAME = "splitkb";
 const char *const PRODUCT_NAME = "Halcyon Kyria (Javelin)";

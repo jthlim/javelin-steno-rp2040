@@ -5,16 +5,14 @@
 #include "console_report_buffer.h"
 #include "javelin/button_script_manager.h"
 #include "javelin/console_input_buffer.h"
-#include "javelin/debounce.h"
-#include "javelin/flash.h"
 #include "javelin/keyboard_led_status.h"
 #include "javelin/split/split_console.h"
 #include "javelin/split/split_serial_buffer.h"
 #include "javelin/split/split_usb_status.h"
 #include "javelin/split/split_version.h"
 #include "javelin/static_allocate.h"
-#include "javelin/timer_manager.h"
 #include "main_report_builder.h"
+#include "main_task.h"
 #include "pinnacle.h"
 #include "plover_hid_report_buffer.h"
 #include "rp2040_button_state.h"
@@ -30,6 +28,10 @@
 #include <hardware/watchdog.h>
 #include <pico/time.h>
 #include <tusb.h>
+
+#if defined(CONFIG_EXTRA_SOURCE)
+#include CONFIG_EXTRA_SOURCE
+#endif
 
 //---------------------------------------------------------------------------
 
@@ -84,114 +86,6 @@ extern "C" void tud_resume_cb(void) {
 //---------------------------------------------------------------------------
 // USB HID
 //---------------------------------------------------------------------------
-
-#if JAVELIN_SPLIT
-class MasterTask final : public SplitRxHandler {
-#else
-class MasterTask {
-#endif
-public:
-  void Update();
-
-private:
-#if JAVELIN_SPLIT
-  ButtonState splitState;
-#endif
-  GlobalDeferredDebounce<ButtonState> debouncer;
-
-#if JAVELIN_SPLIT
-  virtual void OnReceiveConnectionReset() { splitState.ClearAll(); }
-  virtual void OnDataReceived(const void *data, size_t length) {
-    const ButtonState &newSplitState = *(const ButtonState *)data;
-    splitState = newSplitState;
-  }
-#endif
-};
-
-void MasterTask::Update() {
-  if (Flash::IsUpdating()) {
-    return;
-  }
-
-  Pinnacle::Update();
-  Rp2040EncoderState::Update();
-
-  const uint32_t scriptTime = Clock::GetMilliseconds();
-
-#if JAVELIN_SPLIT
-  const Debounced<ButtonState> buttonState =
-      debouncer.Update(Rp2040ButtonState::Read() | splitState);
-#else
-  const Debounced<ButtonState> buttonState =
-      debouncer.Update(Rp2040ButtonState::Read());
-#endif
-  if (buttonState.isUpdated) {
-    if (tud_suspended()) {
-      if (buttonState.value.IsAnySet()) {
-        // Wake up host if we are in suspend mode
-        // and REMOTE_WAKEUP feature is enabled by host
-        tud_remote_wakeup();
-      }
-    }
-
-    ButtonScriptManager::GetInstance().Update(buttonState.value,
-                                              Clock::GetMilliseconds());
-  }
-
-  ButtonScriptManager::GetInstance().Tick(scriptTime);
-  TimerManager::instance.ProcessTimers(scriptTime);
-}
-
-class SlaveTask final : public SplitTxHandler {
-public:
-  void Update();
-  void UpdateBuffer(TxBuffer &buffer);
-
-private:
-  bool needsTransmit;
-  ButtonState buttonState;
-
-  virtual void OnTransmitConnected() { needsTransmit = true; }
-  virtual void OnTransmitConnectionReset() { needsTransmit = true; }
-};
-
-void SlaveTask::Update() {
-  if (Flash::IsUpdating()) {
-    return;
-  }
-
-  Pinnacle::Update();
-  Rp2040EncoderState::Update();
-
-  const uint32_t scriptTime = Clock::GetMilliseconds();
-  ButtonScriptManager::GetInstance().Tick(scriptTime);
-  TimerManager::instance.ProcessTimers(scriptTime);
-
-  const ButtonState newButtonState = Rp2040ButtonState::Read();
-  if (newButtonState == buttonState) {
-    return;
-  }
-
-  buttonState = newButtonState;
-  needsTransmit = true;
-
-  if (tud_suspended()) {
-    if (buttonState.IsAnySet()) {
-      // Wake up host if we are in suspend mode
-      // and REMOTE_WAKEUP feature is enabled by host
-      tud_remote_wakeup();
-    }
-  }
-}
-
-void SlaveTask::UpdateBuffer(TxBuffer &buffer) {
-  if (needsTransmit) {
-    if (buffer.Add(SplitHandlerId::KEY_STATE, &buttonState,
-                   sizeof(ButtonState))) {
-      needsTransmit = false;
-    }
-  }
-}
 
 // Invoked when received SET_PROTOCOL request
 // protocol is either HID_PROTOCOL_BOOT (0) or HID_PROTOCOL_REPORT (1)
@@ -261,8 +155,31 @@ static void cdc_task() {
 
 //---------------------------------------------------------------------------
 
-JavelinStaticAllocate<MasterTask> masterTaskContainer;
-JavelinStaticAllocate<SlaveTask> slaveTaskContainer;
+// By default, the system will run as fast as possible with 100us pauses.
+//
+// This interrupt handling is a fallback to catch key and encoder changes
+// while long-running processes occur.
+
+static void IrqHandler() {
+  hw_clear_bits(&timer_hw->intr, 1);
+  Rp2040ButtonState::Update();
+  Rp2040EncoderState::UpdateNoScriptCall();
+  timer_hw->alarm[0] = timer_hw->timerawl + 3'000;
+}
+
+static void InitializeInterruptUpdate() {
+  irq_set_exclusive_handler(TIMER_IRQ_0, IrqHandler);
+  irq_set_enabled(TIMER_IRQ_0, true);
+}
+
+static void StartInterruptUpdate() {
+  hw_set_bits(&timer_hw->inte, 1);
+  timer_hw->alarm[0] = timer_hw->timerawl + 3'000;
+}
+
+static void StopInterruptUpdate() { hw_clear_bits(&timer_hw->inte, 1); }
+
+//---------------------------------------------------------------------------
 
 void DoMasterRunLoop() {
 #if JAVELIN_USE_WATCHDOG
@@ -270,8 +187,12 @@ void DoMasterRunLoop() {
 #endif
 
   while (1) {
+    Rp2040ButtonState::Update();
+    StartInterruptUpdate();
+
     tud_task(); // tinyusb device task
-    masterTaskContainer->Update();
+
+    MasterTask::container->Update();
     Rp2040Split::Update();
     cdc_task();
 
@@ -284,6 +205,7 @@ void DoMasterRunLoop() {
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
 #endif
+    StopInterruptUpdate();
     sleep_us(100);
   }
 }
@@ -294,8 +216,11 @@ void DoSlaveRunLoop() {
 #endif
 
   while (1) {
+    Rp2040ButtonState::Update();
+    StartInterruptUpdate();
+
     tud_task(); // tinyusb device task
-    slaveTaskContainer->Update();
+    SlaveTask::container->Update();
     Rp2040Split::Update();
     cdc_task();
 
@@ -310,6 +235,7 @@ void DoSlaveRunLoop() {
 #if JAVELIN_USE_WATCHDOG
     watchdog_update();
 #endif
+    StopInterruptUpdate();
     sleep_us(100);
   }
 }
@@ -324,8 +250,6 @@ int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
-  Rp2040ButtonState::Initialize();
-  Rp2040EncoderState::Initialize();
   Rp2040Crc::Initialize();
   Ws2812::Initialize();
   Rp2040Split::Initialize();
@@ -333,11 +257,21 @@ int main(void) {
   Ssd1306::Initialize();
   St7789::Initialize();
 
-  if (Split::IsMaster()) {
-    new (masterTaskContainer) MasterTask;
+#if defined(JAVELIN_PRE_BUTTON_STATE_INITIALIZE)
+  JAVELIN_PRE_BUTTON_STATE_INITIALIZE
+#endif
 
+  Rp2040ButtonState::Initialize();
+  Rp2040EncoderState::Initialize();
+
+  InitializeInterruptUpdate();
+
+  if (Split::IsMaster()) {
+    new (MasterTask::container) MasterTask;
+
+    Split::RegisterTxHandler(&MasterTask::container.value);
     Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
-                             &masterTaskContainer.value);
+                             &MasterTask::container.value);
     ConsoleInputBuffer::RegisterRxHandler();
     Ws2812::RegisterTxHandler();
     SplitHidReportBuffer::RegisterMasterHandlers();
@@ -356,9 +290,11 @@ int main(void) {
 
     DoMasterRunLoop();
   } else {
-    new (slaveTaskContainer) SlaveTask;
+    new (SlaveTask::container) SlaveTask;
 
-    Split::RegisterTxHandler(&slaveTaskContainer.value);
+    Split::RegisterTxHandler(&SlaveTask::container.value);
+    Split::RegisterRxHandler(SplitHandlerId::KEY_STATE,
+                             &SlaveTask::container.value);
     ConsoleInputBuffer::RegisterTxHandler();
     Ws2812::RegisterRxHandler();
     SplitHidReportBuffer::RegisterSlaveHandlers();

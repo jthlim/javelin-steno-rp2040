@@ -25,6 +25,14 @@ void HidReportBufferBase::SendReport(uint8_t reportId, const uint8_t *data,
 
   const bool triggerSend = startIndex == endIndex;
   if (triggerSend) {
+
+    // Wake up host if we are in suspend mode
+    if ((instanceNumber == ITF_NUM_KEYBOARD ||
+         instanceNumber == ITF_NUM_CONSOLE) &&
+        tud_suspended()) {
+      tud_remote_wakeup();
+    }
+
     if (!tud_hid_n_ready(instanceNumber)) {
 #if JAVELIN_SPLIT
       if (Split::IsMaster() &&

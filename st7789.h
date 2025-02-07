@@ -139,6 +139,8 @@ private:
     void Update();
 
   private:
+    struct RunConwayStepThreadData;
+
     union {
       uint16_t buffer16[JAVELIN_DISPLAY_SCREEN_WIDTH *
                         JAVELIN_DISPLAY_SCREEN_HEIGHT];

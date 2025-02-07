@@ -5,6 +5,8 @@
 #include "javelin/console.h"
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
+#include "javelin/malloc_allocate.h"
+#include "javelin/thread.h"
 #include "javelin/utf8_pointer.h"
 #include "rp2040_dma.h"
 #include <hardware/gpio.h>
@@ -92,6 +94,13 @@ void St7789::St7789Data::Initialize() {
     return;
   }
 
+#if defined(JAVELIN_DISPLAY_DETECT)
+  if (!JAVELIN_DISPLAY_DETECT) {
+    available = false;
+    return;
+  }
+#endif
+
   spi_init(JAVELIN_DISPLAY_SPI, 125'000'000);
 
   gpio_init(JAVELIN_DISPLAY_MISO_PIN);
@@ -136,6 +145,12 @@ void St7789::St7789Data::Initialize() {
   dma4->WaitUntilComplete();
 
   SendCommand(St7789Command::DISPLAY_ON, NULL, 0);
+
+#if defined(JAVELIN_DISPLAY_BACKLIGHT_PIN)
+  gpio_init(JAVELIN_DISPLAY_BACKLIGHT_PIN);
+  gpio_set_dir(JAVELIN_DISPLAY_BACKLIGHT_PIN, GPIO_OUT);
+  gpio_put(JAVELIN_DISPLAY_BACKLIGHT_PIN, 1);
+#endif
 
   available = true;
 }
@@ -291,13 +306,14 @@ void St7789::St7789Data::DrawImage(int x, int y, int width, int height,
   while (width > 0) {
     for (int yy = 0, topY = y; yy < bytesPerColumn; ++yy, topY += 8) {
       int v = *data++;
-      while (v) {
-        const int nextRow = __builtin_ctz(v);
-        const uint32_t pixelY = topY + nextRow;
-        if (pixelY < JAVELIN_DISPLAY_HEIGHT) {
-          p[pixelY * JAVELIN_DISPLAY_WIDTH] = drawColor;
+#pragma GCC unroll 8
+      for (int i = 0; i < 8; ++i) {
+        if (v & (1 << i)) {
+          const uint32_t pixelY = topY + i;
+          if (pixelY < JAVELIN_DISPLAY_HEIGHT) {
+            p[pixelY * JAVELIN_DISPLAY_WIDTH] = drawColor;
+          }
         }
-        v &= v - 1;
       }
     }
 
@@ -403,53 +419,127 @@ void St7789::St7789Data::DrawText(int x, int y, const Font *font,
   }
 }
 
-struct RgbaThresholds {
-  uint32_t value;
+struct St7789::St7789Data::RunConwayStepThreadData
+    : public JavelinMallocAllocate {
+  struct RgbaThresholds {
+    uint32_t value;
+    void FromRgb565(uint16_t pixel) { value = pixel & 0x8410; }
+  };
 
-  void FromRgb565(uint16_t pixel) { value = pixel & 0x8410; }
-};
+  uint16_t *buffer;
+  int startYm1;
+  int startY;
+  int endY;
 
-RgbaThresholds conwayBuffers[3][JAVELIN_DISPLAY_WIDTH + 2];
+  uint16_t lastLineBuffer[JAVELIN_DISPLAY_WIDTH];
+  RgbaThresholds conwayBuffers[3][JAVELIN_DISPLAY_WIDTH + 2];
+  uint16_t outputBuffer0[JAVELIN_DISPLAY_WIDTH];
+  uint16_t outputBuffer1[JAVELIN_DISPLAY_WIDTH];
 
-static void SetBuffer(RgbaThresholds *output, const uint16_t *input,
-                      size_t length) {
-  output->FromRgb565(input[length - 1]);
-  for (size_t i = 0; i < length; ++i) {
-    output[i + 1].FromRgb565(input[i]);
+  static void SetBuffer(RgbaThresholds *output, const uint16_t *input,
+                        size_t length) {
+    output->FromRgb565(input[length - 1]);
+    for (size_t i = 0; i < length; ++i) {
+      output[i + 1].FromRgb565(input[i]);
+    }
+    output[length + 1].FromRgb565(input[0]);
   }
-  output[length + 1].FromRgb565(input[0]);
-}
 
-// Dead->alive will spike to 31, then decay to 24
-static constexpr uint8_t ALIVE[32] = {
-    31, 31, 31, 31, 31, 31, 31, 31, //
-    31, 31, 31, 31, 31, 31, 31, 31, //
-    16, 17, 18, 19, 20, 21, 22, 23, //
-    24, 24, 25, 26, 27, 28, 29, 30, //
-};
+  // Dead->alive will spike to 31, then decay to 24
+  static constexpr uint8_t ALIVE[32] = {
+      31, 31, 31, 31, 31, 31, 31, 31, //
+      31, 31, 31, 31, 31, 31, 31, 31, //
+      16, 17, 18, 19, 20, 21, 22, 23, //
+      24, 24, 25, 26, 27, 28, 29, 30, //
+  };
 
-// Alive->Dead will drop to 15, then decay to 0.
-static constexpr uint8_t DEAD[32] = {
-    0,  0,  1,  2,  3,  4,  5,  6,  //
-    7,  8,  9,  10, 11, 12, 13, 14, //
-    15, 15, 15, 15, 15, 15, 15, 15, //
-    15, 15, 15, 15, 15, 15, 15, 15, //
-};
+  // Alive->Dead will drop to 15, then decay to 0.
+  static constexpr uint8_t DEAD[32] = {
+      0,  0,  1,  2,  3,  4,  5,  6,  //
+      7,  8,  9,  10, 11, 12, 13, 14, //
+      15, 15, 15, 15, 15, 15, 15, 15, //
+      15, 15, 15, 15, 15, 15, 15, 15, //
+  };
 
-// This is a simplified table that ORs in the current pixel alive to
-// simplify the lookup.
-static constexpr const uint8_t *(NEXT_EVOLUTION[10]) = {
-    // previously dead, previously alive
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, ALIVE},
-    ALIVE, // {ALIVE, ALIVE},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD},
-    DEAD,  // {DEAD, DEAD}, // Needed since the OR can
+  // This is a simplified table that ORs in the current pixel alive to the
+  // number of alive neighbors to simplify the lookup.
+  static constexpr const uint8_t *(NEXT_EVOLUTION[10]) = {
+      // previously dead, previously alive
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, ALIVE},
+      ALIVE, // {ALIVE, ALIVE},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD},
+      DEAD,  // {DEAD, DEAD}, // Needed since the OR can generate this index.
+  };
+
+  static void ThreadEntryPoint(void *data) {
+    ((RunConwayStepThreadData *)data)->Run();
+  }
+
+  void Run() {
+    uint16_t *rowOutput = outputBuffer0;
+
+    SetBuffer(conwayBuffers[0], buffer + startYm1 * JAVELIN_DISPLAY_WIDTH,
+              JAVELIN_DISPLAY_WIDTH);
+    SetBuffer(conwayBuffers[1], buffer + startY * JAVELIN_DISPLAY_WIDTH,
+              JAVELIN_DISPLAY_WIDTH);
+
+    RgbaThresholds *lm1 = conwayBuffers[0];
+    RgbaThresholds *l = conwayBuffers[1];
+    RgbaThresholds *lp1 = conwayBuffers[2];
+
+    for (size_t y = startY; y < endY; ++y) {
+      const uint16_t *row = buffer + y * JAVELIN_DISPLAY_WIDTH;
+      const uint16_t *nextLineRgb565 =
+          (y == endY - 1) ? lastLineBuffer
+                          : &buffer[(y + 1) * JAVELIN_DISPLAY_WIDTH];
+      SetBuffer(lp1, nextLineRgb565, JAVELIN_DISPLAY_WIDTH);
+
+      for (int x = 0; x < JAVELIN_DISPLAY_WIDTH; ++x) {
+        // This is brute force - could use area sum to reduce this to 5 terms:
+        //   count = BRsum + TLsum - TRsum - BLsum - centerValue
+        const RgbaThresholds &alive = l[x + 1];
+        // clang-format off
+        const uint32_t count =
+            (lm1[x].value + lm1[x + 1].value + lm1[x + 2].value + //
+               l[x].value                    +   l[x + 2].value + //
+             lp1[x].value + lp1[x + 1].value + lp1[x + 2].value)  //
+            | alive.value;
+        // clang-format on
+
+        const uint32_t p = row[x];
+        int r = p >> 11;
+        int g = (p >> 6) & 0x1f;
+        int b = p & 0x1f;
+
+        r = NEXT_EVOLUTION[count >> 15][r];
+        g = NEXT_EVOLUTION[(count >> 10) & 0xf][g];
+        b = NEXT_EVOLUTION[(count >> 4) & 0xf][b];
+
+        rowOutput[x] = (r << 11) | (g << 6) | b;
+      }
+
+      rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
+      if (y != startY) {
+        memcpy(&buffer[(y - 1) * JAVELIN_DISPLAY_WIDTH], rowOutput,
+               2 * JAVELIN_DISPLAY_WIDTH);
+      }
+
+      RgbaThresholds *temp = lm1;
+      lm1 = l;
+      l = lp1;
+      lp1 = temp;
+    }
+    rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
+
+    memcpy(&buffer[(endY - 1) * JAVELIN_DISPLAY_WIDTH], rowOutput,
+           2 * JAVELIN_DISPLAY_WIDTH);
+  }
 };
 
 void St7789::St7789Data::RunConwayStep() {
@@ -459,70 +549,29 @@ void St7789::St7789Data::RunConwayStep() {
 
   dirty = true;
 
-  uint16_t firstLineBuffer[JAVELIN_DISPLAY_WIDTH];
-  dma6->Copy16(firstLineBuffer, buffer16, JAVELIN_DISPLAY_WIDTH);
+  RunConwayStepThreadData *threadData = new RunConwayStepThreadData[2];
 
-  uint16_t outputBuffer0[JAVELIN_DISPLAY_WIDTH];
-  uint16_t outputBuffer1[JAVELIN_DISPLAY_WIDTH];
+  threadData[0].buffer = buffer16;
+  threadData[0].startYm1 = JAVELIN_DISPLAY_HEIGHT - 1;
+  threadData[0].startY = 0;
+  threadData[0].endY = JAVELIN_DISPLAY_HEIGHT / 2;
+  memcpy(threadData[0].lastLineBuffer,
+         buffer16 + (JAVELIN_DISPLAY_HEIGHT / 2) * JAVELIN_DISPLAY_WIDTH,
+         2 * JAVELIN_DISPLAY_WIDTH);
 
-  uint16_t *rowOutput = outputBuffer0;
+  threadData[1].buffer = buffer16;
+  threadData[1].startYm1 = JAVELIN_DISPLAY_HEIGHT / 2 - 1;
+  threadData[1].startY = JAVELIN_DISPLAY_HEIGHT / 2;
+  threadData[1].endY = JAVELIN_DISPLAY_HEIGHT;
+  memcpy(threadData[1].lastLineBuffer, buffer16, 2 * JAVELIN_DISPLAY_WIDTH);
 
-  SetBuffer(conwayBuffers[0],
-            buffer16 + (JAVELIN_DISPLAY_HEIGHT - 1) * JAVELIN_DISPLAY_WIDTH,
-            JAVELIN_DISPLAY_WIDTH);
-  SetBuffer(conwayBuffers[1], buffer16, JAVELIN_DISPLAY_WIDTH);
+  // Let the previous blit complete before updating the buffer.
+  dma4->WaitUntilComplete();
 
-  RgbaThresholds *lm1 = conwayBuffers[0];
-  RgbaThresholds *l = conwayBuffers[1];
-  RgbaThresholds *lp1 = conwayBuffers[2];
+  RunParallel(&RunConwayStepThreadData::ThreadEntryPoint, &threadData[0],
+              &RunConwayStepThreadData::ThreadEntryPoint, &threadData[1]);
 
-  for (size_t y = 0; y < JAVELIN_DISPLAY_HEIGHT; ++y) {
-    const uint16_t *row = buffer16 + y * JAVELIN_DISPLAY_WIDTH;
-    const uint16_t *nextLineRgb565 =
-        (y == JAVELIN_DISPLAY_HEIGHT - 1)
-            ? firstLineBuffer
-            : &buffer16[(y + 1) * JAVELIN_DISPLAY_WIDTH];
-    SetBuffer(lp1, nextLineRgb565, JAVELIN_DISPLAY_WIDTH);
-
-    for (int x = 0; x < JAVELIN_DISPLAY_WIDTH; ++x) {
-      // This is brute force - could use area sum to reduce this to 5 terms:
-      //   count = BRsum + TLsum - TRsum - BLsum - centerValue
-      const RgbaThresholds &alive = l[x + 1];
-      const uint32_t count =
-          (lm1[x].value + lm1[x + 1].value + lm1[x + 2].value + l[x].value +
-           l[x + 2].value + lp1[x].value + lp1[x + 1].value +
-           lp1[x + 2].value) |
-          alive.value;
-
-      const uint32_t p = row[x];
-      int r = p >> 11;
-      int g = (p >> 6) & 0x1f;
-      int b = p & 0x1f;
-
-      r = NEXT_EVOLUTION[count >> 15][r];
-      g = NEXT_EVOLUTION[(count >> 10) & 0xf][g];
-      b = NEXT_EVOLUTION[(count >> 4) & 0xf][b];
-
-      rowOutput[x] = (r << 11) | (g << 6) | b;
-    }
-
-    rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
-    if (y != 0) {
-      dma6->Copy16(&buffer16[(y - 1) * JAVELIN_DISPLAY_WIDTH], rowOutput,
-                   JAVELIN_DISPLAY_WIDTH);
-    }
-
-    RgbaThresholds *temp = lm1;
-    lm1 = l;
-    l = lp1;
-    lp1 = temp;
-  }
-  rowOutput = (rowOutput == outputBuffer0) ? outputBuffer1 : outputBuffer0;
-
-  dma6->WaitUntilComplete();
-  dma6->Copy16(&buffer16[(JAVELIN_DISPLAY_HEIGHT - 1) * JAVELIN_DISPLAY_WIDTH],
-               rowOutput, JAVELIN_DISPLAY_WIDTH);
-  dma6->WaitUntilComplete();
+  delete[] threadData;
 }
 
 void St7789::St7789Data::Update() {
@@ -581,6 +630,10 @@ void St7789::St7789Control::Update() {
   if (dirtyFlag & DIRTY_FLAG_SCREEN_ON) {
     SendCommand(data.screenOn ? St7789Command::DISPLAY_ON
                               : St7789Command::DISPLAY_OFF);
+
+#if JAVELIN_DISPLAY_BACKLIGHT_PIN
+    gpio_put(JAVELIN_DISPLAY_BACKLIGHT_PIN, data.screenOn);
+#endif
   }
 
   if (dirtyFlag & DIRTY_FLAG_CONTRAST) {
@@ -835,6 +888,22 @@ void Display::SetDrawColorRgb(int displayId, int r, int g, int b) {
 
   const int rgb565 = (r << 11) | (g << 5) | b;
   St7789::instances[displayId].drawColor = rgb565;
+}
+
+void Display::DrawEffect(int displayId, int effectId, int parameter) {
+#if JAVELIN_SPLIT
+  if (displayId < 0 || displayId >= 2) {
+    return;
+  }
+#else
+  displayId = 0;
+#endif
+
+  switch (effectId) {
+  case 0:
+    St7789::instances[displayId].RunConwayStep();
+    break;
+  }
 }
 
 //---------------------------------------------------------------------------
