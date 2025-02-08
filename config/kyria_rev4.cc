@@ -15,7 +15,7 @@ uint8_t BUTTON_PINS[] = {JAVELIN_ENCODER_BUTTON_PIN};
 int readBacklightPin(int testOutput) {
   gpio_init(JAVELIN_DISPLAY_BACKLIGHT_PIN);
   gpio_set_dir(JAVELIN_DISPLAY_BACKLIGHT_PIN, GPIO_OUT);
-  gpio_put(JAVELIN_DISPLAY_BACKLIGHT_PIN, 0);
+  gpio_put(JAVELIN_DISPLAY_BACKLIGHT_PIN, testOutput);
   sleep_us(5);
   adc_init();
   gpio_init(JAVELIN_DISPLAY_BACKLIGHT_PIN);
