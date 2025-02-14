@@ -94,7 +94,7 @@ void Pinnacle::Initialize() {
 
   WriteRegister(PinnacleRegister::X_AXIS_WIDE_Z_MIN, 4);
   WriteRegister(PinnacleRegister::Y_AXIS_WIDE_Z_MIN, 3);
-  int adcAttenuation = ReadRegister(PinnacleRegister::ADC_ATTENUATION);
+  const int adcAttenuation = ReadRegister(PinnacleRegister::ADC_ATTENUATION);
   WriteRegister(PinnacleRegister::ADC_ATTENUATION, adcAttenuation & 0x3f);
 
   // Disable GlideExtend, Scroll, Secondary tap, All Taps, Intellimouse

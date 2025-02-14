@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 cmake_policy(SET CMP0076 NEW)
 
-set(NAME javelin-steno-rp2040)
+set(NAME javelin-steno-pico)
 set(JAVELIN_BOARD "" CACHE STRING "Target board, e.g. \"uni_v4\"")
 
 if ("${JAVELIN_BOARD}" STREQUAL "")
@@ -12,33 +12,53 @@ add_definitions(
   -DJAVELIN_BOARD_CONFIG=\"config/${JAVELIN_BOARD}.h\"
   -DJAVELIN_PLATFORM_PICO_SDK=1
   -DJAVELIN_THREADS=1
-  -DJAVELIN_CPU_CORTEX_M0=1
-  -DJAVELIN_USE_CUSTOM_POP_COUNT=1
-  -DJAVELIN_SPLIT_VERSION_INCREMENT=1
+  -DJAVELIN_SPLIT_VERSION_INCREMENT=2
   -DNDEBUG=1
   -DPICO_FLASH_SIZE_BYTES=0x1000000
   -DPICO_FLASH_SPI_CLKDIV=4
   -DPICO_MALLOC_PANIC=0
   -DPICO_NO_FPGA_CHECK=1
-  -DPICO_XOSC_STARTUP_DELAY_MULTIPLIER=128
+  -DPICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
 )
 
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+
+if (PICO_PLATFORM STREQUAL "rp2040")
+  add_definitions(
+    -DJAVELIN_CPU_CORTEX_M0=1
+    -DJAVELIN_USE_CUSTOM_POP_COUNT=1
+    -DJAVELIN_PICO_PLATFORM=2040
+  )
+  set (SIZE "$ENV{PICO_TOOLCHAIN_PATH}/bin/arm-none-eabi-size")
+elseif (PICO_PLATFORM STREQUAL "rp2350-arm-s")
+  add_definitions(
+    -DJAVELIN_CPU_CORTEX_M33=1
+    -DJAVELIN_USE_CUSTOM_POP_COUNT=1
+    -DJAVELIN_PICO_PLATFORM=2350
+  )
+  set (SIZE "$ENV{PICO_TOOLCHAIN_PATH}/bin/arm-none-eabi-size")
+elseif (PICO_PLATFORM STREQUAL "rp2350-riscv")
+  add_definitions(
+    -DJAVELIN_CPU_HAZARD_3=1
+    -DJAVELIN_PICO_PLATFORM=2350
+  )
+  set (SIZE "$ENV{PICO_TOOLCHAIN_PATH}/bin/riscv32-unknown-elf-size")
+endif()
 
 project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 
-set(CMAKE_C_FLAGS "-O2 -g -mcpu=cortex-m0plus")
-set(CMAKE_CXX_FLAGS "-O2 -g -mcpu=cortex-m0plus -fno-exceptions -fno-devirtualize-speculatively -save-temps")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -fno-exceptions -fno-devirtualize-speculatively -save-temps")
 
 pico_sdk_init()
 
 add_executable(${NAME})
 
-pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split.pio)
-pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_split_tx_rx.pio)
-pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/rp2040_ws2812.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/pico_split.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/pico_split_tx_rx.pio)
+pico_generate_pio_header(${NAME} ${CMAKE_CURRENT_LIST_DIR}/pico_ws2812.pio)
 
 target_sources(${NAME} PUBLIC
   main.cc
@@ -50,22 +70,22 @@ target_sources(${NAME} PUBLIC
   main_report_builder.cc
   main_task.cc
   pico_bindings.cc
+  pico_bootloader.cc
+  pico_button_state.cc
+  pico_clock.cc
+  pico_console.cc
+  pico_crc.cc
+  pico_encoder_state.cc
+  pico_flash.cc
+  pico_gpio.cc
+  pico_orthography.cc
+  pico_random.cc
+  pico_serial_port.cc
+  pico_split.cc
   pico_thread.cc
+  pico_ws2812.cc
   pinnacle.cc
   plover_hid_report_buffer.cc
-  rp2040_bootloader.cc
-  rp2040_button_state.cc
-  rp2040_clock.cc
-  rp2040_console.cc
-  rp2040_crc.cc
-  rp2040_encoder_state.cc
-  rp2040_flash.cc
-  rp2040_gpio.cc
-  rp2040_orthography.cc
-  rp2040_random.cc
-  rp2040_serial_port.cc
-  rp2040_split.cc
-  rp2040_ws2812.cc
   split_hid_report_buffer.cc
   ssd1306.cc
   ssd1306_paper_tape.cc
@@ -186,13 +206,13 @@ target_include_directories(${NAME} PUBLIC
 
 target_link_libraries(${NAME}
   hardware_adc
-  hardware_clocks
   hardware_flash
   hardware_gpio
   hardware_i2c
   hardware_pio
   hardware_pwm
   hardware_spi
+  pico_bootrom
   pico_multicore
   pico_stdlib
   tinyusb_device
@@ -201,7 +221,6 @@ target_link_libraries(${NAME}
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${NAME})
 
-set (SIZE "$ENV{PICO_TOOLCHAIN_PATH}/bin/arm-none-eabi-size")
 add_custom_command(TARGET ${NAME} POST_BUILD
-  COMMAND ${SIZE} javelin-steno-rp2040.elf
+  COMMAND ${SIZE} javelin-steno-pico.elf
 )

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 
-#include "rp2040_encoder_state.h"
+#include "pico_encoder_state.h"
 #include <hardware/adc.h>
 #include <hardware/spi.h>
 
@@ -67,7 +67,7 @@ void preButtonStateInitialize() {
   if (!shouldUseEncoderModule()) {
     BUTTON_PINS[0] = JAVELIN_ENCODER_UNUSED_PIN;
     BUTTON_PIN_MASK = 1 << JAVELIN_ENCODER_UNUSED_PIN;
-    Rp2040EncoderState::SetLocalEncoderCount(1);
+    PicoEncoderState::SetLocalEncoderCount(1);
   }
 #endif
 }

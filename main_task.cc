@@ -8,9 +8,9 @@
 #include "javelin/flash.h"
 #include "javelin/split/split_key_state.h"
 #include "javelin/timer_manager.h"
+#include "pico_button_state.h"
+#include "pico_encoder_state.h"
 #include "pinnacle.h"
-#include "rp2040_button_state.h"
-#include "rp2040_encoder_state.h"
 
 //---------------------------------------------------------------------------
 
@@ -97,25 +97,25 @@ inline void MasterTask::RequestSlaveTimestamp() {
 inline uint32_t MasterTask::GetScriptTime() const {
 #if JAVELIN_SPLIT
   if (slaveStates.IsNotEmpty()) {
-    if (Rp2040ButtonState::IsEmpty() ||
-        slaveStates.Front().timestamp <= Rp2040ButtonState::Front().timestamp) {
+    if (PicoButtonState::IsEmpty() ||
+        slaveStates.Front().timestamp <= PicoButtonState::Front().timestamp) {
       return slaveStates.Front().timestamp;
     } else {
-      return Rp2040ButtonState::Front().timestamp;
+      return PicoButtonState::Front().timestamp;
     }
-  } else if (Rp2040ButtonState::IsNotEmpty()) {
-    return Rp2040ButtonState::Front().timestamp;
+  } else if (PicoButtonState::IsNotEmpty()) {
+    return PicoButtonState::Front().timestamp;
   }
 #else
-  if (Rp2040ButtonState::IsNotEmpty()) {
-    return Rp2040ButtonState::Front().timestamp;
+  if (PicoButtonState::IsNotEmpty()) {
+    return PicoButtonState::Front().timestamp;
   }
 #endif
   return Clock::GetMilliseconds();
 }
 
 void MasterTask::UpdateQueue() {
-  if (!Rp2040ButtonState::HasData()) {
+  if (!PicoButtonState::HasData()) {
     return;
   }
 
@@ -140,7 +140,7 @@ void MasterTask::Update() {
 
   UpdateQueue();
   Pinnacle::Update();
-  Rp2040EncoderState::Update();
+  PicoEncoderState::Update();
 
   const uint32_t scriptTime = GetScriptTime();
 
@@ -159,28 +159,27 @@ void MasterTask::ProcessQueue() {
     uint32_t scriptTime;
 
     if (slaveStates.IsNotEmpty()) {
-      if (Rp2040ButtonState::IsEmpty() ||
-          Rp2040ButtonState::Front().timestamp >=
-              slaveStates.Front().timestamp) {
+      if (PicoButtonState::IsEmpty() ||
+          PicoButtonState::Front().timestamp >= slaveStates.Front().timestamp) {
         const TimedButtonState &front = slaveStates.RemoveFront();
         scriptTime = front.timestamp;
         slaveState = front.state;
       } else {
-        const TimedButtonState &front = Rp2040ButtonState::Front();
+        const TimedButtonState &front = PicoButtonState::Front();
         scriptTime = front.timestamp;
         localState = front.state;
-        Rp2040ButtonState::RemoveFront();
+        PicoButtonState::RemoveFront();
       }
-    } else if (Rp2040ButtonState::IsNotEmpty()) {
+    } else if (PicoButtonState::IsNotEmpty()) {
       if (IsWaitingForSlaveTimestamp() &&
-          Rp2040ButtonState::Front().timestamp > slaveTimestamp &&
-          (Rp2040ButtonState::Front().timestamp - slaveTimestamp < 2048)) {
+          PicoButtonState::Front().timestamp > slaveTimestamp &&
+          (PicoButtonState::Front().timestamp - slaveTimestamp < 2048)) {
         break;
       }
-      const TimedButtonState &front = Rp2040ButtonState::Front();
+      const TimedButtonState &front = PicoButtonState::Front();
       scriptTime = front.timestamp;
       localState = front.state;
-      Rp2040ButtonState::RemoveFront();
+      PicoButtonState::RemoveFront();
     } else {
       break;
     }
@@ -188,20 +187,20 @@ void MasterTask::ProcessQueue() {
     const ButtonState currentState = localState | slaveState;
     ButtonScriptManager::GetInstance().Update(currentState, scriptTime);
 #else
-    if (Rp2040ButtonState::IsEmpty()) {
+    if (PicoButtonState::IsEmpty()) {
       return;
     }
 
-    const TimedButtonState &front = Rp2040ButtonState::Front();
+    const TimedButtonState &front = PicoButtonState::Front();
     ButtonScriptManager::GetInstance().Update(front.state, front.timestamp);
-    Rp2040ButtonState::RemoveFront();
+    PicoButtonState::RemoveFront();
 #endif
   }
 
 #if JAVELIN_SPLIT
   switch (timestampState) {
   case TimestampState::RESPONSE_RECEIVED:
-    if (Rp2040ButtonState::IsNotEmpty()) {
+    if (PicoButtonState::IsNotEmpty()) {
       timestampState = TimestampState::REQUEST_TIMESTAMP;
     } else {
       timestampState = TimestampState::INACTIVE;
@@ -209,7 +208,7 @@ void MasterTask::ProcessQueue() {
     break;
 
   case TimestampState::INACTIVE:
-    if (Rp2040ButtonState::IsNotEmpty()) {
+    if (PicoButtonState::IsNotEmpty()) {
       timestampState = TimestampState::REQUEST_TIMESTAMP;
     }
     break;
@@ -226,7 +225,7 @@ void MasterTask::PrintInfo() const {
   Console::Printf("Master Task\n");
   Console::Printf("  Script time: %u ms\n", GetScriptTime());
   Console::Printf("  Local state queue: %zu entries\n",
-                  Rp2040ButtonState::GetCount());
+                  PicoButtonState::GetCount());
 #if JAVELIN_SPLIT
   Console::Printf("  Split state queue: %zu entries\n", slaveStates.GetCount());
 #endif
@@ -271,7 +270,7 @@ void SlaveTask::Update() {
   }
 
   Pinnacle::Update();
-  Rp2040EncoderState::Update();
+  PicoEncoderState::Update();
 
   const uint32_t scriptTime = Clock::GetMilliseconds();
   ButtonScriptManager::GetInstance().Tick(scriptTime);
@@ -280,12 +279,12 @@ void SlaveTask::Update() {
 }
 
 void SlaveTask::UpdateQueue() {
-  if (!Rp2040ButtonState::HasData()) {
+  if (!PicoButtonState::HasData()) {
     return;
   }
 
   do {
-    const TimedButtonState &buttonStateEntry = Rp2040ButtonState::Front();
+    const TimedButtonState &buttonStateEntry = PicoButtonState::Front();
 
     if (!buffers.IsFull()) {
       buffers.Add(buttonStateEntry);
@@ -293,8 +292,8 @@ void SlaveTask::UpdateQueue() {
 
     ButtonScriptManager::GetInstance().Update(buttonStateEntry.state,
                                               buttonStateEntry.timestamp);
-    Rp2040ButtonState::RemoveFront();
-  } while (Rp2040ButtonState::HasData());
+    PicoButtonState::RemoveFront();
+  } while (PicoButtonState::HasData());
 }
 
 void SlaveTask::UpdateBuffer(TxBuffer &buffer) {

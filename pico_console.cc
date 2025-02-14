@@ -2,7 +2,6 @@
 
 #include "console_report_buffer.h"
 #include "javelin/console.h"
-#include JAVELIN_BOARD_CONFIG
 
 //---------------------------------------------------------------------------
 

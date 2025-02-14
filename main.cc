@@ -13,20 +13,20 @@
 #include "javelin/static_allocate.h"
 #include "main_report_builder.h"
 #include "main_task.h"
+#include "pico_button_state.h"
+#include "pico_crc.h"
+#include "pico_encoder_state.h"
+#include "pico_split.h"
+#include "pico_timer.h"
+#include "pico_ws2812.h"
 #include "pinnacle.h"
 #include "plover_hid_report_buffer.h"
-#include "rp2040_button_state.h"
-#include "rp2040_crc.h"
-#include "rp2040_encoder_state.h"
-#include "rp2040_split.h"
-#include "rp2040_ws2812.h"
 #include "split_hid_report_buffer.h"
 #include "ssd1306.h"
 #include "st7789.h"
 #include "usb_descriptors.h"
 
 #include <hardware/watchdog.h>
-#include <pico/time.h>
 #include <tusb.h>
 
 #if defined(CONFIG_EXTRA_SOURCE)
@@ -161,23 +161,30 @@ static void cdc_task() {
 // while long-running processes occur.
 
 static void IrqHandler() {
-  hw_clear_bits(&timer_hw->intr, 1);
-  Rp2040ButtonState::Update();
-  Rp2040EncoderState::UpdateNoScriptCall();
-  timer_hw->alarm[0] = timer_hw->timerawl + 3'000;
+  PicoButtonState::Update();
+  PicoEncoderState::UpdateNoScriptCall();
+  timer->AcknowledgeAlarmInterrupt(0);
+  timer->SetAlarmAfterDelayInMicroseconds(0, 3'000);
 }
 
 static void InitializeInterruptUpdate() {
+#if JAVELIN_PICO_PLATFORM == 2350
+  irq_set_exclusive_handler(TIMER0_IRQ_0, IrqHandler);
+  irq_set_enabled(TIMER0_IRQ_0, true);
+#elif JAVELIN_PICO_PLATFORM == 2040
   irq_set_exclusive_handler(TIMER_IRQ_0, IrqHandler);
   irq_set_enabled(TIMER_IRQ_0, true);
+#else
+#error Unsupported platform
+#endif
 }
 
 static void StartInterruptUpdate() {
-  hw_set_bits(&timer_hw->inte, 1);
-  timer_hw->alarm[0] = timer_hw->timerawl + 3'000;
+  timer->EnableAlarmInterrupt(0);
+  timer->SetAlarmAfterDelayInMicroseconds(0, 3'000);
 }
 
-static void StopInterruptUpdate() { hw_clear_bits(&timer_hw->inte, 1); }
+static void StopInterruptUpdate() { timer->DisableAlarmInterrupt(0); }
 
 //---------------------------------------------------------------------------
 
@@ -187,13 +194,13 @@ void DoMasterRunLoop() {
 #endif
 
   while (1) {
-    Rp2040ButtonState::Update();
+    PicoButtonState::Update();
     StartInterruptUpdate();
 
     tud_task(); // tinyusb device task
 
     MasterTask::container->Update();
-    Rp2040Split::Update();
+    PicoSplit::Update();
     cdc_task();
 
     FlushBuffers();
@@ -216,12 +223,12 @@ void DoSlaveRunLoop() {
 #endif
 
   while (1) {
-    Rp2040ButtonState::Update();
+    PicoButtonState::Update();
     StartInterruptUpdate();
 
     tud_task(); // tinyusb device task
     SlaveTask::container->Update();
-    Rp2040Split::Update();
+    PicoSplit::Update();
     cdc_task();
 
     SplitHidReportBuffer::Update();
@@ -250,9 +257,9 @@ int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
-  Rp2040Crc::Initialize();
+  PicoCrc::Initialize();
   Ws2812::Initialize();
-  Rp2040Split::Initialize();
+  PicoSplit::Initialize();
   Pinnacle::Initialize();
   Ssd1306::Initialize();
   St7789::Initialize();
@@ -261,8 +268,8 @@ int main(void) {
   JAVELIN_PRE_BUTTON_STATE_INITIALIZE
 #endif
 
-  Rp2040ButtonState::Initialize();
-  Rp2040EncoderState::Initialize();
+  PicoButtonState::Initialize();
+  PicoEncoderState::Initialize();
 
   InitializeInterruptUpdate();
 
@@ -282,7 +289,7 @@ int main(void) {
     St7789::RegisterMasterHandlers();
     SplitUsbStatus::RegisterHandlers();
     SplitConsole::RegisterHandlers();
-    Rp2040EncoderState::RegisterRxHandler();
+    PicoEncoderState::RegisterRxHandler();
 
     InitJavelinMaster();
     ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);
@@ -305,7 +312,7 @@ int main(void) {
     St7789::RegisterSlaveHandlers();
     SplitUsbStatus::RegisterHandlers();
     SplitConsole::RegisterHandlers();
-    Rp2040EncoderState::RegisterTxHandler();
+    PicoEncoderState::RegisterTxHandler();
 
     InitJavelinSlave();
     ButtonScriptManager::Initialize(SCRIPT_BYTE_CODE);

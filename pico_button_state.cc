@@ -1,7 +1,6 @@
 //---------------------------------------------------------------------------
 
-#include "rp2040_button_state.h"
-#include "javelin/mem.h"
+#include "pico_button_state.h"
 #include "javelin/split/split.h"
 #include <hardware/gpio.h>
 #include <hardware/structs/ioqspi.h>
@@ -68,11 +67,11 @@ uint32_t touchPadThreshold[sizeof(BUTTON_TOUCH_PINS)];
 
 //---------------------------------------------------------------------------
 
-Rp2040ButtonState Rp2040ButtonState::instance;
+PicoButtonState PicoButtonState::instance;
 
 //---------------------------------------------------------------------------
 
-void Rp2040ButtonState::Initialize() {
+void PicoButtonState::Initialize() {
 #if JAVELIN_BUTTON_MATRIX
 #if JAVELIN_SPLIT
 #if !defined(JAVELIN_SPLIT_IS_LEFT)
@@ -186,7 +185,7 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 #endif
 
 #if JAVELIN_BUTTON_TOUCH
-void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
+void PicoButtonState::ReadTouchCounters(uint32_t *counters) {
   gpio_set_dir_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
   gpio_put_masked(BUTTON_TOUCH_PIN_MASK, BUTTON_TOUCH_PIN_MASK);
 
@@ -210,7 +209,7 @@ void Rp2040ButtonState::ReadTouchCounters(uint32_t *counters) {
 }
 #endif
 
-void Rp2040ButtonState::UpdateInternal() {
+void PicoButtonState::UpdateInternal() {
   if (queue.IsFull()) {
     return;
   }
@@ -228,7 +227,7 @@ void Rp2040ButtonState::UpdateInternal() {
   });
 }
 
-ButtonState Rp2040ButtonState::ReadInternal() {
+ButtonState PicoButtonState::ReadInternal() {
   ButtonState state;
   state.ClearAll();
 

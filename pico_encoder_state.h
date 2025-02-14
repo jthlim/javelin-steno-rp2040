@@ -9,7 +9,7 @@
 
 #if JAVELIN_ENCODER
 
-class Rp2040EncoderState
+class PicoEncoderState
 #if JAVELIN_SPLIT
 #if JAVELIN_SPLIT_IS_MASTER
     : public SplitRxHandler
@@ -19,10 +19,12 @@ class Rp2040EncoderState
 #endif
 {
 public:
-  static void Initialize();
+  static void Initialize() { instance.InitializeInternal(); }
 
-  static size_t GetLocalEncoderCount() { return localEncoderCount; }
-  static void SetLocalEncoderCount(size_t value) { localEncoderCount = value; }
+  static size_t GetLocalEncoderCount() { return instance.localEncoderCount; }
+  static void SetLocalEncoderCount(size_t value) {
+    instance.localEncoderCount = value;
+  }
 
   static void Update() { instance.UpdateInternal(); }
   static void UpdateNoScriptCall() { instance.UpdateNoScriptCallInternal(); }
@@ -38,17 +40,26 @@ public:
 #endif
   }
 
+  bool SetConfiguration(size_t encoderIndex, const int8_t *data);
+  static void SetEncoderConfiguration_Binding(void *context,
+                                              const char *commandLine);
+
 private:
-  static size_t localEncoderCount;
+  PicoEncoderState();
+
+  size_t localEncoderCount;
 
   int8_t deltas[JAVELIN_ENCODER_COUNT];
+  int8_t lastLUT[JAVELIN_ENCODER_COUNT];
 #if JAVELIN_SPLIT && !JAVELIN_SPLIT_IS_MASTER
   int8_t lastDeltas[JAVELIN_ENCODER_COUNT];
 #endif
   GlobalDeferredDebounce<uint8_t, 1> lastEncoderStates[JAVELIN_ENCODER_COUNT];
+  int8_t encoderLUT[JAVELIN_ENCODER_COUNT][16];
 
-  static Rp2040EncoderState instance;
+  static PicoEncoderState instance;
 
+  void InitializeInternal();
   void UpdateInternal();
   void UpdateNoScriptCallInternal();
 
@@ -56,13 +67,16 @@ private:
 
   void OnDataReceived(const void *data, size_t length);
   void UpdateBuffer(TxBuffer &buffer);
+  void OnReceiveConnected();
 
   void CallScript(size_t encoderIndex, int delta);
+
+  void SendConfigurationInfoToPair(size_t encoderIndex);
 };
 
 #else
 
-class Rp2040EncoderState {
+class PicoEncoderState {
 public:
   static void Initialize() {}
   static void Update() {}

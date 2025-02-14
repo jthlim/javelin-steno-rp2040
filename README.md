@@ -1,4 +1,4 @@
-# rp2040 bindings for javelin-steno.
+# Raspberry Pi pico-sdk bindings for javelin-steno.
 
 ## Build Instructions
 

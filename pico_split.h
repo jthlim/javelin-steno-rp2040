@@ -8,7 +8,7 @@
 
 #if JAVELIN_SPLIT
 
-class Rp2040Split : public Split {
+class PicoSplit : public Split {
 public:
   static void Initialize() { instance.Initialize(); }
   static void Update() { instance.Update(); }
@@ -73,7 +73,7 @@ private:
 
 #else
 
-class Rp2040Split : public Split {
+class PicoSplit : public Split {
 public:
   static void Initialize() {}
   static void Update() {}

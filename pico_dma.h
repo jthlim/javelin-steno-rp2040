@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 
-enum class Rp2040DmaTransferRequest : uint32_t {
+enum class PicoDmaTransferRequest : uint32_t {
   PIO0_TX0 = 0,
   PIO0_TX1,
   PIO0_TX2,
@@ -54,7 +54,7 @@ enum class Rp2040DmaTransferRequest : uint32_t {
   PERMANENT = 0x3f,
 };
 
-struct Rp2040DmaControl {
+struct PicoDmaControl {
 
   enum class DataSize : uint32_t {
     BYTE = 0,
@@ -73,7 +73,7 @@ struct Rp2040DmaControl {
   // Set to the channel being used to disable chaining.
   uint32_t chainToDma : 4;
 
-  Rp2040DmaTransferRequest transferRequest : 6;
+  PicoDmaTransferRequest transferRequest : 6;
   uint32_t quietIrq : 1;
   uint32_t bswap : 1;
   uint32_t sniffEnable : 1;
@@ -83,13 +83,13 @@ struct Rp2040DmaControl {
   uint32_t readError : 1;
   uint32_t ahbError : 1;
 
-  void operator=(const Rp2040DmaControl &control) volatile {
-    memcpy((void *)this, &control, sizeof(Rp2040DmaControl));
+  void operator=(const PicoDmaControl &control) volatile {
+    memcpy((void *)this, &control, sizeof(PicoDmaControl));
   }
 };
-static_assert(sizeof(Rp2040DmaControl) == 4, "Unexpected DmaControl size");
+static_assert(sizeof(PicoDmaControl) == 4, "Unexpected DmaControl size");
 
-struct Rp2040DmaIrqControl {
+struct PicoDmaIrqControl {
   struct Irq {
     volatile uint32_t enableMask;
     volatile uint32_t forceMask;
@@ -110,40 +110,39 @@ struct Rp2040DmaIrqControl {
   Irq irq1;
 };
 
-static Rp2040DmaIrqControl *const dmaIrqControl =
-    (Rp2040DmaIrqControl *)0x50000400;
+static PicoDmaIrqControl *const dmaIrqControl = (PicoDmaIrqControl *)0x50000400;
 
-struct Rp2040DmaAbort {
+struct PicoDmaAbort {
   volatile uint32_t value;
 
   void Abort(int channelIndex) { value = (1 << channelIndex); }
 };
 
-static Rp2040DmaAbort *const dmaAbort = (Rp2040DmaAbort *)0x50000444;
+static PicoDmaAbort *const dmaAbort = (PicoDmaAbort *)0x50000444;
 
-struct Rp2040Dma {
+struct PicoDma {
   const volatile void *volatile source;
   const volatile void *volatile destination;
   volatile uint32_t count;
-  volatile Rp2040DmaControl controlTrigger;
+  volatile PicoDmaControl controlTrigger;
 
   // Alias 1
   union {
-    volatile Rp2040DmaControl control;
-    volatile Rp2040DmaControl controlAlias1;
+    volatile PicoDmaControl control;
+    volatile PicoDmaControl controlAlias1;
   };
   const volatile void *volatile sourceAlias1;
   const volatile void *volatile destinationAlias1;
   volatile uint32_t countTrigger;
 
   // Alias 2
-  volatile Rp2040DmaControl controlAlias2;
+  volatile PicoDmaControl controlAlias2;
   volatile uint32_t countAlias2;
   const volatile void *volatile sourceAlias2;
   const volatile void *volatile destinationTrigger;
 
   // Alias 3
-  volatile Rp2040DmaControl controlAlias3;
+  volatile PicoDmaControl controlAlias3;
   const volatile void *volatile destinationAlias3;
   volatile uint32_t countAlias3;
   const volatile void *volatile sourceTrigger;
@@ -156,7 +155,7 @@ struct Rp2040Dma {
   }
 
   void Abort() {
-    dmaAbort->Abort(this - (Rp2040Dma *)0x50000000);
+    dmaAbort->Abort(this - (PicoDma *)0x50000000);
     WaitUntilComplete();
   }
 
@@ -164,18 +163,18 @@ struct Rp2040Dma {
   inline void Copy32(void *dest, const void *source, size_t count);
 };
 
-static Rp2040Dma *const dma0 = (Rp2040Dma *)0x50000000;
-static Rp2040Dma *const dma1 = (Rp2040Dma *)0x50000040;
-static Rp2040Dma *const dma2 = (Rp2040Dma *)0x50000080;
-static Rp2040Dma *const dma3 = (Rp2040Dma *)0x500000c0;
-static Rp2040Dma *const dma4 = (Rp2040Dma *)0x50000100;
-static Rp2040Dma *const dma5 = (Rp2040Dma *)0x50000140;
-static Rp2040Dma *const dma6 = (Rp2040Dma *)0x50000180;
-static Rp2040Dma *const dma7 = (Rp2040Dma *)0x500001c0;
-static Rp2040Dma *const dma8 = (Rp2040Dma *)0x50000200;
-static Rp2040Dma *const dma9 = (Rp2040Dma *)0x50000240;
-static Rp2040Dma *const dma10 = (Rp2040Dma *)0x50000280;
-static Rp2040Dma *const dma11 = (Rp2040Dma *)0x500002c0;
+static PicoDma *const dma0 = (PicoDma *)0x50000000;
+static PicoDma *const dma1 = (PicoDma *)0x50000040;
+static PicoDma *const dma2 = (PicoDma *)0x50000080;
+static PicoDma *const dma3 = (PicoDma *)0x500000c0;
+static PicoDma *const dma4 = (PicoDma *)0x50000100;
+static PicoDma *const dma5 = (PicoDma *)0x50000140;
+static PicoDma *const dma6 = (PicoDma *)0x50000180;
+static PicoDma *const dma7 = (PicoDma *)0x500001c0;
+static PicoDma *const dma8 = (PicoDma *)0x50000200;
+static PicoDma *const dma9 = (PicoDma *)0x50000240;
+static PicoDma *const dma10 = (PicoDma *)0x50000280;
+static PicoDma *const dma11 = (PicoDma *)0x500002c0;
 
 // Upper 16 bits = numerator.
 // Lower 16 bits = denominator.
@@ -186,33 +185,33 @@ static volatile uint32_t *const dmaTimer3 = (uint32_t *)0x5000042c;
 
 //---------------------------------------------------------------------------
 
-inline void Rp2040Dma::Copy16(void *d, const void *s, size_t c) {
+inline void PicoDma::Copy16(void *d, const void *s, size_t c) {
   source = s;
   destination = d;
   count = c;
-  const Rp2040DmaControl dmaControl = {
+  const PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
+      .dataSize = PicoDmaControl::DataSize::HALF_WORD,
       .incrementRead = true,
       .incrementWrite = true,
       .chainToDma = uint32_t(this - dma0),
-      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .transferRequest = PicoDmaTransferRequest::PERMANENT,
       .sniffEnable = false,
   };
   dma6->controlTrigger = dmaControl;
 }
 
-inline void Rp2040Dma::Copy32(void *d, const void *s, size_t c) {
+inline void PicoDma::Copy32(void *d, const void *s, size_t c) {
   source = s;
   destination = d;
   count = c;
-  const Rp2040DmaControl dmaControl = {
+  const PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .dataSize = PicoDmaControl::DataSize::WORD,
       .incrementRead = true,
       .incrementWrite = true,
       .chainToDma = uint32_t(this - dma0),
-      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .transferRequest = PicoDmaTransferRequest::PERMANENT,
       .sniffEnable = false,
   };
   dma6->controlTrigger = dmaControl;

@@ -1,4 +1,4 @@
-.program rp2040split
+.program pico_split
 .side_set 1 opt
 
 public tx_start:

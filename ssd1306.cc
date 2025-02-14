@@ -7,7 +7,7 @@
 #include "javelin/font/monochrome/font.h"
 #include "javelin/hal/display.h"
 #include "javelin/utf8_pointer.h"
-#include "rp2040_dma.h"
+#include "pico_dma.h"
 #include <hardware/gpio.h>
 #include <hardware/i2c.h>
 #include <string.h>
@@ -133,13 +133,13 @@ void Ssd1306::SendDmaBuffer(size_t count) {
   dma4->source = dmaBuffer;
   dma4->destination = &JAVELIN_OLED_I2C->hw->data_cmd;
 
-  constexpr Rp2040DmaControl dmaControl = {
+  constexpr PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
+      .dataSize = PicoDmaControl::DataSize::HALF_WORD,
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 4,
-      .transferRequest = Rp2040DmaTransferRequest::I2C1_TX,
+      .transferRequest = PicoDmaTransferRequest::I2C1_TX,
       .sniffEnable = false,
   };
   dma4->controlTrigger = dmaControl;

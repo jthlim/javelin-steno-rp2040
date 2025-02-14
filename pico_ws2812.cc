@@ -1,9 +1,9 @@
 //---------------------------------------------------------------------------
 
-#include "rp2040_ws2812.h"
+#include "pico_ws2812.h"
 #include "javelin/hal/rgb.h"
-#include "rp2040_dma.h"
-#include "rp2040_ws2812.pio.h"
+#include "pico_dma.h"
+#include "pico_ws2812.pio.h"
 #include <hardware/clocks.h>
 #include <hardware/pio.h>
 #include <hardware/timer.h>
@@ -31,7 +31,7 @@ void Ws2812::Initialize() {
   const int CYCLES_PER_BIT = 10;
   const int FREQUENCY = 800000;
 
-  uint offset = pio_add_program(PIO_INSTANCE, &ws2812_program);
+  const int offset = pio_add_program(PIO_INSTANCE, &ws2812_program);
 
   pio_gpio_init(PIO_INSTANCE, JAVELIN_RGB_PIN);
   pio_sm_set_consecutive_pindirs(PIO_INSTANCE, STATE_MACHINE_INDEX,
@@ -41,20 +41,20 @@ void Ws2812::Initialize() {
   sm_config_set_out_pins(&config, JAVELIN_RGB_PIN, 1);
   sm_config_set_out_shift(&config, false, true, 24);
   sm_config_set_fifo_join(&config, PIO_FIFO_JOIN_TX);
-  int div = clock_get_hz(clk_sys) / (FREQUENCY * CYCLES_PER_BIT >> 8);
+  const int div = clock_get_hz(clk_sys) / (FREQUENCY * CYCLES_PER_BIT >> 8);
   config.clkdiv = div << 8;
   pio_sm_init(PIO_INSTANCE, STATE_MACHINE_INDEX, offset, &config);
   pio_sm_set_enabled(PIO_INSTANCE, STATE_MACHINE_INDEX, true);
 
   dma1->destination = &PIO_INSTANCE->txf[STATE_MACHINE_INDEX];
 
-  Rp2040DmaControl dmaControl = {
+  constexpr PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .dataSize = PicoDmaControl::DataSize::WORD,
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 1,
-      .transferRequest = Rp2040DmaTransferRequest::PIO0_TX2,
+      .transferRequest = PicoDmaTransferRequest::PIO0_TX2,
       .sniffEnable = false,
   };
   dma1->control = dmaControl;
@@ -79,8 +79,8 @@ void Ws2812::Ws2812Data::Update() {
   }
 
   // Don't update more than once every 10ms.
-  uint32_t now = time_us_32();
-  uint32_t timeSinceLastUpdate = now - lastUpdate;
+  const uint32_t now = time_us_32();
+  const uint32_t timeSinceLastUpdate = now - lastUpdate;
   if (timeSinceLastUpdate < 10000) {
     return;
   }

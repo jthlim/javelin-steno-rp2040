@@ -41,9 +41,10 @@
 #include "javelin/static_allocate.h"
 #include "javelin/word_list.h"
 #include "main_report_builder.h"
+#include "pico_divider.h"
+#include "pico_encoder_state.h"
+#include "pico_split.h"
 #include "pinnacle.h"
-#include "rp2040_divider.h"
-#include "rp2040_split.h"
 #include "ssd1306.h"
 #include "st7789.h"
 
@@ -120,16 +121,16 @@ extern "C" char __bss_start__[], __bss_end__[];
 
 static void PrintInfo_Binding(void *context, const char *commandLine) {
   const uint32_t uptime = Clock::GetMilliseconds();
-  auto &uptimeDivider = divider->Divide(uptime, 1000);
+  const auto &uptimeDivider = divider->Divide(uptime, 1000);
   const uint32_t microseconds = uptimeDivider.remainder;
   const uint32_t totalSeconds = uptimeDivider.quotient;
-  auto &totalSecondsDivider = divider->Divide(totalSeconds, 60);
+  const auto &totalSecondsDivider = divider->Divide(totalSeconds, 60);
   const uint32_t seconds = totalSecondsDivider.remainder;
   const uint32_t totalMinutes = totalSecondsDivider.quotient;
-  auto &totalMinutesDivider = divider->Divide(totalMinutes, 60);
+  const auto &totalMinutesDivider = divider->Divide(totalMinutes, 60);
   const uint32_t minutes = totalMinutesDivider.remainder;
   const uint32_t totalHours = totalMinutesDivider.quotient;
-  auto &totalHoursDivider = divider->Divide(totalHours, 24);
+  const auto &totalHoursDivider = divider->Divide(totalHours, 24);
   const uint32_t hours = totalHoursDivider.remainder;
   const uint32_t days = totalHoursDivider.quotient;
 
@@ -137,9 +138,13 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
   const uint32_t systemClockKhz =
       frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   const uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
+
   Console::Printf("  Clock: %u MHz\n", systemMhz);
   Console::Printf("  Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
+#if __riscv
+  Console::Printf("  Architecture: riscv\n");
+#endif
   // Console::Printf("  Chip version: %u\n", rp2040_chip_version());
   // Console::Printf("  ROM version: %u\n", rp2040_rom_version());
 
@@ -173,14 +178,14 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
 
   Flash::PrintInfo();
   HidReportBufferBase::PrintInfo();
-  Rp2040Split::PrintInfo();
+  PicoSplit::PrintInfo();
 
 #if ENABLE_EXTRA_INFO
   ButtonScriptManager::GetInstance().PrintInfo();
   Pinnacle::PrintInfo();
 #endif
 
-  if (Rp2040Split::IsMaster()) {
+  if (PicoSplit::IsMaster()) {
 #if ENABLE_EXTRA_INFO
     // The slave will always just print "Screen: present, present" here.
     // Rather than print incorrect info, don't print anything on the slave at
@@ -466,7 +471,6 @@ void Debug_Binding(void *context, const char *commandLine) {
   Console::Printf("Debug command: %d\n\n", command);
   switch (command) {
   case 0:
-    // Drop in here.
     break;
   }
 }
@@ -508,6 +512,12 @@ void InitCommonCommands() {
 
 #if ENABLE_DEBUG_COMMAND
   console.RegisterCommand("debug", "Runs debug code", Debug_Binding, nullptr);
+#endif
+
+#if JAVELIN_ENCODER
+  console.RegisterCommand(
+      "set_encoder_configuration", "Sets encoder configuration. ",
+      &PicoEncoderState::SetEncoderConfiguration_Binding, nullptr);
 #endif
 }
 

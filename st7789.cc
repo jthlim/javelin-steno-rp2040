@@ -8,7 +8,7 @@
 #include "javelin/malloc_allocate.h"
 #include "javelin/thread.h"
 #include "javelin/utf8_pointer.h"
-#include "rp2040_dma.h"
+#include "pico_dma.h"
 #include <hardware/gpio.h>
 #include <hardware/spi.h>
 #include <pico/time.h>
@@ -139,10 +139,11 @@ void St7789::St7789Data::Initialize() {
   SendCommand(St7789Command::DISPLAY_INVERSION_ON);
   SendCommand(St7789Command::SET_DISPLAY_MODE_NORMAL, NULL, 0);
 
-  dirty = true;
-  Update();
-
-  dma4->WaitUntilComplete();
+  // Clear buffer on startup.
+  // Commented out as it seems to start in a cleared state.
+  // dirty = true;
+  // Update();
+  // dma4->WaitUntilComplete();
 
   SendCommand(St7789Command::DISPLAY_ON, NULL, 0);
 
@@ -188,13 +189,13 @@ void St7789::St7789Data::Clear() {
   dma6->source = &zero;
   dma6->destination = buffer32;
   dma6->count = sizeof(buffer32) / 4;
-  constexpr Rp2040DmaControl dmaControl = {
+  constexpr PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::WORD,
+      .dataSize = PicoDmaControl::DataSize::WORD,
       .incrementRead = false,
       .incrementWrite = true,
       .chainToDma = 6,
-      .transferRequest = Rp2040DmaTransferRequest::PERMANENT,
+      .transferRequest = PicoDmaTransferRequest::PERMANENT,
       .sniffEnable = false,
   };
   dma6->controlTrigger = dmaControl;
@@ -493,6 +494,8 @@ struct St7789::St7789Data::RunConwayStepThreadData
     RgbaThresholds *l = conwayBuffers[1];
     RgbaThresholds *lp1 = conwayBuffers[2];
 
+    asm volatile(".align 2");
+
     for (size_t y = startY; y < endY; ++y) {
       const uint16_t *row = buffer + y * JAVELIN_DISPLAY_WIDTH;
       const uint16_t *nextLineRgb565 =
@@ -513,13 +516,13 @@ struct St7789::St7789Data::RunConwayStepThreadData
         // clang-format on
 
         const uint32_t p = row[x];
-        int r = p >> 11;
-        int g = (p >> 6) & 0x1f;
-        int b = p & 0x1f;
+        const int lastR = p >> 11;
+        const int lastG = (p >> 6) & 0x1f;
+        const int lastB = p & 0x1f;
 
-        r = NEXT_EVOLUTION[count >> 15][r];
-        g = NEXT_EVOLUTION[(count >> 10) & 0xf][g];
-        b = NEXT_EVOLUTION[(count >> 4) & 0xf][b];
+        const int r = NEXT_EVOLUTION[count >> 15][lastR];
+        const int g = NEXT_EVOLUTION[(count >> 10) & 0xf][lastG];
+        const int b = NEXT_EVOLUTION[(count >> 4) & 0xf][lastB];
 
         rowOutput[x] = (r << 11) | (g << 6) | b;
       }
@@ -608,13 +611,13 @@ void St7789::St7789Data::SendScreenData() const {
   spi_set_format(JAVELIN_DISPLAY_SPI, 16, SPI_CPOL_1, SPI_CPHA_1,
                  SPI_MSB_FIRST);
 
-  constexpr Rp2040DmaControl dmaControl = {
+  constexpr PicoDmaControl dmaControl = {
       .enable = true,
-      .dataSize = Rp2040DmaControl::DataSize::HALF_WORD,
+      .dataSize = PicoDmaControl::DataSize::HALF_WORD,
       .incrementRead = true,
       .incrementWrite = false,
       .chainToDma = 4,
-      .transferRequest = Rp2040DmaTransferRequest::SPI1_TX,
+      .transferRequest = PicoDmaTransferRequest::SPI1_TX,
       .sniffEnable = false,
   };
   dma4->controlTrigger = dmaControl;

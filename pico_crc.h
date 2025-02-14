@@ -1,15 +1,17 @@
 //---------------------------------------------------------------------------
 
-#include "javelin/orthography.h"
-#include "rp2040_spinlock.h"
+#pragma once
+#include <stdint.h>
+#include <stdlib.h>
 
 //---------------------------------------------------------------------------
 
-#if USE_ORTHOGRAPHY_CACHE
+struct PicoCrc {
+public:
+  static void Initialize();
 
-void StenoCompiledOrthography::LockCache() { spinlock17->Lock(); }
-void StenoCompiledOrthography::UnlockCache() { spinlock17->Unlock(); }
-
-#endif
+  static uint32_t Crc32(const void *data, size_t length);
+  static uint32_t Crc16Ccitt(const void *data, size_t length);
+};
 
 //---------------------------------------------------------------------------

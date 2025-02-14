@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 
-struct Rp2040DmaSniffControl {
+struct PicoDmaSniffControl {
   enum class Calculate : uint32_t {
     CRC_32 = 0,
     BIT_REVERSED_CRC_32 = 1,
@@ -23,18 +23,18 @@ struct Rp2040DmaSniffControl {
   uint32_t bitInvertOutput : 1;
   uint32_t _reserved12 : 20;
 
-  void operator=(const Rp2040DmaSniffControl &control) volatile {
-    memcpy((void *)this, &control, sizeof(Rp2040DmaSniffControl));
+  void operator=(const PicoDmaSniffControl &control) volatile {
+    memcpy((void *)this, &control, sizeof(PicoDmaSniffControl));
   }
 };
-static_assert(sizeof(Rp2040DmaSniffControl) == 4,
+static_assert(sizeof(PicoDmaSniffControl) == 4,
               "Unexpected DmaSniffControl size");
 
-struct Rp2040DmaSniff {
-  volatile Rp2040DmaSniffControl control;
+struct PicoDmaSniff {
+  volatile PicoDmaSniffControl control;
   volatile uint32_t data;
 };
 
-static Rp2040DmaSniff *const sniff = (Rp2040DmaSniff *)0x50000434;
+static PicoDmaSniff *const sniff = (PicoDmaSniff *)0x50000434;
 
 //---------------------------------------------------------------------------

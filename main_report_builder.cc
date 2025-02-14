@@ -1,8 +1,6 @@
 //---------------------------------------------------------------------------
 
-#include JAVELIN_BOARD_CONFIG
 #include "main_report_builder.h"
-#include "hid_report_buffer.h"
 #include "javelin/console.h"
 #include "javelin/hal/mouse.h"
 #include "javelin/key.h"
@@ -54,7 +52,7 @@ void MainReportBuilder::Press(uint8_t key) {
     if (key < 0xe0) {
       ++byte;
     }
-    int mask = (1 << (key & 7));
+    const int mask = (1 << (key & 7));
 
     if (key <= maxPressIndex ||
         (maxPressIndex != 0 && buffers[0].data[MODIFIER_OFFSET] != modifiers) ||
@@ -98,7 +96,7 @@ void MainReportBuilder::Release(uint8_t key) {
     if (key < 0xe0) {
       ++byte;
     }
-    int mask = (1 << (key & 7));
+    const int mask = (1 << (key & 7));
 
     if ((buffers[0].presenceFlags[byte] & mask) != 0 &&
         (buffers[0].data[byte] & mask) != 0) {
@@ -164,7 +162,7 @@ void MainReportBuilder::SendKeyboardPageReportIfRequired() {
 
     size_t offset = 14;
     for (size_t i = 0x70 / 8; i < 0xa8 / 8; ++i) {
-      uint8_t byte = buffers[0].data[i];
+      const uint8_t byte = buffers[0].data[i];
       if (!byte) {
         continue;
       }
