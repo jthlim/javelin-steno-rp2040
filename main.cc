@@ -14,7 +14,7 @@
 #include "main_report_builder.h"
 #include "main_task.h"
 #include "pico_button_state.h"
-#include "pico_crc.h"
+#include "pico_crc32.h"
 #include "pico_encoder_state.h"
 #include "pico_split.h"
 #include "pico_timer.h"
@@ -257,7 +257,7 @@ int main(void) {
 #if JAVELIN_THREADS
   InitMulticore();
 #endif
-  PicoCrc::Initialize();
+  PicoCrc32::Initialize();
   Ws2812::Initialize();
   PicoSplit::Initialize();
   Pinnacle::Initialize();

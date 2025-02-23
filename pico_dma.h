@@ -54,6 +54,49 @@ enum class PicoDmaTransferRequest : uint32_t {
   PERMANENT = 0x3f,
 };
 
+//---------------------------------------------------------------------------
+
+#if JAVELIN_PICO_PLATFORM == 2350
+
+struct PicoDmaControl {
+
+  enum class DataSize : uint32_t {
+    BYTE = 0,
+    HALF_WORD = 1,
+    WORD = 2,
+  };
+
+  uint32_t enable : 1;
+  uint32_t highPriority : 1;
+  DataSize dataSize : 2;
+  uint32_t incrementRead : 1;
+  uint32_t incrementReadReverse : 1;
+  uint32_t incrementWrite : 1;
+  uint32_t incrementWriteReverse : 1;
+  uint32_t ringSizeShift : 4;
+  uint32_t ringSel : 1;
+
+  // Set to the channel being used to disable chaining.
+  uint32_t chainToDma : 4;
+
+  PicoDmaTransferRequest transferRequest : 6;
+  uint32_t quietIrq : 1;
+  uint32_t bswap : 1;
+  uint32_t sniffEnable : 1;
+  uint32_t busy : 1;
+  uint32_t _reserved27 : 2;
+  uint32_t writeError : 1;
+  uint32_t readError : 1;
+  uint32_t ahbError : 1;
+
+  void operator=(const PicoDmaControl &control) volatile {
+    *(volatile uint32_t *)this = *(uint32_t *)&control;
+  }
+};
+static_assert(sizeof(PicoDmaControl) == 4, "Unexpected DmaControl size");
+
+#elif JAVELIN_PICO_PLATFORM == 2040
+
 struct PicoDmaControl {
 
   enum class DataSize : uint32_t {
@@ -84,10 +127,16 @@ struct PicoDmaControl {
   uint32_t ahbError : 1;
 
   void operator=(const PicoDmaControl &control) volatile {
-    memcpy((void *)this, &control, sizeof(PicoDmaControl));
+    *(volatile uint32_t *)this = *(uint32_t *)&control;
   }
 };
 static_assert(sizeof(PicoDmaControl) == 4, "Unexpected DmaControl size");
+
+#else
+#error Unsupported platform
+#endif
+
+//---------------------------------------------------------------------------
 
 struct PicoDmaIrqControl {
   struct Irq {
@@ -96,7 +145,7 @@ struct PicoDmaIrqControl {
     volatile uint32_t status;
 
     uint32_t AckAllIrqs() {
-      uint32_t mask = status;
+      const uint32_t mask = status;
       status = mask;
       return mask;
     }
@@ -112,6 +161,8 @@ struct PicoDmaIrqControl {
 
 static PicoDmaIrqControl *const dmaIrqControl = (PicoDmaIrqControl *)0x50000400;
 
+//---------------------------------------------------------------------------
+
 struct PicoDmaAbort {
   volatile uint32_t value;
 
@@ -119,6 +170,8 @@ struct PicoDmaAbort {
 };
 
 static PicoDmaAbort *const dmaAbort = (PicoDmaAbort *)0x50000444;
+
+//---------------------------------------------------------------------------
 
 struct PicoDma {
   const volatile void *volatile source;

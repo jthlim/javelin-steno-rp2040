@@ -139,22 +139,28 @@ static void PrintInfo_Binding(void *context, const char *commandLine) {
       frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
   const uint32_t systemMhz = divider->Divide(systemClockKhz, 1000).quotient;
 
-  Console::Printf("  Clock: %u MHz\n", systemMhz);
+#if JAVELIN_PICO_PLATFORM == 2350
+#if __riscv
+  Console::Printf("  CPU: RP2350 RISC-V %u MHz\n", systemMhz);
+#else
+  Console::Printf("  CPU: RP2350 ARM %u MHz\n", systemMhz);
+#endif
+#elif JAVELIN_PICO_PLATFORM == 2040
+  Console::Printf("  CPU: RP2040 %u MHz\n", systemMhz);
+#else
+#error Unsupported platform
+#endif
   Console::Printf("  Uptime: %ud %uh %um %0u.%03us\n", days, hours, minutes,
                   seconds, microseconds);
-#if __riscv
-  Console::Printf("  Architecture: riscv\n");
-#endif
   // Console::Printf("  Chip version: %u\n", rp2040_chip_version());
   // Console::Printf("  ROM version: %u\n", rp2040_rom_version());
 
-  Console::Printf("  Serial number: ");
-  uint8_t serialId[8];
-
   const uint32_t interrupts = save_and_disable_interrupts();
+  uint8_t serialId[8];
   flash_get_unique_id(serialId);
   restore_interrupts(interrupts);
 
+  Console::Printf("  Serial number: ");
   for (size_t i = 0; i < 8; ++i) {
     Console::Printf("%02x", serialId[i]);
   }

@@ -109,13 +109,11 @@ void PicoEncoderState::UpdateNoScriptCallInternal() {
       continue;
     }
 
-    // Console::Printf("%d -> %d\n\n", lastValue, newValue);
-
     const int newLutValue = encoderLUT[JAVELIN_ENCODER_LOCAL_OFFSET + i]
                                       [lastValue | (newValue << 2)];
     const int lastLutValue = lastLUT[i];
-    int delta = newLutValue >> 4;
-    if ((newLutValue & lastLutValue & 0xf) != 0) {
+    if (newLutValue & lastLutValue) {
+      const int delta = newLutValue >> 4;
       deltas[JAVELIN_ENCODER_LOCAL_OFFSET + i] += delta;
     }
     lastLUT[i] = newLutValue;
@@ -217,14 +215,13 @@ void PicoEncoderState::SendConfigurationInfoToPair(size_t encoderIndex) {
 void PicoEncoderState::SetEncoderConfiguration_Binding(
     void *context, const char *commandLine) {
 
-  const char *instructions =
-      "Common configuration data:\n"
-      "- Normal: \"APQRAAIAAAQIAAABABL4AA==\"\n"
-      "- Reversed: \"ABTxAAIAAAQIAAABAPIYAA==\"\n"
-      "- Phase Shift: \"AAgCABIAAPT4AAARAAEEAA==\"\n"
-      "- Phase Shift Reversed: \"AAgCAPIAABQYAADxAAEEAA==\"\n"
-      "- Half Speed: \"APIRAAAAAAIAAAABAAAAAA==\"\n"
-      "- Half Speed Reversed: \"ABLxAAAAAAIAAAABAAAAAA==\"\n";
+  const char *instructions = "Common configuration data:\n"
+                             "- Normal 1: \"APQRAAIAAAQIAAABABL4AA==\"\n"
+                             "  - Reversed: \"ABTxAAIAAAQIAAABAPIYAA==\"\n"
+                             "- Normal 2: \"AAgCABIAAPT4AAARAAEEAA==\"\n"
+                             "  - Reversed: \"AAgCAPIAABQYAADxAAEEAA==\"\n"
+                             "- Half Speed: \"AAIBABEAAADyAAAAAAAAAA==\"\n"
+                             "  - Reversed: \"AAIBAPEAAAASAAAAAAAAAA==\"\n";
 
   const char *p = strchr(commandLine, ' ');
   if (!p) {

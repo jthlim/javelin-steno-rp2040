@@ -143,19 +143,11 @@ void PicoButtonState::Initialize() {
 }
 
 #if defined(BOOTSEL_BUTTON_INDEX)
-// Picoboard has a button attached to the flash CS pin, which the bootrom
-// checks, and jumps straight to the USB bootcode if the button is pressed
-// (pulling flash CS low). We can check this pin in by jumping to some code in
-// SRAM (so that the XIP interface is not required), floating the flash CS
-// pin, and observing whether it is pulled low.
-//
-// This doesn't work if others are trying to access flash at the same time,
-// e.g. XIP streamer, or the other core.
+
 static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
   const int CS_PIN_INDEX = 1;
 
-  // Must disable interrupts, as interrupt handlers may be in flash, and flash
-  // access it about to be disabled temporarily.
+  // Flash access is temporarily disabled, so interrupts must be disabled.
   const uint32_t flags = save_and_disable_interrupts();
 
   // Set chip select to Hi-Z
@@ -171,7 +163,15 @@ static bool __no_inline_not_in_flash_func(isBootSelButtonPressed)() {
 
   // The HI GPIO registers in SIO can observe and control the 6 QSPI pins.
   // Note the button pulls the pin *low* when pressed.
-  const bool buttonState = (sio_hw->gpio_hi_in & (1u << CS_PIN_INDEX)) == 0;
+#if JAVELIN_PICO_PLATFORM == 2350
+#define CS_BIT SIO_GPIO_HI_IN_QSPI_CSN_BITS
+#elif JAVELIN_PICO_PLATFORM == 2040
+#define CS_BIT (1u << 1)
+#else
+#error Unsupported platform
+#endif
+
+  const bool buttonState = !(sio_hw->gpio_hi_in & CS_BIT);
 
   // Restore the state of chip select
   hw_write_masked(&ioqspi_hw->io[CS_PIN_INDEX].ctrl,

@@ -1,18 +1,19 @@
 //---------------------------------------------------------------------------
 
-#include "pico_crc.h"
+#include "pico_crc32.h"
+#include "javelin/crc32.h"
 #include "pico_dma.h"
 #include "pico_sniff.h"
 #include "pico_spinlock.h"
 
 //---------------------------------------------------------------------------
 
-void PicoCrc::Initialize() {
+void PicoCrc32::Initialize() {
   // Writing to ROM address 0 seems to work fine as a no-op.
   dma0->destination = 0;
 }
 
-uint32_t PicoCrc::Crc32(const void *data, size_t length) {
+uint32_t PicoCrc32::Hash(const void *data, size_t length) {
 #if JAVELIN_THREADS
   spinlock16->Lock();
 #endif
@@ -29,7 +30,7 @@ uint32_t PicoCrc::Crc32(const void *data, size_t length) {
   };
   sniff->control = sniffControl;
 
-  bool use32BitTransfer = ((intptr_t(data) | length) & 3) == 0;
+  const bool use32BitTransfer = ((intptr_t(data) | length) & 3) == 0;
   PicoDmaControl control;
   if (use32BitTransfer) {
     length >>= 2;
@@ -53,7 +54,6 @@ uint32_t PicoCrc::Crc32(const void *data, size_t length) {
         .transferRequest = PicoDmaTransferRequest::PERMANENT,
         .sniffEnable = true,
     };
-
     control = dmaControl8BitTransfer;
   }
   dma0->count = length;
@@ -69,52 +69,10 @@ uint32_t PicoCrc::Crc32(const void *data, size_t length) {
   return value;
 }
 
-uint32_t PicoCrc::Crc16Ccitt(const void *data, size_t length) {
-#if JAVELIN_THREADS
-  spinlock16->Lock();
-#endif
-
-  dma0->source = data;
-  dma0->count = length;
-
-  sniff->data = 0xffff;
-
-  constexpr PicoDmaSniffControl sniffControl = {
-      .enable = true,
-      .dmaChannel = 0,
-      .calculate = PicoDmaSniffControl::Calculate::CRC_16_CCITT,
-      .bitReverseOutput = false,
-      .bitInvertOutput = false,
-  };
-  sniff->control = sniffControl;
-
-  constexpr PicoDmaControl controlTrigger = {
-      .enable = true,
-      .dataSize = PicoDmaControl::DataSize::BYTE,
-      .incrementRead = true,
-      .incrementWrite = false,
-      .chainToDma = 0,
-      .transferRequest = PicoDmaTransferRequest::PERMANENT,
-      .sniffEnable = true,
-  };
-  dma0->controlTrigger = controlTrigger;
-
-  dma0->WaitUntilComplete();
-  uint32_t value = sniff->data;
-
-#if JAVELIN_THREADS
-  spinlock16->Unlock();
-#endif
-
-  return value;
-}
-
 //---------------------------------------------------------------------------
 
-uint32_t Crc32(const void *v, size_t count) { return PicoCrc::Crc32(v, count); }
-
-uint32_t Crc16Ccitt(const void *v, size_t count) {
-  return PicoCrc::Crc16Ccitt(v, count);
+uint32_t Crc32::Hash(const void *v, size_t count) {
+  return PicoCrc32::Hash(v, count);
 }
 
 //---------------------------------------------------------------------------

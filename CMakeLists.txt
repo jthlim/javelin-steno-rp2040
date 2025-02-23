@@ -74,7 +74,7 @@ target_sources(${NAME} PUBLIC
   pico_button_state.cc
   pico_clock.cc
   pico_console.cc
-  pico_crc.cc
+  pico_crc32.cc
   pico_encoder_state.cc
   pico_flash.cc
   pico_gpio.cc
@@ -101,7 +101,7 @@ target_sources(${NAME} PUBLIC
   javelin/button_script_manager.cc
   javelin/console.cc
   javelin/console_input_buffer.cc
-  javelin/crc.cc
+  javelin/crc32.cc
   javelin/dictionary/compact_map_dictionary.cc
   javelin/dictionary/debug_dictionary.cc
   javelin/dictionary/dictionary.cc
